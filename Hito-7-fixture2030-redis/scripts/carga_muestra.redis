@@ -1,0 +1,29 @@
+DEL f2030:cache:partido:P001:resumen
+DEL f2030:ranking:partido:P001:figura
+DEL f2030:contador:partido:P001:visitas
+
+# Usuarios sintéticos reutilizados de Hito 5.
+SET f2030:demo:usuario:1 "Ana Torres" EX 86400
+SET f2030:demo:usuario:2 "Bruno Silva" EX 86400
+SET f2030:demo:usuario:3 "Carla Méndez" EX 86400
+SET f2030:demo:usuario:4 "Diego Fernández" EX 86400
+SET f2030:demo:usuario:5 "Elena García" EX 86400
+
+# Contador concurrente: temporal y reconstruible.
+SET f2030:contador:partido:P001:visitas 0 EX 3600
+
+# Ranking temporal de figura del partido.
+ZADD f2030:ranking:partido:P001:figura 12 "J-ARG-1"
+ZADD f2030:ranking:partido:P001:figura 9  "J-BRA-1"
+ZADD f2030:ranking:partido:P001:figura 7  "J-ARG-2"
+ZADD f2030:ranking:partido:P001:figura 5  "J-BRA-2"
+EXPIRE f2030:ranking:partido:P001:figura 600
+
+# Una actualización de voto/elección es atómica sobre el score.
+ZINCRBY f2030:ranking:partido:P001:figura 1 "J-ARG-1"
+
+ECHO "=== Estado inicial cargado ==="
+GET f2030:contador:partido:P001:visitas
+TTL f2030:contador:partido:P001:visitas
+ZREVRANGE f2030:ranking:partido:P001:figura 0 2 WITHSCORES
+TTL f2030:ranking:partido:P001:figura

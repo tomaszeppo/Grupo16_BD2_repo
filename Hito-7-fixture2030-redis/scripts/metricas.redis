@@ -1,0 +1,31 @@
+ECHO "=== Versión ==="
+INFO server
+
+ECHO "=== Estadísticas de acceso: hits / misses / evictions ==="
+INFO stats
+
+ECHO "=== Memoria ==="
+INFO memory
+
+ECHO "=== Keyspace ==="
+INFO keyspace
+
+ECHO "=== Límite y política ==="
+CONFIG GET maxmemory
+CONFIG GET maxmemory-policy
+
+ECHO "=== TTL de ejemplos ==="
+TTL f2030:sesion:U001
+TTL f2030:cache:partido:P001:resumen
+TTL f2030:ranking:partido:P001:figura
+TTL f2030:contador:partido:P001:visitas
+TTL f2030:contador:partido:P001:meta
+
+ECHO "=== Tipos ==="
+TYPE f2030:sesion:U001
+TYPE f2030:cache:partido:P001:resumen
+TYPE f2030:ranking:partido:P001:figura
+TYPE f2030:contador:partido:P001:visitas
+
+ECHO "=== Inspección segura por cursor ==="
+SCAN 0 MATCH f2030:* COUNT 100

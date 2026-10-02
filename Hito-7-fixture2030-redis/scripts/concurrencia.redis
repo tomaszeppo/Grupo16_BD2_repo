@@ -1,0 +1,21 @@
+DEL f2030:contador:partido:P001:visitas
+SET f2030:contador:partido:P001:visitas 0 EX 3600
+
+ECHO "=== Incrementos atómicos individuales ==="
+INCRBY f2030:contador:partido:P001:visitas 1
+INCRBY f2030:contador:partido:P001:visitas 1
+INCRBY f2030:contador:partido:P001:visitas 5
+GET f2030:contador:partido:P001:visitas
+TTL f2030:contador:partido:P001:visitas
+
+# Secuencia corta que también actualiza metadatos sin intercalación.
+# La clave meta recibe TTL para seguir siendo compatible con volatile-lru.
+MULTI
+INCRBY f2030:contador:partido:P001:visitas 10
+HSET f2030:contador:partido:P001:meta ultima_operacion "incremento-demo"
+EXPIRE f2030:contador:partido:P001:meta 3600
+EXEC
+
+ECHO "=== Resultado de la secuencia ==="
+GET f2030:contador:partido:P001:visitas
+HGETALL f2030:contador:partido:P001:meta

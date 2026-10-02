@@ -1,0 +1,28 @@
+DEL f2030:cache:partido:P001:resumen
+
+ECHO "=== RF6/RF7: cache miss ==="
+GET f2030:cache:partido:P001:resumen
+
+# Simulación del resultado que la aplicación obtuvo de MongoDB.
+# TTL 30 s: límite de permanencia de la copia si no ocurre antes una invalidación de negocio.
+SET f2030:cache:partido:P001:resumen "{\"partido_id\":\"P001\",\"local\":\"Argentina\",\"visitante\":\"Brasil\",\"estado\":\"FINALIZADO\",\"goles_local\":2,\"goles_visitante\":1,\"revision_fuente\":1}" EX 30
+
+ECHO "=== Cache hit ==="
+GET f2030:cache:partido:P001:resumen
+TTL f2030:cache:partido:P001:resumen
+
+# ---------- Cambio en la fuente de verdad ----------
+# En la arquitectura real, la aplicación actualiza MongoDB primero.
+# Después invalida la copia anterior para impedir servir datos obsoletos.
+ECHO "=== RF7: invalidación ante cambio de negocio ==="
+DEL f2030:cache:partido:P001:resumen
+GET f2030:cache:partido:P001:resumen
+
+# ---------- Próximo miss: reconstrucción de la copia ----------
+SET f2030:cache:partido:P001:resumen "{\"partido_id\":\"P001\",\"local\":\"Argentina\",\"visitante\":\"Brasil\",\"estado\":\"FINALIZADO\",\"goles_local\":2,\"goles_visitante\":1,\"revision_fuente\":2}" EX 30
+ECHO "=== Caché reconstruida desde la fuente de verdad ==="
+GET f2030:cache:partido:P001:resumen
+TTL f2030:cache:partido:P001:resumen
+
+ECHO "=== RF7: clave ausente / comportamiento esperado ==="
+ECHO "La aplicación debe consultar MongoDB y volver a poblar Redis; si Redis no está disponible, debe continuar desde la fuente de verdad sin usar Redis como autoridad."

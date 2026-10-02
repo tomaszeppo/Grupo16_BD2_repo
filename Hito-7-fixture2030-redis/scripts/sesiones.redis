@@ -1,0 +1,58 @@
+#RF3/RF4/RF5: crear sesión de U001
+DEL f2030:sesion:U001
+MULTI
+HSET f2030:sesion:U001 session_id "S-DEMO-001" usuario_id "U001" rol "fan" estado_acceso "ACTIVA" creado_en "2030-06-14T10:00:00-03:00" ultimo_acceso "2030-06-14T10:00:00-03:00" acciones 0 token_ref "DEMO-NO-SECRETO-001"
+EXPIRE f2030:sesion:U001 1800
+EXEC
+
+ECHO "=== Sesión creada ==="
+HGETALL f2030:sesion:U001
+TTL f2030:sesion:U001
+
+#RF3: recuperar
+ECHO "=== Recuperación de sesión ==="
+HGET f2030:sesion:U001 usuario_id
+HGET f2030:sesion:U001 estado_acceso
+
+#RF3/RF4: actualizar actividad y renovar TTL
+# HSET por sí solo NO renueva TTL; por eso usamos MULTI/EXEC.
+ECHO "Renovación atómica tras actividad válida"
+MULTI
+HINCRBY f2030:sesion:U001 acciones 1
+HSET f2030:sesion:U001 ultimo_acceso "2030-06-14T10:05:00-03:00" estado_acceso "ACTIVA"
+EXPIRE f2030:sesion:U001 1800
+EXEC
+HGETALL f2030:sesion:U001
+TTL f2030:sesion:U001
+
+#RF3: segunda sesión sintética para demostrar cierre 
+DEL f2030:sesion:U002
+MULTI
+HSET f2030:sesion:U002 session_id "S-DEMO-002" usuario_id "U002" rol "fan" estado_acceso "ACTIVA" creado_en "2030-06-14T10:10:00-03:00" ultimo_acceso "2030-06-14T10:10:00-03:00" acciones 0 token_ref "DEMO-NO-SECRETO-002"
+EXPIRE f2030:sesion:U002 1800
+EXEC
+
+ECHO "Estado previo al cierre"
+HGETALL f2030:sesion:U002
+TTL f2030:sesion:U002
+
+ECHO "Finalización explícita de U002"
+HSET f2030:sesion:U002 estado_acceso "CERRADA"
+HGETALL f2030:sesion:U002
+MULTI
+DEL f2030:sesion:U002
+EXEC
+TTL f2030:sesion:U002
+
+#RF4: demostración de expiración nativa 
+# U003 representa una sesión de demostración con TTL muy corto.
+DEL f2030:sesion:U003
+HSET f2030:sesion:U003 session_id "S-DEMO-003" usuario_id "U003" rol "fan" estado_acceso "ACTIVA" creado_en "2030-06-14T10:20:00-03:00" ultimo_acceso "2030-06-14T10:20:00-03:00"
+EXPIRE f2030:sesion:U003 2
+ECHO "TTL inicial de U003"
+TTL f2030:sesion:U003
+# Forzamos la expiración para que la prueba sea determinística y no dependa de esperar 2 s.
+EXPIREAT f2030:sesion:U003 1
+ECHO "Consecuencia de una sesión expirada"
+TTL f2030:sesion:U003
+HGETALL f2030:sesion:U003

@@ -1,0 +1,14 @@
+ECHO "RF1: disponibilidad de Redis"
+PING
+
+ECHO "Versión observada"
+INFO server
+
+ECHO "Persistencia observada"
+INFO persistence
+
+ECHO "Política de memoria configurada"
+CONFIG GET maxmemory
+CONFIG GET maxmemory-policy
+
+ECHO "Fin inicialización"
