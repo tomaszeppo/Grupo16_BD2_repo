@@ -1,0 +1,20 @@
+# Secretos locales de InfluxDB
+.secrets/
+.influxdb3-token
+*.token
+.env
+
+# Evidencia o resultados generados localmente
+/docs/evidencia/*.txt
+/docs/evidencia/*.csv
+/generated/
+generated/*.lp
+
+# Python
+__pycache__/
+*.py[cod]
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/

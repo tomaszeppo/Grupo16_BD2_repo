@@ -1,0 +1,3 @@
+-- Referencia: las consultas se ejecutan individualmente desde agregaciones.sh.
+-- ag01_equipo.sql
+-- ag02_por_minuto.sql

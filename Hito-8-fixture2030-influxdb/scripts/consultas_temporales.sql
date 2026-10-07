@@ -1,0 +1,5 @@
+-- Referencia: las cuatro consultas se ejecutan individualmente desde consultas_temporales.sh.
+-- q01_ventana.sql
+-- q02_comparacion_equipos.sql
+-- q03_comparacion_fuentes.sql
+-- q04_pico_usuarios.sql
