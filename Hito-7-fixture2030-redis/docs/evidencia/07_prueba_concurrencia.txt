@@ -1,0 +1,12 @@
+# 07 - Prueba de concurrencia real (8 procesos x 5000 repeticiones, mismo usuario y mismo contador)
+# Fecha: 2026-10-09 14:47:51 -0300
+# Docker: CPUs=12 RAM=16644243456 bytes
+
+Redis 8.10.2 | 8 procesos x 5000 repeticiones
+Tiempo: 17.53s (4562 operaciones/seg entre EVALSHA e INCR)
+puntos:     esperado 120000 | obtenido 120000
+antelacion: esperado 400000 | obtenido 400000
+likes:      esperado 40000 | obtenido 40000
+score:      esperado 120000.0400000 | obtenido 120000.0400000
+RESULTADO: OK, no se perdio ninguna actualizacion
+(codigo de salida: 0)

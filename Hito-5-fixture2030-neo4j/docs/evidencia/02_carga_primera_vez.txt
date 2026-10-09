@@ -1,0 +1,9 @@
+# 02 - Primera carga y conteos
+# Fecha: 2026-10-09 14:33:21
+# Motor: Neo4j 5.26.31 | Docker: CPUs=12 RAM=16644243456 bytes
+
+--- conteos
+equipos, jugadores, sedes, partidos, eventos
+64, 1536, 10, 32, 10
+pertenece_a, disputa, se_juega_en, ocurre_en, protagonista_de
+1536, 64, 32, 10, 10

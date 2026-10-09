@@ -1,0 +1,45 @@
+# espectadores.redis
+# Conteo de gente mirando un partido en este momento (RF9 / patron 11 de
+# patrones_de_acceso.md). Es puramente efimero, no tiene sentido como historial.
+# Base de tiempo: 2030-06-08T18:00:00Z = 1907172000 (Unix). Se puede correr
+# varias veces: empieza borrando la clave de la demo.
+
+DEL espectadores:P-01
+
+# --- Latido de usuarios con el partido abierto (sesion_id, timestamp Unix) ---
+# Cada latido renueva tambien el TTL de respaldo de 6 horas de la clave: si el
+# partido se cierra y nadie vuelve a latir, la clave se libera sola y no queda
+# ocupando memoria. Va junto con el ZADD en MULTI/EXEC.
+MULTI
+ZADD espectadores:P-01 1907172000 sess-000001
+EXPIRE espectadores:P-01 21600
+EXEC
+MULTI
+ZADD espectadores:P-01 1907172005 sess-000002
+EXPIRE espectadores:P-01 21600
+EXEC
+MULTI
+ZADD espectadores:P-01 1907172010 sess-000003
+EXPIRE espectadores:P-01 21600
+EXEC
+# Este latido es viejo (mas de 30 segundos antes del "ahora" de los otros
+# tres): simula un usuario que se fue sin avisar.
+MULTI
+ZADD espectadores:P-01 1907171900 sess-000004
+EXPIRE espectadores:P-01 21600
+EXEC
+
+TTL espectadores:P-01
+
+# --- Conteo real: solo los que latieron en los ultimos 30 segundos ---
+# "Ahora" = 1907172010, asi que la ventana va de 1907171980 a 1907172010.
+# (en uso real, "ahora" es el timestamp Unix del momento de la consulta)
+# Esperado: 3
+ZCOUNT espectadores:P-01 1907171980 1907172010
+
+# --- Poda periodica: sacar del set a quien ya no cuenta (se puede correr
+#     con un cron corto, no bloquea nada porque ZREMRANGEBYSCORE es O(log N)) ---
+ZREMRANGEBYSCORE espectadores:P-01 -inf 1907171979
+
+# --- Verificar lo que quedo (sess-000004 ya no esta) ---
+ZRANGE espectadores:P-01 0 -1 WITHSCORES

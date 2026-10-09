@@ -1,0 +1,28 @@
+# 04 - CRUD con verificacion antes y despues
+# Fecha: 2026-10-09 14:35:08
+# Motor: Neo4j 5.26.31 | Docker: CPUs=12 RAM=16644243456 bytes
+
+evento_ev3_antes
+0
+jugador, evento, tipo, minuto, partido
+"ARG-09", "P-01-EV3", "Cambio", 65, "P-01"
+j.codigo, j.posicion, equipo
+"ARG-20", "Delantero", "ARG"
+ev.codigo, ev.tipo, ev.minuto
+"P-01-EV1", "Gol", 23
+"P-01-EV2", "TarjetaAmarilla", 41
+"P-01-EV3", "Cambio", 65
+evento, minuto_antes
+"P-01-EV1", 23
+evento, minuto_despues
+"P-01-EV1", 25
+partido, fase_antes
+"P-01", "Fase de grupos"
+partido, fase_despues
+"P-01", "Octavos de final"
+relaciones_antes
+1
+relaciones_despues
+0
+evento_ev3_despues
+0

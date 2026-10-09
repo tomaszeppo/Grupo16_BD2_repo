@@ -1,0 +1,14 @@
+# 06 - Generacion de la carga masiva (semilla fija)
+# Fecha: 2026-10-09 14:40:12 -0300
+
+Filas generadas: 1199770
+Tiempo de generacion: 134.3s (8931 filas/seg)
+Maximo de filas en un mismo bucket (una sola particion): 12923
+Particiones esperadas: 416 (partido, bucket) y 50000 usuarios
+Semilla: 2030
+Archivos en: ..\data
+
+Para cargar con cqlsh (COPY no valida el esquema, correr esquema.cql antes).
+Se puede ejecutar mas de una vez: los ids son estables, la segunda carga sobrescribe.
+Despues, validar con validar_carga_masiva.py (conteo por particion contra el esperado).
+Las rutas /data/... son las de adentro del contenedor:

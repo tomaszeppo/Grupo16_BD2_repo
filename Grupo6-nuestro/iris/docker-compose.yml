@@ -1,0 +1,19 @@
+version: "3.8"
+
+# Ambiente local de InterSystems IRIS para el modulo de entidades complejas
+# del Fixture 2030 (Hito 9). Imagen community, con Durable %SYS montada en
+# la convencion de la materia (~/docker/data/iris).
+
+services:
+  iris:
+    image: intersystems/iris-community:latest-cd
+    container_name: fixture2030-iris
+    restart: unless-stopped
+    ports:
+      - "1972:1972"    # SuperServer: terminal, ObjectScript, drivers nativos
+      - "52773:52773"  # Management Portal, REST, SQL via web
+    volumes:
+      - ~/docker/data/iris:/durable
+      - ./src:/opt/src:ro
+    environment:
+      - ISC_DATA_DIRECTORY=/durable/irissys

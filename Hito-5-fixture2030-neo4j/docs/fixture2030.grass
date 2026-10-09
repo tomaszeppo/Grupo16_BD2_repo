@@ -1,50 +1,32 @@
-// Estilo de Neo4j Browser para el flujo visual de Fixture 2030.
+// Estilo de Neo4j Browser para el modelo de grafo del Fixture 2030.
 // Importar desde :style > Upload en Neo4j Browser.
-
-node.Usuario {
-  color: #F59E0B;
-  size: 70px;
-  caption: "{nombre}";
-}
-
-node.Grupo {
-  color: #8B5CF6;
-  size: 72px;
-  caption: "{nombreGrupo}";
-}
-
-node.Prediccion {
-  color: #EC4899;
-  size: 86px;
-  caption: "#{idPrediccion}: {paisGanador} {golesPG}-{golesPP} {paisPerdedor}";
-}
-
-node.Partido {
-  color: #0EA5E9;
-  size: 120px;
-  caption: "{id} · {equipoGanador} {golesGanador}-{golesPerdedor} {equipoPerdedor}";
-}
 
 node.Equipo {
   color: #A78BFA;
   size: 78px;
-  caption: "{codigo} · {nombre}";
+  caption: "{codigo}";
 }
 
 node.Jugador {
-  color: #10B981;
-  size: 62px;
-  caption: "{nombre} {apellido}";
+  color: #34D399;
+  size: 50px;
+  caption: "{codigo}";
 }
 
-node.Estadio {
+node.Partido {
+  color: #0EA5E9;
+  size: 100px;
+  caption: "{codigo}";
+}
+
+node.Sede {
   color: #F97316;
-  size: 74px;
+  size: 80px;
   caption: "{nombre}";
 }
 
 node.Evento {
   color: #EF4444;
-  size: 60px;
-  caption: "{tipo} · min {minuto}";
+  size: 55px;
+  caption: "{tipo} {minuto}'";
 }

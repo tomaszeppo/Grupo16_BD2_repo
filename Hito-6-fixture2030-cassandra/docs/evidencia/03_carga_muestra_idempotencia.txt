@@ -1,0 +1,89 @@
+# 03 - Carga de muestra dos veces
+# Fecha: 2026-10-09 14:42:19 -0300
+
+## Corrida 1
+$ docker exec fixture2030-cassandra cqlsh -f /scripts/carga_muestra.cql
+(codigo de salida: 0)
+
+$ docker exec fixture2030-cassandra cqlsh -e SELECT COUNT(*) FROM fixture2030.comentarios_por_partido;
+
+ count
+-------
+    40
+
+(1 rows)
+
+Warnings :
+Aggregation query used without partition key
+
+(codigo de salida: 0)
+
+$ docker exec fixture2030-cassandra cqlsh -e SELECT COUNT(*) FROM fixture2030.comentarios_por_usuario;
+
+ count
+-------
+    40
+
+(1 rows)
+
+Warnings :
+Aggregation query used without partition key
+
+(codigo de salida: 0)
+
+$ docker exec fixture2030-cassandra cqlsh -e SELECT COUNT(*) FROM fixture2030.partidos_referencia;
+
+ count
+-------
+     5
+
+(1 rows)
+
+Warnings :
+Aggregation query used without partition key
+
+(codigo de salida: 0)
+
+## Corrida 2
+$ docker exec fixture2030-cassandra cqlsh -f /scripts/carga_muestra.cql
+(codigo de salida: 0)
+
+$ docker exec fixture2030-cassandra cqlsh -e SELECT COUNT(*) FROM fixture2030.comentarios_por_partido;
+
+ count
+-------
+    40
+
+(1 rows)
+
+Warnings :
+Aggregation query used without partition key
+
+(codigo de salida: 0)
+
+$ docker exec fixture2030-cassandra cqlsh -e SELECT COUNT(*) FROM fixture2030.comentarios_por_usuario;
+
+ count
+-------
+    40
+
+(1 rows)
+
+Warnings :
+Aggregation query used without partition key
+
+(codigo de salida: 0)
+
+$ docker exec fixture2030-cassandra cqlsh -e SELECT COUNT(*) FROM fixture2030.partidos_referencia;
+
+ count
+-------
+     5
+
+(1 rows)
+
+Warnings :
+Aggregation query used without partition key
+
+(codigo de salida: 0)
+

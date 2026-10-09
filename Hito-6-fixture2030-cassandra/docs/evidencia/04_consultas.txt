@@ -1,0 +1,47 @@
+# 04 - Consultas (consultas.cql)
+# Fecha: 2026-10-09 14:43:18 -0300
+
+$ docker exec fixture2030-cassandra cqlsh -f /scripts/consultas.cql
+
+ comentario_id                        | usuario_id | contenido                         | creado_en                       | likes
+--------------------------------------+------------+-----------------------------------+---------------------------------+-------
+ 81c3ff32-b90f-11f1-ac43-d79b7e526781 | user-00008 |                   Arbitro vendido | 2030-06-08 18:16:21.000000+0000 |     6
+ 81c3ff0f-b90f-11f1-9281-d79b7e526781 | user-00007 | Merecido el gol, se lo veia venir | 2030-06-08 18:14:14.000000+0000 |     3
+ 81c3fee7-b90f-11f1-b6d0-d79b7e526781 | user-00006 |          Hay que cerrar mas atras | 2030-06-08 18:12:07.000000+0000 |     0
+ 81c3feb4-b90f-11f1-9a08-d79b7e526781 | user-00005 | Increible la jugada por izquierda | 2030-06-08 18:10:00.000000+0000 |    12
+
+(4 rows)
+
+ comentario_id                        | usuario_id | contenido                         | creado_en                       | estado_moderacion
+--------------------------------------+------------+-----------------------------------+---------------------------------+-------------------
+ 81c3fe7c-b90f-11f1-b420-d79b7e526781 | user-00004 |             El arquero salvo todo | 2030-06-08 18:06:21.000000+0000 |           visible
+ 81c3fe34-b90f-11f1-b4d2-d79b7e526781 | user-00003 |          Necesitamos un cambio ya | 2030-06-08 18:04:14.000000+0000 |           visible
+ 81c3fdbb-b90f-11f1-a455-d79b7e526781 | user-00002 |      Ese offside estuvo re dudoso | 2030-06-08 18:02:07.000000+0000 |           visible
+ 81c1d6ab-b90f-11f1-a3a2-d79b7e526781 | user-00001 | Que partidazo, vamos que se puede | 2030-06-08 18:00:00.000000+0000 |         reportado
+ 81c3ff32-b90f-11f1-ac43-d79b7e526781 | user-00008 |                   Arbitro vendido | 2030-06-08 18:16:21.000000+0000 |           visible
+ 81c3ff0f-b90f-11f1-9281-d79b7e526781 | user-00007 | Merecido el gol, se lo veia venir | 2030-06-08 18:14:14.000000+0000 |           visible
+ 81c3fee7-b90f-11f1-b6d0-d79b7e526781 | user-00006 |          Hay que cerrar mas atras | 2030-06-08 18:12:07.000000+0000 |           visible
+ 81c3feb4-b90f-11f1-9a08-d79b7e526781 | user-00005 | Increible la jugada por izquierda | 2030-06-08 18:10:00.000000+0000 |           visible
+
+(8 rows)
+
+ comentario_id                        | partido_codigo | contenido                         | creado_en                       | estado_moderacion
+--------------------------------------+----------------+-----------------------------------+---------------------------------+-------------------
+ 81c40357-b90f-11f1-a64f-d79b7e526781 |           P-05 |          Necesitamos un cambio ya | 2030-06-12 18:00:00.000000+0000 |           visible
+ 81c4022e-b90f-11f1-aa8a-d79b7e526781 |           P-04 | Increible la jugada por izquierda | 2030-06-11 18:00:00.000000+0000 |           visible
+ 81c400f3-b90f-11f1-9bf1-d79b7e526781 |           P-03 | Merecido el gol, se lo veia venir | 2030-06-10 18:00:00.000000+0000 |           visible
+ 81c3ff81-b90f-11f1-a44d-d79b7e526781 |           P-02 |       Que nivel el mediocampo hoy | 2030-06-09 18:00:00.000000+0000 |           visible
+ 81c1d6ab-b90f-11f1-a3a2-d79b7e526781 |           P-01 | Que partidazo, vamos que se puede | 2030-06-08 18:00:00.000000+0000 |         reportado
+
+(5 rows)
+
+ comentario_id                        | usuario_id | contenido                         | creado_en                       | likes
+--------------------------------------+------------+-----------------------------------+---------------------------------+-------
+ 81c3fe7c-b90f-11f1-b420-d79b7e526781 | user-00004 |             El arquero salvo todo | 2030-06-08 18:06:21.000000+0000 |     9
+ 81c3fe34-b90f-11f1-b4d2-d79b7e526781 | user-00003 |          Necesitamos un cambio ya | 2030-06-08 18:04:14.000000+0000 |     6
+ 81c3fdbb-b90f-11f1-a455-d79b7e526781 | user-00002 |      Ese offside estuvo re dudoso | 2030-06-08 18:02:07.000000+0000 |     3
+ 81c1d6ab-b90f-11f1-a3a2-d79b7e526781 | user-00001 | Que partidazo, vamos que se puede | 2030-06-08 18:00:00.000000+0000 |     0
+
+(4 rows)
+(codigo de salida: 0)
+

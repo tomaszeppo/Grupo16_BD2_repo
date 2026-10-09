@@ -1,172 +1,137 @@
-# Hito 7 — Redis: Caché de usuarios y sesiones — Fixture 2030
+# Fixture 2030 — Caché de Usuarios y Sesiones (Hito 7)
 
-**Asignatura:** Ingeniería de Datos II  
-**Grupo:** 16  
-**Tecnología:** Redis  
-**Entorno:** Docker Compose + `redis:latest`  
-**Alcance:** sesiones, caché de consultas frecuentes, ranking temporal, concurrencia y métricas.
+Módulo de sesiones, caché e información temporal del Fixture 2030, sobre Redis. Diseñado por patrones de acceso — el detalle está en `docs/patrones_de_acceso.md`, `docs/modelo_clave_valor.md` y `docs/ciclo_de_vida_e_invalidacion.md`.
 
-## 1. Qué resuelve este módulo
+Resuelve en particular el problema del cierre del ranking público: cuando termina el último partido y muchos usuarios quedan empatados en puntos, la tabla tiene que mostrar el orden correcto (con el desempate por antelación ya resuelto) sin ningún paso extra de recálculo. Ver `docs/ciclo_de_vida_e_invalidacion.md`, sección "El ranking público", para el detalle completo con un caso probado.
 
-Este módulo implementa el hito 7 sin reemplazar los módulos de persistencia anteriores. Redis se usa para estado temporal y copias de acceso rápido que pueden reconstruirse. En la arquitectura anterior, MongoDB conserva los datos estáticos/finalizados y Neo4j mantiene las relaciones de usuarios, grupos y predicciones; este módulo agrega la capa de sesión/caché pedida para el hito.
+## Qué incluye
 
-La caché de ejemplo es `f2030:cache:partido:P001:resumen`. Se considera una **copia derivada** de una respuesta obtenida desde la fuente de verdad externa (MongoDB en el diseño del Fixture). No se usa esa clave como fuente autoritativa del partido.
-
-## 2. Requisitos principales cubiertos
-
-- **RF1:** Compose, `redis:latest`, healthcheck, `redis-cli`, persistencia local.
-- **RF2:** patrones de acceso documentados antes del modelo de claves.
-- **RF3:** crear, recuperar, actualizar y finalizar sesiones.
-- **RF4:** TTL de inactividad de 30 minutos con renovación explícita.
-- **RF5:** sesión como Hash con `session_id`, `usuario_id`, estado, fechas, rol y contadores.
-- **RF6:** caché Cache-Aside de un dato frecuente del Fixture.
-- **RF7:** cache hit, cache miss, carga desde fuente de verdad y `DEL` por invalidación.
-- **RF8:** contador concurrente con `INCRBY`, que es atómico dentro de Redis.
-- **RF9:** ranking temporal con Sorted Set.
-- **RF10:** `maxmemory 128mb` + `volatile-lru` y explicación de TTL vs. evicción.
-- **RF11:** carga reproducible e idempotente sobre el namespace `f2030:*`.
-- **RF12:** scripts de medición con método, entorno y resultados generados localmente.
-- **RF13:** captura de `PING`, versión, TTL, `INFO`, memoria, hits/misses y resultados de concurrencia.
-
-## 3. Estructura
-
-```text
-fixture2030-redis/
-├── docker-compose.yml
-├── README.md
-├── .gitignore
-├── datos/
-│   └── demo_mongo_response_P001.json
+```
+redis/
+├── docker-compose.yml           Ambiente Redis (redis:latest)
 ├── scripts/
-│   ├── inicializacion.redis
-│   ├── carga_muestra.redis
-│   ├── sesiones.redis
-│   ├── cache.redis
-│   ├── concurrencia.redis
-│   ├── metricas.redis
-│   ├── limpieza.redis
-│   ├── limpieza.sh
-│   ├── run_all.sh
-│   ├── prueba_concurrencia.sh
-│   ├── medir.sh
-│   └── capturar_evidencia.sh
-└── docs/
-    ├── patrones_de_acceso.md
-    ├── modelo_clave_valor.md
-    ├── ciclo_de_vida_e_invalidacion.md
-    ├── memoria_y_escalabilidad.md
-    ├── pruebas_y_evidencia.md
-    ├── matriz_cumplimiento.md
-    ├── coherencia_con_tpo.md
-    └── evidencia/
-        └── README.md
+│   ├── inicializacion.redis       Verificaciones de arranque y configuración
+│   ├── carga_muestra.redis        Sesiones, caché, ranking, likes y espectadores de ejemplo (se puede repetir)
+│   ├── sesiones.redis             Ciclo de vida de una sesión (renovación en MULTI/EXEC)
+│   ├── cache.redis                Patrón cache-aside: miss, hit, invalidación
+│   ├── concurrencia.redis         Likes, límite de comentarios y actualización atómica del ranking
+│   ├── actualizar_ranking.lua     El script de concurrencia.redis, legible, comentado
+│   ├── espectadores.redis         Latidos y conteo de gente en vivo, con TTL de respaldo de 6 horas
+│   ├── metricas.redis             Memoria, SCAN (no KEYS), ranking, TTL
+│   ├── prueba_concurrencia.py     Varios procesos en paralelo sobre el mismo usuario y el mismo contador
+│   ├── hit_rate.py                Hit rate con INFO stats antes y después de una microprueba
+│   └── prueba_rendimiento.py      Mide EVALSHA (ranking) y GET (caché) reales
+├── docs/
+│   ├── patrones_de_acceso.md      Qué operaciones motivan el diseño
+│   ├── modelo_clave_valor.md      Claves, estructuras, convención de nombres
+│   ├── ciclo_de_vida_e_invalidacion.md   Sesiones, caché, ranking y consistencia por tipo de dato
+│   ├── memoria_y_escalabilidad.md Política de memoria y qué claves tienen TTL
+│   ├── rendimiento.md             Mediciones reales con ambiente y limitaciones
+│   └── evidencia/                 Salidas de consola con fecha y versión
+└── README.md
 ```
 
-## 4. Inicio del ambiente
+## Cómo levantarlo
 
-Desde esta carpeta:
+Necesitás Docker Desktop corriendo.
 
-```bash
-mkdir -p ~/docker/data/redis
-docker compose up -d
-docker compose ps
+1. Crear la carpeta de persistencia en el host (la misma convención que el
+   Hito 6 con Cassandra):
+
+   ```
+   mkdir -p ~/docker/data/redis
+   ```
+
+   En Windows, Docker Desktop resuelve `~` contra la carpeta del usuario. Si da
+   error, crear la carpeta a mano y reemplazar `~/docker/data/redis` en
+   `docker-compose.yml` por una ruta absoluta (por ejemplo `C:/docker/data/redis`).
+
+2. Levantar el contenedor:
+
+   ```
+   docker compose up -d
+   docker compose ps
+   ```
+
+3. Verificar que levantó bien y registrar la versión real (se usa la etiqueta
+   `latest`):
+
+   ```
+   docker exec fixture2030-redis redis-cli ping
+   docker exec fixture2030-redis redis-cli info server
+   ```
+
+## Cómo correr los scripts
+
+La carpeta `scripts/` está montada en `/scripts` dentro del contenedor. Cada
+archivo `.redis` se corre entero así (funciona igual en PowerShell, `cmd` y bash,
+sin usar el operador `<` del lado del anfitrión). Se filtran las líneas de
+comentario porque `redis-cli` las toma como comandos desconocidos:
+
+```
+docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/inicializacion.redis | redis-cli"
+docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/carga_muestra.redis | redis-cli"
+docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/sesiones.redis | redis-cli"
+docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/cache.redis | redis-cli"
+docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/concurrencia.redis | redis-cli"
+docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/espectadores.redis | redis-cli"
+docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/metricas.redis | redis-cli"
 ```
 
-Verificación del servidor:
+Para confirmar la carga de muestra:
 
-```bash
-docker compose exec -T redis redis-cli PING
-docker compose exec -T redis redis-cli INFO server | grep -E 'redis_version|process_id|uptime_in_seconds'
+```
+docker exec fixture2030-redis redis-cli zrevrange ranking:publico 0 -1 withscores
 ```
 
-El resultado de `PING` debe ser `PONG`.
+Tiene que mostrar 15 usuarios, con los tres primeros empatados en 300 puntos pero
+en el orden correcto por antelación (ver `docs/ciclo_de_vida_e_invalidacion.md`).
 
-Abrir una consola interactiva:
+## Reiniciar o recargar
 
-```bash
-docker compose exec redis redis-cli
+- **Reiniciar sin perder datos:** `docker compose restart`. Con `appendonly yes`,
+  un reinicio pierde como mucho el último segundo de escrituras; los datos sin
+  TTL sobreviven. Las sesiones y la caché, si ya vencieron, no vuelven.
+- **Recargar la muestra:** `carga_muestra.redis` empieza borrando sus propias
+  claves (una lista finita, nunca `KEYS`), así que se puede correr todas las
+  veces que haga falta y da el mismo resultado: los puntos y la antelación del
+  ranking no se suman de nuevo.
+- **Empezar de cero:** `docker exec fixture2030-redis redis-cli FLUSHALL`.
+
+## Pruebas con Python
+
+Necesitan el driver (`pip install redis`) o un contenedor de Python en la red del
+compose. Sin instalar nada en el anfitrión:
+
+```
+docker run --rm --network <proyecto>_default -v "${PWD}/scripts:/scripts:ro" python:3.11-slim sh -c "pip install -q redis && python /scripts/prueba_concurrencia.py --host redis --procesos 8 --repeticiones 5000"
 ```
 
-La persistencia queda montada en `~/docker/data/redis`. `docker compose stop`, `docker compose restart` y `docker compose down` no borran ese directorio.
+- `prueba_concurrencia.py`: varios procesos ejecutan `EVALSHA` del script de
+  ranking sobre el mismo usuario y `INCR` sobre el mismo contador de likes. Al
+  final el total tiene que ser exactamente procesos × repeticiones × delta; si no,
+  sale con error.
+- `hit_rate.py`: toma `keyspace_hits` y `keyspace_misses` de `INFO stats` antes y
+  después de una microprueba de lecturas de caché. Correrlo justo después de
+  `carga_muestra.redis` (la caché de equipo vence a los 5 minutos).
+- `prueba_rendimiento.py`: mide `EVALSHA` y `GET` por separado (RF12). El
+  resultado y el ambiente están en `docs/rendimiento.md`.
 
-## 5. Ejecución reproducible
+(`<proyecto>` es el nombre de la carpeta del módulo en minúsculas; se ve con
+`docker network ls`.)
 
-Los scripts `.redis` se pueden ejecutar con `redis-cli` desde el contenedor:
+## Nodo único vs. despliegue real
 
-```bash
-docker compose exec -T redis redis-cli < scripts/inicializacion.redis
-docker compose exec -T redis redis-cli < scripts/carga_muestra.redis
-docker compose exec -T redis redis-cli < scripts/sesiones.redis
-docker compose exec -T redis redis-cli < scripts/cache.redis
-docker compose exec -T redis redis-cli < scripts/concurrencia.redis
-docker compose exec -T redis redis-cli < scripts/metricas.redis
-```
+Este ambiente es un único nodo Redis, para desarrollo y aprendizaje. No hay
+réplicas, no hay Sentinel para failover automático, y no hay Redis Cluster
+para particionar los datos entre varios nodos — todo lo cual haría falta en
+producción para sostener los 2-3 millones de usuarios simultáneos del
+escenario del Fixture 2030 (ver `docs/memoria_y_escalabilidad.md`). Este
+laboratorio no se presenta en ningún momento como una topología de alta
+disponibilidad.
 
-O todo junto:
+## Variables de entorno
 
-```bash
-bash scripts/run_all.sh
-```
-
-La carga es deliberadamente reproducible: las claves de demostración se eliminan/recrean o se sobrescriben, y los Sorted Sets/contadores se reinician con valores conocidos.
-
-## 6. Prueba de concurrencia real
-
-```bash
-bash scripts/prueba_concurrencia.sh
-```
-
-La prueba crea un contador en cero y ejecuta 10 workers en paralelo; cada worker envía 100 `INCRBY 1`. Al finalizar compara el valor observado con el esperado de 1000.
-
-## 7. Medición
-
-```bash
-bash scripts/medir.sh
-```
-
-El script registra el entorno, versión, un benchmark acotado, una microprueba de hit/miss, memoria usada y política de evicción. Sus números solo describen el nodo local de esa ejecución.
-
-## 8. Evidencia verificable
-
-```bash
-bash scripts/capturar_evidencia.sh
-```
-
-Se genera un archivo con marca temporal dentro de `docs/evidencia/` y se registran los comandos y salidas relevantes. Las evidencias reales deben capturarse ejecutando los scripts en el entorno local del grupo.
-
-## 9. Reinicio y borrado total
-
-Reinicio conservando datos:
-
-```bash
-docker compose restart
-```
-
-Detener y volver a iniciar:
-
-```bash
-docker compose down
-docker compose up -d
-```
-
-Para una práctica completamente limpia, y **solo** con esa intención:
-
-```bash
-docker compose down
-rm -rf ~/docker/data/redis/*
-docker compose up -d
-```
-
-## 10. Nodo único vs. despliegue distribuido
-
-Este repositorio usa un único nodo Redis porque así lo exige el laboratorio. No es una topología de alta disponibilidad.
-
-- **Primary + replicas:** agrega copias para lectura/recuperación; puede existir atraso entre réplicas.
-- **Sentinel:** agrega monitorización y failover de una topología primary/replica.
-- **Redis Cluster:** distribuye claves entre slots y permite escalar capacidad horizontalmente; operaciones multi-clave deben diseñarse teniendo en cuenta el slot.
-
-El módulo local no prueba failover, replicación real, distribución geográfica ni consistencia entre réplicas.
-
-## 11. Seguridad local
-
-No se usan credenciales reales, tokens reales ni secretos en los scripts. Los identificadores de usuario y valores de sesión son datos sintéticos de demostración.
+Este módulo no define credenciales propias: el ambiente de laboratorio usa
+Redis sin autenticación (`requirepass` sin configurar), documentado como
+configuración de desarrollo (RNF7), no apta para un ambiente real.

@@ -1,85 +1,92 @@
-# Ciclo de vida e invalidación
+# Ciclo de vida e invalidación — Caché de usuarios y sesiones (Hito 7)
 
-## 1. Ciclo de vida de una sesión
+## Sesiones
 
-### Crear
+**Cuándo es válida:** mientras exista la clave `sesion:{id}` en Redis. No hay un campo "válida: true/false" que consultar — la propia existencia de la clave es la validez. Si `EXISTS sesion:{id}` da 0, la sesión no es válida, haya vencido por tiempo o haya sido cerrada explícitamente.
 
-1. El usuario completa un login.
-2. Se crea `f2030:sesion:{usuario_id}` como Hash.
-3. Se asigna `EXPIRE 1800`.
-4. La aplicación considera válida la sesión mientras la clave exista, el estado sea `ACTIVA` y el contexto de autenticación corresponda.
+**Qué renueva la actividad:** cualquier acción del usuario ya logueado dispara un `EXPIRE sesion:{id} 1800` (y el mismo `EXPIRE` sobre el puntero `usuario:{id}:sesion_activa`), reiniciando la cuenta de 30 minutos desde cero. Es una ventana deslizante: mientras el usuario esté activo, nunca vence; si se queda quieto 30 minutos, se la lleva el TTL nativo de Redis.
 
-### Consultar
+**Por qué 30 minutos:** es un balance entre no obligar a un usuario activo a reloguearse en medio de un partido largo (con entretiempo incluido) y no mantener memoria reservada por usuarios que ya se fueron. Durante un partido, las acciones son frecuentes (ver eventos, comentar, consultar el marcador), así que la renovación constante mantiene viva la sesión de cualquiera que esté realmente mirando el partido.
 
-La petición usa el `usuario_id` para derivar la clave. Si `HGETALL` encuentra datos, la sesión existe. Si la clave no existe (`TTL = -2`), la aplicación debe tratar la sesión como inexistente y volver al flujo de autenticación.
+**Por qué el TTL nativo y no un barrido manual:** la consigna lo pide explícitamente, y además tiene sentido para el volumen del Fixture 2030 — recorrer periódicamente millones de claves de sesión para buscar cuáles vencieron sería mucho más caro que dejar que Redis las expire solo, de forma perezosa y en segundo plano.
 
-### Renovar por actividad
+**Sesión inexistente:** la aplicación la trata como un usuario anónimo — no es un error, es el comportamiento esperado de una sesión vencida o nunca creada.
 
-Una actividad válida actualiza `ultimo_acceso`, puede incrementar `acciones` y vuelve a aplicar `EXPIRE 1800`. Se agrupan esas acciones con `MULTI/EXEC` para que no exista una ventana en la que se cambie el estado pero no se renueve la vida.
+## Caché de catálogo (`cache:equipo:{codigo}`)
 
-Importante: modificar un campo con `HSET` no renueva por sí mismo el TTL. La renovación es explícita.
+- **Fuente de verdad:** la colección `equipos` de MongoDB (Hito 4).
+- **Cache hit:** `GET cache:equipo:{codigo}` devuelve algo distinto de `nil`. Se usa directo, sin tocar Mongo.
+- **Cache miss:** `GET` devuelve `nil`. La aplicación busca en Mongo, arma el JSON, lo guarda con `SETEX cache:equipo:{codigo} 300 <json>` y recién ahí responde. El usuario nunca ve un error por un miss — como mucho, una respuesta un poco más lenta esa vez.
+- **TTL:** 5 minutos. El catálogo de equipos cambia poco (según el Hito 1, prácticamente nada durante el torneo salvo alguna corrección puntual de ranking), así que 5 minutos es tiempo de sobra para absorber picos de lectura sin arriesgar mostrar un dato desactualizado por mucho tiempo.
+- **Invalidación explícita:** si alguien corrige un equipo en Mongo (por ejemplo, un cambio de ranking), la aplicación hace `DEL cache:equipo:{codigo}` en el mismo momento del `UPDATE` en Mongo. No se espera a que venza el TTL — la consigna es clara en que un TTL solo no alcanza como estrategia de coherencia.
+- **Si Redis no está disponible:** la aplicación cae directo a Mongo. Es más lento, pero sigue siendo correcto — Redis es una aceleración, nunca una dependencia obligatoria para que el dato exista.
 
-### Finalizar
+## El ranking público: el problema que motivó este módulo
 
-En logout o invalidación de seguridad, se marca brevemente `estado_acceso=CERRADA` para la evidencia y luego se ejecuta `DEL`. La clave deja de estar disponible inmediatamente.
+Ya lo habíamos visto venir desde el Hito 2: "demoras en la consolidación de la información impactan directamente en la confianza del usuario" — un usuario que ve un primer puesto que después cambia es exactamente ese problema.
 
-### Expirar
+**El escenario concreto:** apenas termina el último partido del torneo, se recalculan muchas predicciones casi en simultáneo. Es común que varios usuarios terminen con el mismo puntaje. Sin una regla de desempate resuelta de antemano, hay que decidir el orden en el momento — recorriendo y comparando usuarios empatados — y eso es lento justo cuando más gente está mirando la tabla.
 
-El vencimiento por inactividad lo realiza Redis mediante TTL nativo. No existe un proceso que recorra todas las sesiones periódicamente para detectar las vencidas.
+**La regla de desempate** (ya la teníamos anotada de una conversación anterior sobre el módulo de predicciones): en caso de empate en puntos, gana quien cargó o actualizó sus pronósticos con más antelación respecto de cada partido, sumando la antelación de todas sus predicciones — no solo la última.
 
-## 2. Política de inactividad
+**Cómo se resuelve sin recalcular nada al leer:** el score del Sorted Set combina los dos criterios en un solo número:
 
-**Duración elegida:** 30 minutos.  
-**Renovación:** ante cada actividad autenticada que demuestre que la sesión sigue siendo utilizada.  
-**Consecuencia:** si no existe la clave, el usuario debe autenticarse nuevamente.
-
-La elección busca equilibrar una ventana razonable de inactividad para una plataforma de navegación con el crecimiento potencial de 2–3 millones de sesiones simultáneas. En el laboratorio, el TTL de 30 minutos es una regla verificable; no implica que una sesión real siempre sobreviva hasta ese instante porque la presión de memoria puede evictarla antes.
-
-## 3. Caché Cache-Aside
-
-La lectura sigue este flujo:
-
-```text
-Aplicación
-   │
-   ├─ GET f2030:cache:partido:P001:resumen
-   │
-   ├─ HIT → responde desde Redis
-   │
-   └─ MISS → consulta fuente de verdad (MongoDB)
-                   │
-                   └─ SET + EX 30 → responde al usuario
+```
+score = puntos + (antelacion_total / 10_000_000)
 ```
 
-### Cache hit
+La parte entera ordena por puntos (lo que realmente define quién ganó). La parte decimal, siempre menor a 1, ordena el desempate dentro del mismo puntaje — sin que la antelación de un usuario alcance jamás a mover el puntaje de otro a otro nivel. El divisor (10 millones) es una cota bien por encima de cualquier antelación acumulada real (en minutos, ni sumando todos los partidos del torneo varias veces se acerca a ese número), así que la parte decimal nunca se sale del rango (0, 1).
 
-La clave existe: la copia puede devolverse directamente.
+Esto se probó antes de escribir el script final, simulando exactamente el caso que describiste: tres usuarios con 300 puntos cada uno y distinta antelación acumulada (5000, 1200 y 8800 minutos), más un cuarto con 250 puntos y la mayor antelación de todos. El resultado de `ZREVRANGE`:
 
-### Cache miss
+1. `user-00003` (300 puntos, 8800 de antelación) — el que más temprano cargó, con el mismo puntaje que los demás
+2. `user-00001` (300 puntos, 5000 de antelación)
+3. `user-00002` (300 puntos, 1200 de antelación)
+4. `user-00004` (250 puntos, 9000 de antelación) — pese a tener la mayor antelación de todos, no le gana a nadie con más puntos
 
-La clave no existe porque nunca se cargó, porque venció por TTL o porque fue eliminada por una invalidación. El consumidor debe consultar la fuente de verdad y luego poblar Redis.
+Exactamente el comportamiento buscado, y sin ningún paso de "reordenar" aparte: `ZREVRANGE` ya devuelve esto directo, en O(log N + M).
 
-### Invalidación
+**Por qué hace falta un script atómico y no dos comandos separados:** actualizar el ranking implica leer el puntaje actual, sumarle el delta, y recalcular el score combinado para el ZSET — un patrón de lectura-modificación-escritura. Si dos actualizaciones del mismo usuario llegaran en paralelo como comandos sueltos, una podría pisar a la otra. El script en `concurrencia.redis` hace las tres cosas (`HINCRBY`, `HINCRBYFLOAT`, `ZADD`) dentro de un único `EVAL`, que Redis ejecuta como una unidad indivisible — ninguna otra operación se intercala en el medio, sin importar cuántas actualizaciones lleguen al mismo tiempo desde la aplicación.
 
-Cuando cambia el dato de negocio en la fuente de verdad y ese cambio debe verse de inmediato, primero se considera actualizado el dato autoritativo y después se ejecuta `DEL` sobre la copia. Así el siguiente lector no recibe la versión anterior.
+## Qué no llegamos a resolver
 
-### TTL de la caché
+- El ranking privado (por grupos de amigos) usa el mismo patrón que el público, pero no se cargaron datos de ejemplo para esa variante en este hito.
+- No se modeló qué pasa si la fuente de verdad de las predicciones (que todavía no existe como módulo propio — quedó pendiente desde el Hito 2) calcula un puntaje distinto al que tiene acumulado el hash de Redis por una falla previa. Habría que definir un proceso de reconciliación periódica, no solo el camino feliz de actualización incremental.
 
-Se usa **30 segundos** como límite de permanencia de una copia que no debería vivir indefinidamente. El TTL no reemplaza la invalidación: si un cambio requiere coherencia inmediata, se hace `DEL` antes de que transcurra el TTL.
+---
 
-## 4. Si Redis no está disponible
+## Marcador en vivo: por qué es "write-through" y no cache-aside
 
-Redis es una capa de aceleración y estado temporal, no la fuente de verdad del módulo. Si el servidor no responde:
+A diferencia de la caché de equipo (lazy: se llena recién cuando alguien la pide y falla), el marcador se actualiza en el mismo momento en que Neo4j confirma un gol — la aplicación escribe en Redis como parte del mismo flujo que registra el evento, no espera a que alguien lo pida y falle. Es la diferencia correcta para este caso: un gol tiene que verse al instante para todo el que esté mirando, no en la próxima lectura que dispare un miss. Si Redis no tiene la clave (por ejemplo, recién arrancó el servidor), la aplicación cae a reconstruirla consultando Neo4j una vez — eso sí es cache-aside, como respaldo.
 
-- para una consulta cacheada, la aplicación consulta la fuente de verdad y responde desde allí;
-- para una sesión, la plataforma debe aplicar la estrategia de contingencia definida por el sistema de autenticación; este laboratorio no implementa un segundo almacén de sesiones;
-- la caída de Redis no convierte una copia caché en autoridad de negocio.
+## Likes: contador en caliente con sincronización diferida
 
-## 5. Diferencia entre expiración e invalidación
+Redis nunca es la fuente de verdad acá: Cassandra sigue siendo donde el like final queda guardado. El flujo:
 
-- **Expiración:** el producto decidió que la copia deja de ser válida por tiempo.
-- **Invalidación:** un cambio de negocio exige dejar obsoleta la copia antes del TTL.
+1. `INCR likes:comentario:{id}` (atómico, instantáneo).
+2. `SADD likes:pendientes_sync {id}` (para que el proceso de sincronización sepa qué comentarios tocar sin recorrer todo).
+3. Un proceso periódico (no implementado en este hito, documentado como paso futuro) lee `likes:pendientes_sync` con `SSCAN`, por cada `id` hace `UPDATE comentarios_por_partido SET likes = <valor de Redis> WHERE ...` en Cassandra, y recién ahí hace `SREM`.
 
-## 6. Diferencia entre expiración y evicción
+Con `appendonly yes` (escritura al archivo de persistencia una vez por segundo), un reinicio del servidor pierde como mucho el último segundo de incrementos. Los likes solo se pierden por completo si se borra el volumen donde Redis guarda sus datos. Sigue siendo un costo aceptado: la fuente de verdad final es Cassandra, y evitar hasta esa pérdida mínima exigiría persistir cada incremento por separado, lo que anula la ventaja de un contador en memoria.
 
-Una clave puede vencer por TTL o puede ser eliminada antes porque la política de memoria necesita recuperar RAM. Por eso la caché siempre debe ser reconstruible y la aplicación debe contemplar una sesión ausente.
+## Rate limiting: por qué `EXPIRE ... NX`
+
+Si el `EXPIRE` se reinjectara en cada comentario (sin `NX`), un usuario que comenta sin parar nunca dejaría pasar la ventana — el TTL se correría para siempre y jamás volvería a cero. Con `NX`, el TTL se fija una sola vez, en el primer comentario de la ventana; los siguientes solo incrementan el contador hasta que esa ventana puntual expira.
+
+## Espectadores en vivo: por qué un latido y no conectar/desconectar
+
+No hay forma confiable de detectar que alguien cerró la pestaña sin avisar. Por eso no se modela como "sumar al entrar, restar al salir" (que se rompe apenas un usuario se va sin disparar el evento de salida) — se modela como latido: mientras el cliente tenga el partido abierto, manda un latido cada cierto tiempo que actualiza su score en el Sorted Set. El conteo es "cuántos laten en los últimos N segundos", así que alguien que se fue sin avisar simplemente deja de contar en cuanto pasa esa ventana, sin que nadie tenga que notar su ausencia.
+
+## Consistencia por tipo de dato (qué se sacrifica ante una partición)
+
+Ante una partición de red no se pueden garantizar a la vez consistencia y disponibilidad. Para cada tipo de dato de este módulo se eligió qué propiedad se sacrifica y qué impacto se acepta:
+
+| Dato | Se prioriza | Se sacrifica | Impacto que se acepta |
+| :--- | :--- | :--- | :--- |
+| Sesiones | Disponibilidad | Consistencia inmediata | Un nodo aislado puede seguir aceptando y renovando sesiones. Si dos lados de la partición modifican la misma sesión, al unirse se queda con una sola versión, y un cierre de sesión puede tardar en verse en el otro lado. Es preferible a impedir que los usuarios naveguen. |
+| Likes | Disponibilidad | Consistencia inmediata | Los contadores de cada lado pueden diverger un rato, y el valor que se sincroniza a Cassandra puede quedar levemente atrasado. El usuario ve su like al instante. Un conteo apenas desactualizado no afecta a nadie. |
+| Espectadores en vivo | Disponibilidad | Consistencia inmediata | El conteo puede ser aproximado mientras dure la partición. Es un dato efímero que se corrige solo con los latidos siguientes. |
+| Marcador en vivo | Consistencia | Disponibilidad | Un marcador no debe mostrarse distinto según desde dónde se mire (es lo que se definió para Redis en el Hito 3). Si un nodo no puede confirmar que tiene el estado más reciente, la aplicación prefiere consultar la fuente de verdad o no mostrar el marcador antes que mostrar uno que después se contradiga. |
+| Ranking público | Consistencia dentro de un nodo | Disponibilidad entre nodos | La actualización de puntos, antelación y posición es atómica porque corre en un solo script dentro de un único nodo; no hay estados intermedios visibles. Con una partición, un nodo sin acceso a quien lleva la escritura puede no aceptar actualizaciones del ranking en lugar de aceptar valores que luego haya que reconciliar. |
+
+**Qué es este laboratorio y qué cambia con réplicas.** El ambiente es un único nodo de Redis, así que no hay partición posible entre nodos y la tabla describe el comportamiento que se espera del diseño, no algo que se haya probado. Con réplicas, la replicación de Redis es asincrónica: una réplica puede ir atrasada respecto de quien lleva la escritura, y si este falla y se promueve una réplica, se pierden las escrituras que todavía no habían llegado. Eso es consistente con lo elegido para sesiones, likes y espectadores (se acepta perder o ver con atraso lo último que se escribió a cambio de seguir respondiendo). Para el ranking, donde sí importa no perder ni duplicar una actualización, la escritura seguiría yendo a un único nodo principal.

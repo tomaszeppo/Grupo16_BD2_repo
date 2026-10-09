@@ -1,0 +1,23 @@
+# 06 - Consultas de 2 y 3 saltos y camino de RF9
+# Fecha: 2026-10-09 14:36:01
+# Motor: Neo4j 5.26.31 | Docker: CPUs=12 RAM=16644243456 bytes
+
+equipo, jugador, partido, minuto
+"ARG", "ARG-20", "P-01", 25
+"ESP", "ESP-20", "P-02", 23
+"GER", "GER-20", "P-03", 23
+"ITA", "ITA-20", "P-04", 23
+"NED", "NED-20", "P-05", 23
+partido, rival, fecha
+"P-01", "BRA", 2030-06-15
+sede, partido, equipo
+"EST001", "P-01", "ARG"
+"EST001", "P-01", "BRA"
+"EST001", "P-11", "GHA"
+"EST001", "P-11", "NGA"
+"EST001", "P-21", "SCO"
+"EST001", "P-21", "IRL"
+"EST001", "P-31", "RSA"
+"EST001", "P-31", "NZL"
+camino, saltos
+(:Equipo {confederacion: "CONMEBOL", codigo: "ARG", ranking: 1})<-[:DISPUTA {rol: "local"}]-(:Partido {origenResultado: "SIMULADO", fecha: 2030-06-15, fase: "Octavos de final", codigo: "P-01", equipoGanador: "ARG", golesPerdedor: 0, equipoPerdedor: "BRA", golesGanador: 1})-[:SE_JUEGA_EN]->(:Sede {nombre: "Estadio Monumental", codigo: "EST001", ciudad: "Buenos Aires"})<-[:SE_JUEGA_EN]-(:Partido {origenResultado: "SIMULADO", fecha: 2030-06-20, codigo: "P-21", fase: "Fase de grupos", equipoGanador: "SCO", golesPerdedor: 0, equipoPerdedor: "IRL", golesGanador: 1})-[:DISPUTA {rol: "local"}]->(:Equipo {confederacion: "UEFA", codigo: "SCO", ranking: 26}), 4

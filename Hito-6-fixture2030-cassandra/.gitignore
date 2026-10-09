@@ -1,0 +1,3 @@
+data/*.csv
+!data/partidos_referencia.csv
+__pycache__/

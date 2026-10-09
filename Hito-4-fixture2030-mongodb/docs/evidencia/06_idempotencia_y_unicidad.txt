@@ -1,0 +1,21 @@
+# 06 - Idempotencia y unicidad (luego de las actualizaciones: la recarga no pisa lo acumulado)
+# Fecha: 2026-10-09 14:31:26
+# Motor: MongoDB db version v7.0.43
+# Docker: CPUs=12 RAM=16644243456 bytes
+
+Antes   -> equipos: 64, jugadores: 1536
+Cargando equipos...
+Equipos nuevos: 0 | ya existentes: 64
+Cargando jugadores...
+Jugadores nuevos: 0 | ya existentes: 1536
+Total en la base -> equipos: 64, jugadores: 1536
+Despues -> equipos: 64, jugadores: 1536
+Goles de ARG-10 antes / despues de recargar: 1 / 1
+JPN-07 convocado antes / despues de recargar: false / false
+Totales iguales antes y despues: true
+Totales iguales a los esperados (64 / 1536): true
+Datos del torneo intactos: true
+Intentando insertar un segundo equipo con codigo ARG...
+Error recibido: E11000 duplicate key error collection: fixture2030.equipos index: ix_equipos_codigo_unico dup key: { codigo: "ARG" }
+Rechazado por el indice unico (E11000), como se esperaba.
+Equipos con codigo ARG: 1

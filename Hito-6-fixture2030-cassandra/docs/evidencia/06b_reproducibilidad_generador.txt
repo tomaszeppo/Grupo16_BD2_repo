@@ -1,0 +1,16 @@
+# 06b - Reproducibilidad del generador: dos corridas independientes, misma semilla
+# Fecha: 2026-10-09 14:50:35 -0300
+
+## MD5 de la primera generacion (data/)
+28c52da0ad86627e88d937782fbd55e2 *data/comentarios_por_partido.csv
+8dc86dfe8ba42cc6198dc823106790fe *data/comentarios_por_usuario.csv
+7acb53dceb7cd189cbbd67fbfbfbe2ab *data/conteo_esperado_por_particion.csv
+c5b3e141af81ccebe08222ea509c193e *data/conteo_esperado_por_usuario.csv
+61707aed7c9439dd2c2c4229cd7c31fe *data/partidos_referencia.csv
+
+## MD5 de la segunda generacion (carpeta temporal)
+28c52da0ad86627e88d937782fbd55e2 *comentarios_por_partido.csv
+8dc86dfe8ba42cc6198dc823106790fe *comentarios_por_usuario.csv
+7acb53dceb7cd189cbbd67fbfbfbe2ab *conteo_esperado_por_particion.csv
+c5b3e141af81ccebe08222ea509c193e *conteo_esperado_por_usuario.csv
+61707aed7c9439dd2c2c4229cd7c31fe *partidos_referencia.csv

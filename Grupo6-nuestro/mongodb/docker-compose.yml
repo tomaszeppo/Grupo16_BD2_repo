@@ -1,0 +1,34 @@
+# Ambiente local de MongoDB para el modulo documental del Fixture 2030 (Hito 4).
+# Un unico nodo (no replica set): para este hito alcanza con probar el
+# modelo, la carga y las consultas. La replica multi-region que definimos
+# en el Hito 3 queda para cuando este modulo pase a un ambiente real.
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: fixture2030-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?definir MONGO_ROOT_USER en el archivo .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?definir MONGO_ROOT_PASSWORD en el archivo .env}
+      MONGO_INITDB_DATABASE: fixture2030
+    volumes:
+      # Persistencia: los datos sobreviven aunque se reinicie o se borre el contenedor (RF2).
+      - fixture2030_mongo_data:/data/db
+      # Los scripts de esta carpeta se ejecutan una sola vez, en orden alfabetico,
+      # la primera vez que el contenedor arranca con el volumen vacio.
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+      # Script de carga reejecutable; el init-script lo llama y tambien se puede correr a mano.
+      - ./scripts:/scripts:ro
+      - ./queries:/queries:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  fixture2030_mongo_data:
+    name: fixture2030_mongo_data

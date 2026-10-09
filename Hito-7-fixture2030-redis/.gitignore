@@ -1,9 +1,3 @@
-# Persistencia local de Redis
-redis-data/
-
-# Evidencias generadas durante ejecuciones locales
-docs/evidencia/ejecucion_*.txt
-docs/evidencia/benchmark_*.txt
-
-# Archivos de sistema
+.env
 .DS_Store
+__pycache__/

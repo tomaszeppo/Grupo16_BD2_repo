@@ -1,0 +1,452 @@
+# 03 - Consultas y agregaciones
+# Fecha: 2026-10-09 14:30:48
+# Motor: MongoDB db version v7.0.43
+# Docker: CPUs=12 RAM=16644243456 bytes
+
+{
+  _id: ObjectId('6ac9133140555b49b32aecd4'),
+  codigo: 'ARG',
+  cantidadJugadoresConvocados: 24,
+  confederacion: 'CONMEBOL',
+  nombre: 'Argentina',
+  ranking: 1,
+  sedeBase: 'Buenos Aires'
+}
+[
+  {
+    _id: ObjectId('6ac9133140555b49b32aecd4'),
+    codigo: 'ARG',
+    cantidadJugadoresConvocados: 24,
+    confederacion: 'CONMEBOL',
+    nombre: 'Argentina',
+    ranking: 1,
+    sedeBase: 'Buenos Aires'
+  },
+  {
+    _id: ObjectId('6ac9133140555b49b32aecd5'),
+    codigo: 'URU',
+    cantidadJugadoresConvocados: 24,
+    confederacion: 'CONMEBOL',
+    nombre: 'Uruguay',
+    ranking: 2,
+    sedeBase: 'Montevideo'
+  },
+  {
+    _id: ObjectId('6ac9133140555b49b32aecd6'),
+    codigo: 'PAR',
+    cantidadJugadoresConvocados: 24,
+    confederacion: 'CONMEBOL',
+    nombre: 'Paraguay',
+    ranking: 3,
+    sedeBase: 'Asunción'
+  },
+  {
+    _id: ObjectId('6ac9133140555b49b32aecd7'),
+    codigo: 'BRA',
+    cantidadJugadoresConvocados: 24,
+    confederacion: 'CONMEBOL',
+    nombre: 'Brasil',
+    ranking: 4,
+    sedeBase: 'San Pablo'
+  },
+  {
+    _id: ObjectId('6ac9133140555b49b32aecd8'),
+    codigo: 'COL',
+    cantidadJugadoresConvocados: 24,
+    confederacion: 'CONMEBOL',
+    nombre: 'Colombia',
+    ranking: 5,
+    sedeBase: 'Bogotá'
+  },
+  {
+    _id: ObjectId('6ac9133140555b49b32aecd9'),
+    codigo: 'CHI',
+    cantidadJugadoresConvocados: 24,
+    confederacion: 'CONMEBOL',
+    nombre: 'Chile',
+    ranking: 6,
+    sedeBase: 'Santiago'
+  },
+  {
+    _id: ObjectId('6ac9133140555b49b32aecda'),
+    codigo: 'ECU',
+    cantidadJugadoresConvocados: 24,
+    confederacion: 'CONMEBOL',
+    nombre: 'Ecuador',
+    ranking: 7,
+    sedeBase: 'Quito'
+  },
+  {
+    _id: ObjectId('6ac9133140555b49b32aecdb'),
+    codigo: 'PER',
+    cantidadJugadoresConvocados: 24,
+    confederacion: 'CONMEBOL',
+    nombre: 'Perú',
+    ranking: 8,
+    sedeBase: 'Lima'
+  },
+  {
+    _id: ObjectId('6ac9133140555b49b32aed10'),
+    codigo: 'VEN',
+    cantidadJugadoresConvocados: 24,
+    confederacion: 'CONMEBOL',
+    nombre: 'Venezuela',
+    ranking: 61,
+    sedeBase: 'Caracas'
+  }
+]
+[
+  {
+    codigo: 'ARG',
+    nombre: 'Argentina',
+    ranking: 1
+  },
+  {
+    codigo: 'URU',
+    nombre: 'Uruguay',
+    ranking: 2
+  },
+  {
+    codigo: 'PAR',
+    nombre: 'Paraguay',
+    ranking: 3
+  },
+  {
+    codigo: 'BRA',
+    nombre: 'Brasil',
+    ranking: 4
+  },
+  {
+    codigo: 'COL',
+    nombre: 'Colombia',
+    ranking: 5
+  },
+  {
+    codigo: 'CHI',
+    nombre: 'Chile',
+    ranking: 6
+  },
+  {
+    codigo: 'ECU',
+    nombre: 'Ecuador',
+    ranking: 7
+  },
+  {
+    codigo: 'PER',
+    nombre: 'Perú',
+    ranking: 8
+  },
+  {
+    codigo: 'VEN',
+    nombre: 'Venezuela',
+    ranking: 61
+  }
+]
+[
+  {
+    codigo: 'ARG',
+    ranking: 1
+  },
+  {
+    codigo: 'URU',
+    ranking: 2
+  },
+  {
+    codigo: 'PAR',
+    ranking: 3
+  },
+  {
+    codigo: 'BRA',
+    ranking: 4
+  },
+  {
+    codigo: 'COL',
+    ranking: 5
+  },
+  {
+    codigo: 'CHI',
+    ranking: 6
+  },
+  {
+    codigo: 'ECU',
+    ranking: 7
+  },
+  {
+    codigo: 'PER',
+    ranking: 8
+  },
+  {
+    codigo: 'ESP',
+    ranking: 9
+  },
+  {
+    codigo: 'POR',
+    ranking: 10
+  }
+]
+[
+  {
+    codigo: 'MAR',
+    ranking: 11
+  },
+  {
+    codigo: 'FRA',
+    ranking: 12
+  },
+  {
+    codigo: 'GER',
+    ranking: 13
+  },
+  {
+    codigo: 'ENG',
+    ranking: 14
+  },
+  {
+    codigo: 'ITA',
+    ranking: 15
+  },
+  {
+    codigo: 'NED',
+    ranking: 16
+  },
+  {
+    codigo: 'BEL',
+    ranking: 17
+  },
+  {
+    codigo: 'CRO',
+    ranking: 18
+  },
+  {
+    codigo: 'SUI',
+    ranking: 19
+  },
+  {
+    codigo: 'DEN',
+    ranking: 20
+  }
+]
+{
+  _id: ObjectId('6ac9133140555b49b32aed1e'),
+  codigo: 'ARG-10',
+  apellido: 'Ruiz',
+  convocado: true,
+  dorsal: 10,
+  equipoCodigo: 'ARG',
+  estadisticas: {
+    partidosJugados: 0,
+    goles: 0,
+    tarjetasAmarillas: 0,
+    tarjetasRojas: 0
+  },
+  fechaNacimiento: ISODate('2002-11-11T00:00:00.000Z'),
+  nombre: 'Thiago',
+  posicion: 'Defensa'
+}
+Plantilla de ARG: 24 jugadores
+[
+  {
+    codigo: 'ARG-20',
+    nombre: 'Joaquin'
+  },
+  {
+    codigo: 'ARG-21',
+    nombre: 'Maximiliano'
+  },
+  {
+    codigo: 'ARG-22',
+    nombre: 'Leandro'
+  },
+  {
+    codigo: 'ARG-23',
+    nombre: 'Ramiro'
+  },
+  {
+    codigo: 'ARG-24',
+    nombre: 'Alejandro'
+  }
+]
+[
+  {
+    dorsal: 1,
+    nombre: 'Franco',
+    posicion: 'Portero'
+  },
+  {
+    dorsal: 2,
+    nombre: 'Agustin',
+    posicion: 'Portero'
+  },
+  {
+    dorsal: 3,
+    nombre: 'Ezequiel',
+    posicion: 'Portero'
+  },
+  {
+    dorsal: 4,
+    nombre: 'Ignacio',
+    posicion: 'Defensa'
+  },
+  {
+    dorsal: 5,
+    nombre: 'Martin',
+    posicion: 'Defensa'
+  }
+]
+[
+  {
+    codigo: 'ARG-01',
+    apellido: 'Ramirez',
+    dorsal: 1
+  },
+  {
+    codigo: 'ARG-02',
+    apellido: 'Ortiz',
+    dorsal: 2
+  },
+  {
+    codigo: 'ARG-03',
+    apellido: 'Sosa',
+    dorsal: 3
+  },
+  {
+    codigo: 'ARG-04',
+    apellido: 'Rodriguez',
+    dorsal: 4
+  },
+  {
+    codigo: 'ARG-05',
+    apellido: 'Diaz',
+    dorsal: 5
+  }
+]
+[
+  {
+    codigo: 'ALG-16',
+    apellido: 'Acosta',
+    nombre: 'Ignacio'
+  },
+  {
+    codigo: 'ARG-16',
+    apellido: 'Acosta',
+    nombre: 'Ignacio'
+  },
+  {
+    codigo: 'AUS-22',
+    apellido: 'Acosta',
+    nombre: 'Ignacio'
+  },
+  {
+    codigo: 'BEL-22',
+    apellido: 'Acosta',
+    nombre: 'Ignacio'
+  },
+  {
+    codigo: 'BRA-04',
+    apellido: 'Acosta',
+    nombre: 'Ignacio'
+  }
+]
+[
+  {
+    _id: 'SWE',
+    cantidadJugadores: 24,
+    anioNacimientoPromedio: 2003.8333333333333
+  },
+  {
+    _id: 'PAN',
+    cantidadJugadores: 24,
+    anioNacimientoPromedio: 2004.25
+  },
+  {
+    _id: 'QAT',
+    cantidadJugadores: 24,
+    anioNacimientoPromedio: 2002.125
+  },
+  {
+    _id: 'UAE',
+    cantidadJugadores: 24,
+    anioNacimientoPromedio: 2002.7083333333333
+  },
+  {
+    _id: 'TUN',
+    cantidadJugadores: 24,
+    anioNacimientoPromedio: 2003.8333333333333
+  },
+  {
+    _id: 'KSA',
+    cantidadJugadores: 24,
+    anioNacimientoPromedio: 2003.4166666666667
+  },
+  {
+    _id: 'SCO',
+    cantidadJugadores: 24,
+    anioNacimientoPromedio: 2001.9583333333333
+  },
+  {
+    _id: 'TUR',
+    cantidadJugadores: 24,
+    anioNacimientoPromedio: 2003.2916666666667
+  },
+  {
+    _id: 'KOR',
+    cantidadJugadores: 24,
+    anioNacimientoPromedio: 2001.5416666666667
+  },
+  {
+    _id: 'CIV',
+    cantidadJugadores: 24,
+    anioNacimientoPromedio: 2003.875
+  }
+]
+[
+  {
+    _id: 'UEFA',
+    cantidadEquipos: 27,
+    cantidadJugadores: 648
+  },
+  {
+    _id: 'CAF',
+    cantidadEquipos: 11,
+    cantidadJugadores: 264
+  },
+  {
+    _id: 'AFC',
+    cantidadEquipos: 9,
+    cantidadJugadores: 216
+  },
+  {
+    _id: 'CONMEBOL',
+    cantidadEquipos: 9,
+    cantidadJugadores: 216
+  },
+  {
+    _id: 'CONCACAF',
+    cantidadEquipos: 7,
+    cantidadJugadores: 168
+  },
+  {
+    _id: 'OFC',
+    cantidadEquipos: 1,
+    cantidadJugadores: 24
+  }
+]
+[
+  {
+    cantidadJugadores: 512,
+    posicion: 'Centrocampista'
+  },
+  {
+    cantidadJugadores: 512,
+    posicion: 'Defensa'
+  },
+  {
+    cantidadJugadores: 320,
+    posicion: 'Delantero'
+  },
+  {
+    cantidadJugadores: 192,
+    posicion: 'Portero'
+  }
+]
+[]

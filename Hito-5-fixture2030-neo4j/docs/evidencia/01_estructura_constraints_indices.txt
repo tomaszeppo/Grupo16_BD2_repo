@@ -1,0 +1,20 @@
+# 01 - Restricciones e indices
+# Fecha: 2026-10-09 14:33:09
+# Motor: Neo4j 5.26.31 | Docker: CPUs=12 RAM=16644243456 bytes
+
+id, name, type, entityType, labelsOrTypes, properties, ownedIndex, propertyType
+4, "equipo_codigo_unico", "UNIQUENESS", "NODE", ["Equipo"], ["codigo"], "equipo_codigo_unico", NULL
+12, "evento_codigo_unico", "UNIQUENESS", "NODE", ["Evento"], ["codigo"], "evento_codigo_unico", NULL
+6, "jugador_codigo_unico", "UNIQUENESS", "NODE", ["Jugador"], ["codigo"], "jugador_codigo_unico", NULL
+8, "partido_codigo_unico", "UNIQUENESS", "NODE", ["Partido"], ["codigo"], "partido_codigo_unico", NULL
+10, "sede_codigo_unico", "UNIQUENESS", "NODE", ["Sede"], ["codigo"], "sede_codigo_unico", NULL
+id, name, state, populationPercent, type, entityType, labelsOrTypes, properties, indexProvider, owningConstraint, lastRead, readCount
+3, "equipo_codigo_unico", "ONLINE", 100.0, "RANGE", "NODE", ["Equipo"], ["codigo"], "range-1.0", "equipo_codigo_unico", NULL, 0
+11, "evento_codigo_unico", "ONLINE", 100.0, "RANGE", "NODE", ["Evento"], ["codigo"], "range-1.0", "evento_codigo_unico", NULL, NULL
+13, "evento_tipo_idx", "ONLINE", 100.0, "RANGE", "NODE", ["Evento"], ["tipo"], "range-1.0", NULL, NULL, NULL
+1, "index_343aff4e", "ONLINE", 100.0, "LOOKUP", "NODE", NULL, NULL, "token-lookup-1.0", NULL, NULL, 0
+2, "index_f7700477", "ONLINE", 100.0, "LOOKUP", "RELATIONSHIP", NULL, NULL, "token-lookup-1.0", NULL, NULL, 0
+5, "jugador_codigo_unico", "ONLINE", 100.0, "RANGE", "NODE", ["Jugador"], ["codigo"], "range-1.0", "jugador_codigo_unico", NULL, NULL
+7, "partido_codigo_unico", "ONLINE", 100.0, "RANGE", "NODE", ["Partido"], ["codigo"], "range-1.0", "partido_codigo_unico", NULL, NULL
+14, "partido_fecha_idx", "ONLINE", 100.0, "RANGE", "NODE", ["Partido"], ["fecha"], "range-1.0", NULL, NULL, NULL
+9, "sede_codigo_unico", "ONLINE", 100.0, "RANGE", "NODE", ["Sede"], ["codigo"], "range-1.0", "sede_codigo_unico", NULL, NULL

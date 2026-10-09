@@ -1,0 +1,10 @@
+# 02 - Recarga: segunda ejecucion de cargar-datos.js
+# Fecha: 2026-10-09 14:30:41
+# Motor: MongoDB db version v7.0.43
+# Docker: CPUs=12 RAM=16644243456 bytes
+
+Cargando equipos...
+Equipos nuevos: 0 | ya existentes: 64
+Cargando jugadores...
+Jugadores nuevos: 0 | ya existentes: 1536
+Total en la base -> equipos: 64, jugadores: 1536

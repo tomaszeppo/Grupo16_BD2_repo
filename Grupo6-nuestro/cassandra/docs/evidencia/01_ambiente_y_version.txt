@@ -1,0 +1,19 @@
+# 01 - Ambiente y version
+# Fecha: 2026-10-09 10:37:51 -0300
+
+$ docker compose ps
+NAME                    IMAGE              COMMAND                  SERVICE     CREATED              STATUS                        PORTS
+fixture2030-cassandra   cassandra:latest   "docker-entrypoint.s…"   cassandra   About a minute ago   Up About a minute (healthy)   0.0.0.0:9042->9042/tcp, [::]:9042->9042/tcp
+
+$ SHOW VERSION
+[cqlsh 6.2.0 | Cassandra 5.0.9 | CQL spec 3.4.7 | Native protocol v5]
+ReleaseVersion: 5.0.9
+
+$ docker info (recursos asignados a Docker Desktop)
+CPUs: 12 | RAM: 16644243456 bytes | Kernel: 6.6.87.2-microsoft-standard-WSL2 | OS: Docker Desktop
+
+$ ls ~/docker/data/cassandra (persistencia en el host)
+commitlog
+data
+hints
+saved_caches
