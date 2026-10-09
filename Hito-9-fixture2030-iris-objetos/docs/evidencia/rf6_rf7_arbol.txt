@@ -1,0 +1,99 @@
+
+Node: cdab460d3da3, Instance: IRIS
+
+USER>
+
+
+=================================================
+
+USER>
+PRUEBA RF6 / RF7 - ARBOL DE OBJETOS Y NAVEGACION
+
+USER>
+=================================================
+
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+Antes de guardar: Partido Codigo=H9-ARB-67852-77820
+
+USER>
+Antes de guardar: Evento Tipo=Gol Minuto=17
+
+USER>
+Operacion de persistencia: una unica llamada a partido.%Save() sobre el padre.
+
+USER>
+
+USER>
+Error al guardar (0 significa que no hay error): 0
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+ID Partido=3 | Codigo=H9-ARB-67852-77820
+
+USER>
+ID Evento=3||3 | Tipo=Gol | Minuto=17
+
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+NAVEGACION PADRE -> HIJO: H9-ARB-67852-77820 -> Gol minuto 17
+
+USER>
+NAVEGACION INVERSA HIJO -> PADRE: H9-ARB-67852-77820
+
+USER>
+RESULTADO: RF6 y RF7 demostrados mediante objetos, sin SQL para navegar.
+
+
+USER>

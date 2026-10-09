@@ -1,0 +1,58 @@
+
+Node: cdab460d3da3, Instance: IRIS
+
+USER>
+
+
+=================================================
+
+USER>
+PRUEBA RF5 - RECHAZO DE PROPIEDAD [Required]
+
+USER>
+=================================================
+
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+
+USER>
+Objeto creado: Fixture.Arbitro
+
+USER>
+Nombre=Arbitro incompleto de prueba | Rol=Asistente
+
+USER>
+Licencia: OMITIDA intencionalmente (propiedad [Required]).
+
+USER>
+
+USER>
+Error al guardar (1 significa que IRIS rechazo el objeto): 1
+
+USER>
+
+ERROR #5659: Property 'Fixture.Arbitro::Licencia(2@Fixture.Arbitro,ID=)' required
+USER>
+PRUEBA PASADA: IRIS rechazo el objeto por una propiedad obligatoria ausente.
+
+USER>
+
+USER>
+
+
+
+USER>

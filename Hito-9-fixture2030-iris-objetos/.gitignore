@@ -1,0 +1,19 @@
+# Sistema operativo / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Datos durables y artefactos locales (nunca versionar IRIS raw data)
+data/
+*.log
+*.tmp
+*.bak
+*.pid
+
+# Secretos / configuración local
+.secrets/
+.env
+.env.*
+!.env.example
+
+# No ignorar docs/evidencia: allí deben guardarse las salidas/capturas de la entrega.

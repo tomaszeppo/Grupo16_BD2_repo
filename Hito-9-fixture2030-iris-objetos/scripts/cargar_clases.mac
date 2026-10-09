@@ -1,0 +1,24 @@
+; Carga definiciones fuente sin compilar individualmente. Luego compila el paquete
+; completo para que IRIS vea simultaneamente los dos extremos de la relacion.
+Write !!,"=== HITO 9: importando clases Fixture ===",!
+Set err = ""
+Set sc = $System.OBJ.Load("/clases/Fixture.Persona.cls","k",.err)
+Write "Load Fixture.Persona; error? ",$System.Status.IsError(sc),!
+Set sc = $System.OBJ.Load("/clases/Fixture.Jugador.cls","k",.err)
+Write "Load Fixture.Jugador; error? ",$System.Status.IsError(sc),!
+Set sc = $System.OBJ.Load("/clases/Fixture.Arbitro.cls","k",.err)
+Write "Load Fixture.Arbitro; error? ",$System.Status.IsError(sc),!
+Set sc = $System.OBJ.Load("/clases/Fixture.Tecnico.cls","k",.err)
+Write "Load Fixture.Tecnico; error? ",$System.Status.IsError(sc),!
+Set sc = $System.OBJ.Load("/clases/Fixture.Partido.cls","k",.err)
+Write "Load Fixture.Partido; error? ",$System.Status.IsError(sc),!
+Set sc = $System.OBJ.Load("/clases/Fixture.Evento.cls","k",.err)
+Write "Load Fixture.Evento; error? ",$System.Status.IsError(sc),!
+Set sc = $System.OBJ.Load("/clases/Fixture.Demo.cls","k",.err)
+Write "Load Fixture.Demo; error? ",$System.Status.IsError(sc),!
+Write !!,"=== Compilando todas las clases Fixture ===",!
+Set sc = $System.OBJ.Compile("Fixture.*","ck",.err)
+If $System.Status.IsError(sc) Write "COMPILACION CON ERRORES:",!
+If $System.Status.IsError(sc) Do $System.Status.DisplayError(sc)
+If '$System.Status.IsError(sc) Write "COMPILACION OK: Fixture.*",!
+Halt

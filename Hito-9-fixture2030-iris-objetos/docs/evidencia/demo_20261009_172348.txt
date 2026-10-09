@@ -1,0 +1,41 @@
+
+Node: cdab460d3da3, Instance: IRIS
+
+USER>
+
+
+=================================================
+HITO 9 - DEMOSTRACION IRIS ORIENTADA A OBJETOS
+=================================================
+
+HERENCIA OK: Jugador persistido; ID=3, nombre=Jugador de demostracion, posicion=Delantero
+
+HERENCIA OK: Arbitro persistido; ID=4, licencia=LIC-H9-67852-73429
+
+VALIDACION OK: IRIS rechazo Arbitro sin Licencia obligatoria.
+
+ERROR #5659: Property 'Fixture.Arbitro::Licencia(5@Fixture.Arbitro,ID=)' required
+VALIDACION OK: se rechazo Programado -> Finalizado sin pasar por En juego.
+Transicion valida: Programado -> En juego.
+Evento agregado a la relacion en memoria; todavia no se guardo por separado.
+GUARDADO ATOMICO OK: se invoco Partido.%Save() una sola vez para persistir el arbol inicial.
+Partido ID=2 Codigo=H9-M-67852-73429 Estado=En juego
+Evento ID=2||2 Tipo=Gol Minuto=12
+
+NAVEGACION OBJETOS OK: H9-M-67852-73429 -> Gol minuto 12
+Relacion inversa: el evento referencia al partido H9-M-67852-73429
+
+VALIDACION OK: partido Finalizado rechazo un evento en minuto 0.
+
+PROYECCION MULTIMODELO - SQL SOBRE Fixture.Partido
+SQL Partido: ID=2 Codigo=H9-M-67852-73429 ARG-FRA Estado=Finalizado Sede=Estadio Monumental
+PROYECCION MULTIMODELO - SQL SOBRE Fixture.Evento
+SQL Evento: ID=2||2 Tipo=Gol Minuto=12 Descripcion=Gol de demostracion
+
+
+FIN DEMOSTRACION HITO 9
+Codigo de partido usado: H9-M-67852-73429
+Conserva este codigo para localizar la fila en SQL.
+
+
+USER>
