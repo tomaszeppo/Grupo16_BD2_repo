@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture 2030 — Esquema (rama correcciones)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* -------------------------------------------------------------------
+   Navegador de esquema: fila de 6 motores (mapa) arriba, panel de
+   entidades (colecciones/tablas/nodos/clases) abajo, con chips
+   "se relaciona con" que saltan de un motor a otro.
+   ------------------------------------------------------------------- */
+:root{
+  --bg:#f7f6f2; --surface:#ffffff; --surface-2:#efece4; --fg:#1c1a15; --fg-dim:#6c6757;
+  --border:#ddd8c9; --accent:#2f5fd6; --accent-fg:#ffffff;
+  --pk:#b8860b; --fk:#2f5fd6;
+  --mongo:#3f8f4f; --neo4j:#2a6bb0; --cassandra:#c06a28; --redis:#c23b4b; --influx:#7b57c0; --iris:#1a8f82;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15140f; --surface:#1d1b15; --surface-2:#242119; --fg:#ece7da; --fg-dim:#9b9484;
+    --border:#38342a; --accent:#7ea0ff; --accent-fg:#101225;
+    --pk:#e0b24a; --fk:#7ea0ff;
+    --mongo:#6fc17f; --neo4j:#6fa8e0; --cassandra:#e0924f; --redis:#e8707e; --influx:#ab8ce0; --iris:#4dc0b2;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15140f; --surface:#1d1b15; --surface-2:#242119; --fg:#ece7da; --fg-dim:#9b9484;
+  --border:#38342a; --accent:#7ea0ff; --accent-fg:#101225;
+  --pk:#e0b24a; --fk:#7ea0ff;
+  --mongo:#6fc17f; --neo4j:#6fa8e0; --cassandra:#e0924f; --redis:#e8707e; --influx:#ab8ce0; --iris:#4dc0b2;
+  color-scheme: dark;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{ background:var(--bg); color:var(--fg); font-family:'IBM Plex Sans', system-ui, sans-serif; }
+code, .mono{ font-family:'IBM Plex Mono', ui-monospace, monospace; }
+
+.wrap{ max-width:1180px; margin:0 auto; padding:24px 16px 56px; }
+
+header.top{ margin-bottom:18px; }
+header.top .badge{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:'IBM Plex Mono',monospace; font-size:.72rem; letter-spacing:.04em; text-transform:uppercase;
+  background:var(--surface-2); border:1px solid var(--border); border-radius:999px; padding:3px 10px;
+  color:var(--fg-dim); margin-bottom:10px;
+}
+header.top .badge b{ color:var(--accent); }
+header.top h1{ font-size:clamp(1.5rem,3.6vw,2.1rem); margin:0 0 6px; text-wrap:balance; }
+header.top p{ margin:0; max-width:640px; color:var(--fg-dim); font-size:.92rem; line-height:1.5; }
+
+#map{ position:relative; margin:22px 0 20px; }
+#map svg{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+#map svg path{ fill:none; stroke:var(--border); stroke-width:1.4; }
+#map svg path.lit{ stroke:var(--accent); stroke-width:2; }
+.nodes-row{ display:flex; justify-content:space-between; gap:6px; position:relative; z-index:1; -webkit-user-select:none; user-select:none; }
+.node-btn{
+  flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px;
+  background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:10px 6px;
+  cursor:pointer; font-family:inherit; color:var(--fg); transition:border-color .15s, transform .15s;
+  -webkit-user-select:none; user-select:none;
+}
+.node-btn:hover{ transform:translateY(-2px); }
+.node-btn.active{ border-color:var(--dot); box-shadow:0 0 0 2px color-mix(in srgb, var(--dot) 30%, transparent); }
+.node-btn .dot{ width:10px; height:10px; border-radius:50%; background:var(--dot); }
+.node-btn .nm{ font-size:.78rem; font-weight:600; text-align:center; line-height:1.2; }
+.node-btn .ht{ font-family:'IBM Plex Mono',monospace; font-size:.64rem; color:var(--fg-dim); }
+
+#panel-blurb{ font-size:.86rem; color:var(--fg-dim); margin:0 0 16px; max-width:720px; line-height:1.5; }
+#panel-blurb b{ color:var(--fg); }
+
+.entity-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:14px; }
+.entity{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 16px 14px;
+  scroll-margin-top:16px;
+}
+.entity.flash{ animation:flash 1.1s ease; }
+@keyframes flash{ 0%{ box-shadow:0 0 0 3px var(--accent); } 100%{ box-shadow:0 0 0 0 transparent; } }
+.entity h3{ margin:0 0 2px; font-size:1rem; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.entity h3 .mono{ overflow-wrap:anywhere; word-break:break-word; }
+.entity h3 .kind{
+  font-family:'IBM Plex Mono',monospace; font-size:.64rem; text-transform:uppercase; letter-spacing:.03em;
+  color:var(--fg-dim); border:1px solid var(--border); border-radius:5px; padding:1px 6px;
+}
+.entity .note{ font-size:.78rem; color:var(--fg-dim); margin:4px 0 10px; line-height:1.4; }
+
+.fields-wrap{ overflow-x:auto; margin-bottom:10px; }
+table.fields{ width:100%; border-collapse:collapse; font-size:.8rem; margin-bottom:0; table-layout:fixed; }
+table.fields th{ text-align:left; font-size:.66rem; text-transform:uppercase; letter-spacing:.04em; color:var(--fg-dim); padding:3px 6px 5px 0; border-bottom:1px solid var(--border); }
+table.fields td{ padding:5px 6px 5px 0; border-bottom:1px solid var(--border); vertical-align:top; overflow-wrap:anywhere; word-break:break-word; }
+table.fields tr:last-child td{ border-bottom:none; }
+table.fields td.fname{ font-family:'IBM Plex Mono',monospace; white-space:normal; width:28%; }
+table.fields td.ftype{ font-family:'IBM Plex Mono',monospace; color:var(--fg-dim); white-space:normal; width:18%; }
+table.fields td.fdesc{ color:var(--fg-dim); min-width:0; width:54%; }
+.key{ font-family:'IBM Plex Mono',monospace; font-size:.6rem; font-weight:600; border-radius:4px; padding:0 4px; margin-left:5px; }
+.key.pk{ background:color-mix(in srgb, var(--pk) 22%, transparent); color:var(--pk); }
+.key.fk{ background:color-mix(in srgb, var(--fk) 18%, transparent); color:var(--fk); }
+
+.rel-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.rel-chip{
+  font-family:'IBM Plex Mono',monospace; font-size:.68rem; background:var(--surface-2); border:1px solid var(--border);
+  border-radius:7px; padding:3px 8px; cursor:pointer; color:var(--fg); display:inline-flex; align-items:center; gap:5px;
+  max-width:100%; overflow-wrap:anywhere; word-break:break-word; text-align:left;
+}
+.rel-chip:hover{ border-color:var(--accent); color:var(--accent); }
+.rel-chip .d{ width:7px; height:7px; border-radius:50%; flex:none; }
+
+.more{ margin:8px 0 0; padding:8px 10px; background:var(--surface-2); border-radius:9px; }
+.more .lbl{ font-size:.66rem; text-transform:uppercase; letter-spacing:.04em; color:var(--fg-dim); margin-bottom:4px; }
+.more ul{ margin:0; padding-left:16px; font-size:.78rem; line-height:1.5; }
+
+.empty{
+  background:var(--surface); border:1.5px dashed var(--border); border-radius:14px; padding:22px;
+  color:var(--fg-dim); font-size:.88rem; text-align:center; grid-column:1/-1;
+}
+
+footer.note{ margin-top:26px; font-size:.74rem; color:var(--fg-dim); text-align:center; }
+
+.view-toggle{ display:flex; gap:8px; margin:18px 0 16px; }
+.view-toggle button{
+  font-family:'IBM Plex Mono',monospace; font-size:.74rem; padding:6px 14px; border-radius:999px;
+  border:1.5px solid var(--border); background:var(--surface); color:var(--fg-dim); cursor:pointer;
+}
+.view-toggle button.active{ border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.view{ display:none; }
+.view.active{ display:block; }
+
+/* ---- canvas edgeless ---- */
+#canvasViewport{
+  position:relative; height:70vh; min-height:460px; max-height:760px;
+  border:1px solid var(--border); border-radius:14px; overflow:hidden; background:var(--surface);
+  touch-action:none; cursor:grab; -webkit-user-select:none; user-select:none;
+}
+#canvasViewport.panning{ cursor:grabbing; }
+#canvasWorld{ position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; }
+#canvasEdges{ position:absolute; top:0; left:0; overflow:visible; pointer-events:none; transform-origin:0 0; will-change:transform; }
+#canvasEdges path.struct{ fill:none; stroke:var(--border); stroke-width:1.3; }
+#canvasEdges path.rel{ fill:none; stroke-width:1.3; stroke-dasharray:3 5; opacity:.75; }
+
+.canvas-controls{ position:absolute; right:12px; bottom:12px; display:flex; flex-direction:column; gap:6px; z-index:5; }
+.canvas-controls button{
+  width:32px; height:32px; border-radius:8px; border:1px solid var(--border); background:var(--surface);
+  color:var(--fg); font-size:1rem; cursor:pointer; line-height:1;
+}
+.storage-intro{ margin:18px 0 10px; max-width:720px; }
+.storage-intro h2{ font-size:1rem; margin:0 0 4px; }
+.storage-intro p{ margin:0; font-size:.84rem; color:var(--fg-dim); line-height:1.5; }
+.storage-notes{ display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:10px; }
+.storage-notes .snote{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+.storage-notes .snh{ display:flex; align-items:center; gap:6px; font-weight:600; font-size:.84rem; margin-bottom:4px; }
+.storage-notes .snh .d{ width:8px; height:8px; border-radius:50%; flex:none; }
+.storage-notes p{ margin:0; font-size:.78rem; color:var(--fg-dim); line-height:1.5; }
+
+.canvas-hint{
+  position:absolute; left:12px; bottom:12px; font-size:.66rem; color:var(--fg-dim); font-family:'IBM Plex Mono',monospace;
+  z-index:5; background:color-mix(in srgb, var(--surface) 82%, transparent); padding:3px 8px; border-radius:6px;
+}
+
+.hub-node{
+  position:absolute; width:116px; height:116px; margin:-58px 0 0 -58px; border-radius:50%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  background:var(--surface); border:2.5px solid var(--dot); cursor:grab; -webkit-user-select:none; user-select:none; text-align:center; padding:6px;
+}
+.hub-node.dragging{ cursor:grabbing; z-index:20; }
+.hub-node .nm{ font-weight:700; font-size:.8rem; overflow-wrap:anywhere; word-break:break-word; }
+.hub-node .ht{ font-family:'IBM Plex Mono',monospace; font-size:.6rem; color:var(--fg-dim); overflow-wrap:anywhere; word-break:break-word; }
+
+.canvas-entity{
+  position:absolute; width:190px; margin:-18px 0 0 -95px; background:var(--surface); border:1.5px solid var(--border);
+  border-radius:10px; padding:7px 9px; cursor:grab; -webkit-user-select:none; user-select:none; font-size:.76rem;
+}
+.canvas-entity.dragging{ cursor:grabbing; z-index:20; }
+.canvas-entity .cn-title{ font-family:'IBM Plex Mono',monospace; font-weight:600; display:flex; align-items:center; flex-wrap:wrap; justify-content:space-between; gap:6px; }
+.canvas-entity .cn-title span:first-child{ overflow-wrap:anywhere; word-break:break-word; min-width:0; }
+.canvas-entity .cn-kind{ font-size:.6rem; color:var(--fg-dim); text-transform:uppercase; white-space:nowrap; }
+.canvas-entity .cn-fields{ display:none; margin-top:6px; padding-top:6px; border-top:1px dashed var(--border); }
+.canvas-entity.open{ width:250px; margin-left:-125px; }
+.canvas-entity.open .cn-fields{ display:block; }
+.canvas-entity .cn-fields div{ font-family:'IBM Plex Mono',monospace; font-size:.67rem; line-height:1.6; color:var(--fg-dim); overflow-wrap:anywhere; word-break:break-word; }
+.canvas-entity .cn-fields b{ color:var(--fg); }
+
+@media (max-width:720px){
+  .nodes-row{ flex-wrap:wrap; }
+  .node-btn{ flex:1 1 30%; }
+  #map svg{ display:none; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="badge">rama <b>correcciones</b> · estado actual del repo</div>
+    <h1>Esquema del Fixture 2030</h1>
+    <p>Qué guarda cada motor, cómo se referencian entre sí (mismo <code>codigo</code> de equipo, jugador y partido en todos) y qué le falta a cada tabla/colección/nodo. Tocá un motor del mapa o un chip "se relaciona con" para saltar.</p>
+  </header>
+
+  <div class="view-toggle">
+    <button data-view="nav" class="active" type="button">Navegador</button>
+    <button data-view="canvas" type="button">Canvas</button>
+  </div>
+
+  <div id="navView" class="view active">
+    <div id="map">
+      <svg id="lines"></svg>
+      <div class="nodes-row" id="nodesRow"></div>
+    </div>
+    <p id="panel-blurb"></p>
+    <div class="entity-grid" id="panel"></div>
+  </div>
+
+  <div id="canvasViewWrap" class="view">
+    <div id="canvasViewport">
+      <svg id="canvasEdges" width="1" height="1"></svg>
+      <div id="canvasWorld"></div>
+      <div class="canvas-controls">
+        <button id="zoomIn" type="button" title="Acercar">+</button>
+        <button id="zoomOut" type="button" title="Alejar">−</button>
+        <button id="zoomReset" type="button" title="Centrar">⟲</button>
+      </div>
+      <div class="canvas-hint">arrastrá el fondo para moverte · rueda para zoom · tocá una tarjeta para abrirla</div>
+    </div>
+
+    <div class="storage-intro">
+      <h2>¿Guarda todo o solo una parte?</h2>
+      <p>Que dos motores tengan una entidad "Partido" no significa que guarden lo mismo. Cada uno se queda con el subconjunto de datos que necesita para su trabajo — el resto lo busca en otro lado.</p>
+    </div>
+    <div class="storage-notes" id="storageNotes"></div>
+  </div>
+
+  <footer class="note">Mapa generado a partir de los esquemas reales (init-scripts, .cypher, .cql, docs/modelo_clave_valor.md, docs/modelo_multidimensional.md y las clases .cls) de la rama correcciones.</footer>
+</div>
+
+<script>
+const DATA = {
+  dbs: [
+    { id:'mongo', name:'MongoDB', hito:4, dot:'var(--mongo)',
+      blurb:'Ficha estática de cada equipo y jugador — lo que no cambia durante el partido.',
+      storage:'Guarda la ficha completa: todos los campos de equipos y jugadores viven acá, es la fuente de verdad para ese dato.',
+      entities: [
+        { name:'equipos', kind:'Colección', fields:[
+            {n:'codigo',t:'string',k:'pk',d:'3 letras mayúsculas, estándar FIFA (ej. ARG)'},
+            {n:'nombre',t:'string',d:''},
+            {n:'confederacion',t:'enum',d:'CONMEBOL / UEFA / CAF / AFC / CONCACAF / OFC'},
+            {n:'ranking',t:'int',d:''},
+            {n:'sedeBase',t:'string',d:'opcional'},
+            {n:'cantidadJugadoresConvocados',t:'int',d:'contador desnormalizado'},
+          ],
+          rel:[ {db:'mongo',e:'jugadores',label:'tiene muchos'}, {db:'neo4j',e:'Equipo',label:'mismo codigo'}, {db:'redis',e:'cache:equipo:{codigo}',label:'se cachea acá'}, {db:'iris',e:'Jugador',label:'EquipoCodigo referencia acá'} ],
+          more:['Escudo o bandera (url de imagen)','Historial de resultados del torneo','Datos del cuerpo técnico'] },
+        { name:'jugadores', kind:'Colección', fields:[
+            {n:'codigo',t:'string',k:'pk',d:'ej. ARG-10'},
+            {n:'equipoCodigo',t:'string',k:'fk',d:'→ equipos.codigo'},
+            {n:'nombre',t:'string',d:''},
+            {n:'apellido',t:'string',d:''},
+            {n:'posicion',t:'enum',d:'Portero / Defensa / Centrocampista / Delantero'},
+            {n:'dorsal',t:'int',d:'1 a 26'},
+            {n:'fechaNacimiento',t:'date',d:''},
+            {n:'convocado',t:'bool',d:''},
+          ],
+          rel:[ {db:'mongo',e:'equipos',label:'pertenece a'}, {db:'neo4j',e:'Jugador',label:'mismo codigo'}, {db:'iris',e:'Jugador',label:'EquipoCodigo'}, {db:'iris',e:'Evento',label:'JugadorCodigo'} ],
+          more:['Estadísticas acumuladas (goles, asistencias)','Estado de lesión o disponibilidad','Valor de mercado'] },
+      ] },
+
+    { id:'neo4j', name:'Neo4j', hito:5, dot:'var(--neo4j)',
+      blurb:'Relaciones entre partidos, equipos, sedes y eventos — lo que conviene recorrer, no buscar.',
+      storage:'No guarda todo: cada nodo tiene solo lo que hace falta para filtrar o recorrer una relación (ej. Equipo acá no tiene nombre ni sede, eso se busca en Mongo). El resto de la ficha completa no se duplica acá.',
+      entities:[
+        { name:'Equipo', kind:'Nodo', fields:[
+            {n:'codigo',t:'string',k:'pk',d:''}, {n:'confederacion',t:'string',d:''}, {n:'ranking',t:'int',d:''},
+          ],
+          rel:[ {db:'mongo',e:'equipos',label:'mismo codigo'}, {db:'neo4j',e:'Jugador',label:'PERTENECE_A ←'}, {db:'neo4j',e:'Partido',label:'DISPUTA ←'} ],
+          more:['nodo Confederación propio (hoy es solo un string)'] },
+        { name:'Jugador', kind:'Nodo', fields:[
+            {n:'codigo',t:'string',k:'pk',d:'ej. ARG-10'}, {n:'posicion',t:'string',d:''}, {n:'dorsal',t:'int',d:''},
+          ],
+          rel:[ {db:'neo4j',e:'Equipo',label:'PERTENECE_A →'}, {db:'neo4j',e:'Evento',label:'PROTAGONISTA_DE →'}, {db:'mongo',e:'jugadores',label:'mismo codigo'} ],
+          more:['relación PREDICE hacia una Predicción (el Hito 2 se la asignó a Neo4j, pero acá no está implementada)'] },
+        { name:'Partido', kind:'Nodo', fields:[
+            {n:'codigo',t:'string',k:'pk',d:'ej. P-01'}, {n:'fase',t:'string',d:''}, {n:'fecha',t:'date',d:''},
+            {n:'equipoGanador',t:'string',d:''}, {n:'equipoPerdedor',t:'string',d:''},
+            {n:'golesGanador',t:'int',d:''}, {n:'golesPerdedor',t:'int',d:''}, {n:'origenResultado',t:'string',d:'siempre "SIMULADO"'},
+          ],
+          rel:[ {db:'neo4j',e:'Equipo',label:'DISPUTA ×2 (rol)'}, {db:'neo4j',e:'Sede',label:'SE_JUEGA_EN →'}, {db:'neo4j',e:'Evento',label:'OCURRE_EN ←'}, {db:'cassandra',e:'partidos_referencia',label:'mismo partido_codigo'}, {db:'redis',e:'cache:partido:{codigo}:resumen',label:'se cachea acá'}, {db:'influx',e:'estadisticas_partido',label:'tag partido_codigo'}, {db:'iris',e:'Partido',label:'mismo Codigo'} ],
+          more:['nodo Fase propio en vez de un string','marcador realmente en vivo (hoy el resultado es simulado, no viene de ningún partido corriendo)'] },
+        { name:'Sede', kind:'Nodo', fields:[
+            {n:'codigo',t:'string',k:'pk',d:'ej. EST001'}, {n:'nombre',t:'string',d:''}, {n:'ciudad',t:'string',d:''},
+          ],
+          rel:[ {db:'neo4j',e:'Partido',label:'SE_JUEGA_EN ←'} ],
+          more:['Sede → Ciudad → País como nodos separados','capacidad (se sacó del modelo por ser solo descriptiva)'] },
+        { name:'Evento', kind:'Nodo', fields:[
+            {n:'codigo',t:'string',k:'pk',d:'ej. P-01-EV1'}, {n:'tipo',t:'string',d:''}, {n:'minuto',t:'int',d:''},
+          ],
+          rel:[ {db:'neo4j',e:'Partido',label:'OCURRE_EN →'}, {db:'neo4j',e:'Jugador',label:'PROTAGONISTA_DE ←'}, {db:'iris',e:'Evento',label:'mismo concepto, otra base'} ],
+          more:['resultado del evento (ej. marcador tras el gol)'] },
+      ] },
+
+    { id:'cassandra', name:'Cassandra', hito:6, dot:'var(--cassandra)',
+      blurb:'Comentarios masivos durante el partido — mucho volumen de escritura, poca necesidad de cruzar tablas.',
+      storage:'Guarda el comentario completo, pero dos veces: una vez ordenado por partido y otra por usuario. No es un recorte, es duplicación deliberada para no tener que filtrar sin índice.',
+      entities:[
+        { name:'comentarios_por_partido', kind:'Tabla', fields:[
+            {n:'partido_codigo',t:'text',k:'pk',d:'partición, junto con bucket'},
+            {n:'bucket',t:'int',k:'pk',d:'ventana de 10 min desde el inicio del partido'},
+            {n:'comentario_id',t:'timeuuid',k:'pk',d:'clustering, orden descendente'},
+            {n:'usuario_id',t:'text',d:''}, {n:'contenido',t:'text',d:''}, {n:'creado_en',t:'timestamp',d:''},
+            {n:'estado_moderacion',t:'text',d:''}, {n:'likes',t:'int',d:''},
+          ],
+          rel:[ {db:'neo4j',e:'Partido',label:'mismo partido_codigo'}, {db:'cassandra',e:'comentarios_por_usuario',label:'mismo comentario, otra clave'} ],
+          more:['tabla separada por estado_moderacion, para revisar en bloque','tabla de "quién dio like" si hiciera falta evitar doble voto'] },
+        { name:'comentarios_por_usuario', kind:'Tabla', fields:[
+            {n:'usuario_id',t:'text',k:'pk',d:'partición'},
+            {n:'creado_en',t:'timestamp',k:'pk',d:'clustering'}, {n:'comentario_id',t:'timeuuid',k:'pk',d:'clustering'},
+            {n:'partido_codigo',t:'text',d:''}, {n:'contenido',t:'text',d:''}, {n:'estado_moderacion',t:'text',d:''},
+          ],
+          rel:[ {db:'cassandra',e:'comentarios_por_partido',label:'duplicado intencional'}, {db:'neo4j',e:'Partido',label:'partido_codigo'} ],
+          more:['-- existe solo para responder "todo lo que escribió un usuario" sin ALLOW FILTERING'] },
+        { name:'partidos_referencia', kind:'Tabla', fields:[
+            {n:'partido_codigo',t:'text',k:'pk',d:''}, {n:'fecha_inicio',t:'timestamp',d:''},
+          ],
+          rel:[ {db:'neo4j',e:'Partido',label:'mismo partido_codigo'} ],
+          more:['-- tabla puente: solo existe para calcular a qué bucket pertenece un comentario nuevo'] },
+      ] },
+
+    { id:'redis', name:'Redis', hito:7, dot:'var(--redis)',
+      blurb:'Copias rápidas y de corta vida — sesiones, caché y contadores en memoria.',
+      storage:'No guarda nada de forma permanente: todo es una copia parcial y temporal (con TTL) de lo que ya existe en Mongo o Neo4j, para no recalcularlo cada vez.',
+      entities:[
+        { name:'sesion:{sesion_id}', kind:'Hash · TTL 30 min', fields:[
+            {n:'usuario_id',t:'string',d:'a quién pertenece'}, {n:'creado_en',t:'string',d:'ISO 8601'},
+            {n:'ultima_actividad',t:'string',d:'ISO 8601, se actualiza en cada acceso'}, {n:'estado',t:'string',d:'"activa"'},
+          ], rel:[], more:['datos de dispositivo/IP, para detectar sesiones duplicadas'] },
+        { name:'usuario:{usuario_id}:sesion_activa', kind:'String · TTL = sesión', fields:[
+            {n:'(valor)',t:'string',d:'sesion_id vigente de ese usuario'},
+          ], rel:[], more:[] },
+        { name:'cache:equipo:{codigo}', kind:'String JSON · TTL 5 min', fields:[
+            {n:'(valor)',t:'json',d:'copia de un documento de mongo.equipos'},
+          ], rel:[ {db:'mongo',e:'equipos',label:'copia de'} ], more:['invalidación por evento en vez de TTL fijo'] },
+        { name:'cache:partido:{codigo}:resumen', kind:'String JSON · TTL 30 s', fields:[
+            {n:'(valor)',t:'json',d:'incluye revision_fuente, para verificar que no quedó vieja'},
+          ], rel:[ {db:'neo4j',e:'Partido',label:'resumen de'} ], more:['cache:jugador:{codigo} (todavía no existe)'] },
+        { name:'ranking:publico', kind:'Sorted Set · sin TTL', fields:[
+            {n:'miembro',t:'string',d:'usuario_id'}, {n:'score',t:'float',d:'puntos + antelación normalizada'},
+          ], rel:[], more:['ranking:grupo:{id} — hoy solo existe el ranking público, no uno por grupo privado'] },
+        { name:'contador:partido:{codigo}:visitas / :meta', kind:'String + Hash · TTL 1 h', fields:[
+            {n:'visitas',t:'int',d:'INCRBY atómico'}, {n:'meta',t:'hash',d:'última operación'},
+          ], rel:[ {db:'neo4j',e:'Partido',label:'contador de'} ], more:[] },
+      ] },
+
+    { id:'influx', name:'InfluxDB', hito:8, dot:'var(--influx)',
+      blurb:'Cómo evoluciona cada estadística segundo a segundo durante el partido.',
+      storage:'Solo guarda los números que cambian con el tiempo (posesión, pases, tiros...) más los códigos para identificarlos. Nombres, fechas y el resto de la ficha no están acá.',
+      entities:[
+        { name:'estadisticas_partido', kind:'Medición', fields:[
+            {n:'partido_codigo',t:'tag',d:'mismo formato P-NN que el resto de los módulos'},
+            {n:'equipo_codigo',t:'tag',d:''}, {n:'sede',t:'tag',d:''}, {n:'fuente',t:'tag',d:'baja cardinalidad'}, {n:'fase',t:'tag',d:''},
+            {n:'posesion_pct',t:'field',d:'float'}, {n:'pases_completados',t:'field',d:'int'}, {n:'tiros',t:'field',d:'int'},
+            {n:'recuperaciones',t:'field',d:'int'}, {n:'velocidad_kmh',t:'field',d:'float'}, {n:'time',t:'timestamp',d:'precisión de segundos'},
+          ],
+          rel:[ {db:'neo4j',e:'Partido',label:'tag partido_codigo'}, {db:'mongo',e:'equipos',label:'tag equipo_codigo'} ],
+          more:['métrica de clima/temperatura del estadio','bitrate o espectadores de streaming (la idea original de "espectadores" del Hito 7)'] },
+        { name:'usuarios_conectados', kind:'Medición', fields:[
+            {n:'partido_codigo',t:'tag',d:''}, {n:'region',t:'tag',d:''}, {n:'usuarios_activos',t:'field',d:'int'}, {n:'time',t:'timestamp',d:''},
+          ], rel:[ {db:'neo4j',e:'Partido',label:'tag partido_codigo'} ], more:['desglose por tipo de dispositivo (móvil / web)'] },
+      ] },
+
+    { id:'iris', name:'IRIS', hito:9, dot:'var(--iris)',
+      blurb:'Un partido con sus eventos adentro — relación padre-hijo que se guarda de una sola vez.',
+      storage:'Guarda una copia reducida de Partido (código, equipos, resultado) que se superpone a propósito con lo que ya tiene Neo4j, para poder mostrar el modelo de objetos de forma independiente.',
+      entities:[
+        { name:'Persona', kind:'Clase base', fields:[
+            {n:'Nombre',t:'%String',d:'obligatorio'}, {n:'Nacionalidad',t:'%String',d:''}, {n:'FechaNacimiento',t:'%Date',d:''},
+          ], rel:[], more:[] },
+        { name:'Jugador', kind:'Extends Persona', fields:[
+            {n:'Dorsal',t:'%Integer',d:'1 a 26'}, {n:'Posicion',t:'%String',d:'enum'}, {n:'EquipoCodigo',t:'%String',k:'fk',d:'→ equipo del módulo documental'},
+          ], rel:[ {db:'mongo',e:'equipos',label:'EquipoCodigo'}, {db:'mongo',e:'jugadores',label:'mismo dominio'} ], more:[] },
+        { name:'Arbitro', kind:'Extends Persona', fields:[
+            {n:'Categoria',t:'%String',d:'FIFA / Continental / Nacional'}, {n:'PaisOrigen',t:'%String',d:''},
+          ], rel:[], more:['relación formal con Partido (hoy es solo una referencia simple, no bidireccional)'] },
+        { name:'Tecnico', kind:'Extends Persona', fields:[
+            {n:'EquipoCodigo',t:'%String',k:'fk',d:''}, {n:'Formacion',t:'%String',d:''},
+          ], rel:[ {db:'mongo',e:'equipos',label:'EquipoCodigo'} ], more:[] },
+        { name:'Partido', kind:'Clase', fields:[
+            {n:'Codigo',t:'%String',k:'pk',d:'mismo código que Neo4j (ej. P-01)'}, {n:'Fecha',t:'%TimeStamp',d:''}, {n:'Fase',t:'%String',d:''},
+            {n:'EquipoLocal',t:'%String',d:''}, {n:'EquipoVisitante',t:'%String',d:''},
+            {n:'GolesLocal',t:'%Integer',d:''}, {n:'GolesVisitante',t:'%Integer',d:''}, {n:'Estado',t:'%String',d:'Programado/EnCurso/Finalizado'},
+            {n:'ArbitroPrincipal',t:'ref',d:'referencia simple a Arbitro'}, {n:'Eventos',t:'relationship',d:'children, cardinalidad 1:N'},
+          ],
+          rel:[ {db:'neo4j',e:'Partido',label:'mismo Codigo'}, {db:'cassandra',e:'partidos_referencia',label:'mismo partido_codigo'}, {db:'redis',e:'cache:partido:{codigo}:resumen',label:'mismo código'}, {db:'influx',e:'estadisticas_partido',label:'tag partido_codigo'} ],
+          more:['relación formal con Arbitro, en vez de referencia simple'] },
+        { name:'Evento', kind:'Clase', fields:[
+            {n:'Partido',t:'relationship',d:'parent, inverso de Partido.Eventos'}, {n:'Tipo',t:'%String',d:'Gol/TarjetaAmarilla/TarjetaRoja/Cambio'},
+            {n:'Minuto',t:'%Integer',d:'0 a 130'}, {n:'JugadorCodigo',t:'%String',d:'ej. ARG-20'}, {n:'Descripcion',t:'%String',d:'opcional'},
+          ],
+          rel:[ {db:'neo4j',e:'Evento',label:'mismo concepto, otra base'}, {db:'mongo',e:'jugadores',label:'JugadorCodigo'} ],
+          more:['relación formal con Jugador en vez de guardar solo el código como texto'] },
+      ] },
+  ],
+  links:[ ['mongo','neo4j'], ['mongo','redis'], ['mongo','iris'], ['neo4j','cassandra'], ['neo4j','redis'], ['neo4j','influx'], ['neo4j','iris'] ],
+};
+
+let setActive;
+(function(){
+  const row = document.getElementById('nodesRow');
+  const svg = document.getElementById('lines');
+  const panel = document.getElementById('panel');
+  const blurbEl = document.getElementById('panel-blurb');
+  const byId = Object.fromEntries(DATA.dbs.map(d=>[d.id,d]));
+  let active = DATA.dbs[0].id;
+
+  DATA.dbs.forEach(db=>{
+    const b = document.createElement('button');
+    b.className = 'node-btn'; b.dataset.id = db.id; b.style.setProperty('--dot', db.dot);
+    b.innerHTML = '<span class="dot"></span><span class="nm">'+db.name+'</span><span class="ht">Hito '+db.hito+'</span>';
+    b.addEventListener('click', ()=> setActive(db.id));
+    row.appendChild(b);
+  });
+
+  function drawLines(){
+    svg.innerHTML = '';
+    const rowRect = row.getBoundingClientRect();
+    svg.setAttribute('viewBox','0 0 '+rowRect.width+' '+rowRect.height);
+    const centers = {};
+    DATA.dbs.forEach(db=>{
+      const el = row.querySelector('[data-id="'+db.id+'"]');
+      const r = el.getBoundingClientRect();
+      centers[db.id] = { x: r.left - rowRect.left + r.width/2, y: r.top - rowRect.top + r.height - 2 };
+    });
+    DATA.links.forEach(([a,b])=>{
+      const c1 = centers[a], c2 = centers[b];
+      if(!c1||!c2) return;
+      const dy = Math.max(18, Math.abs(c2.x-c1.x)*0.12);
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', 'M '+c1.x+' '+c1.y+' C '+c1.x+' '+(c1.y+dy)+', '+c2.x+' '+(c2.y+dy)+', '+c2.x+' '+c2.y);
+      path.dataset.a=a; path.dataset.b=b;
+      svg.appendChild(path);
+    });
+  }
+
+  setActive = function(id, focusEntity){
+    active = id;
+    row.querySelectorAll('.node-btn').forEach(b=> b.classList.toggle('active', b.dataset.id===id));
+    svg.querySelectorAll('path').forEach(p=> p.classList.toggle('lit', p.dataset.a===id || p.dataset.b===id));
+    render();
+    if (focusEntity){
+      requestAnimationFrame(()=>{
+        const card = panel.querySelector('[data-entity="'+CSS.escape(focusEntity)+'"]');
+        if(card){ card.scrollIntoView({behavior:'smooth', block:'center'}); card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash'); }
+      });
+    }
+  };
+
+  function chip(r){
+    const target = byId[r.db];
+    const span = document.createElement('button');
+    span.className = 'rel-chip';
+    span.innerHTML = '<span class="d" style="background:'+(target?target.dot:'var(--fg-dim)')+'"></span>'+(target?target.name:r.db)+' · '+r.e+' <span style="opacity:.6">— '+r.label+'</span>';
+    span.addEventListener('click', ()=> setActive(r.db, r.e));
+    return span;
+  }
+
+  function render(){
+    const db = byId[active];
+    blurbEl.innerHTML = '<b>'+db.name+'</b> (Hito '+db.hito+') — '+db.blurb;
+    panel.innerHTML = '';
+    if (!db.entities.length){
+      const d = document.createElement('div');
+      d.className = 'empty';
+      d.textContent = 'Este motor no tiene entidades definidas en esta rama.';
+      panel.appendChild(d);
+      return;
+    }
+    db.entities.forEach(ent=>{
+      const card = document.createElement('div');
+      card.className = 'entity'; card.dataset.entity = ent.name;
+      const h = document.createElement('h3');
+      h.innerHTML = '<span class="mono">'+ent.name+'</span><span class="kind">'+ent.kind+'</span>';
+      card.appendChild(h);
+      if (ent.note){ const n=document.createElement('p'); n.className='note'; n.textContent=ent.note; card.appendChild(n); }
+
+      const table = document.createElement('table'); table.className='fields';
+      table.innerHTML = '<tr><th>Campo</th><th>Tipo</th><th>Nota</th></tr>';
+      ent.fields.forEach(f=>{
+        const tr = document.createElement('tr');
+        const keyBadge = f.k ? '<span class="key '+f.k+'">'+f.k.toUpperCase()+'</span>' : '';
+        tr.innerHTML = '<td class="fname">'+f.n+keyBadge+'</td><td class="ftype">'+f.t+'</td><td class="fdesc">'+(f.d||'')+'</td>';
+        table.appendChild(tr);
+      });
+      const tableWrap = document.createElement('div');
+      tableWrap.className = 'fields-wrap';
+      tableWrap.appendChild(table);
+      card.appendChild(tableWrap);
+
+      if (ent.rel && ent.rel.length){
+        const relRow = document.createElement('div'); relRow.className='rel-row';
+        ent.rel.forEach(r=> relRow.appendChild(chip(r)));
+        card.appendChild(relRow);
+      }
+      if (ent.more && ent.more.length){
+        const more = document.createElement('div'); more.className='more';
+        more.innerHTML = '<div class="lbl">Qué podría sumar</div>';
+        const ul = document.createElement('ul');
+        ent.more.forEach(m=>{ const li=document.createElement('li'); li.textContent=m; ul.appendChild(li); });
+        more.appendChild(ul);
+        card.appendChild(more);
+      }
+      panel.appendChild(card);
+    });
+  }
+
+  window.addEventListener('resize', drawLines);
+  requestAnimationFrame(()=>{ drawLines(); setActive(active); });
+  setTimeout(drawLines, 200);
+})();
+
+/* ---------- Canvas (edgeless) view ---------- */
+let initCanvasView;
+(function(){
+  const viewport = document.getElementById('canvasViewport');
+  const world = document.getElementById('canvasWorld');
+  const edgesSvg = document.getElementById('canvasEdges');
+  let built = false;
+  let scale = 0.62, panX = 0, panY = 0;
+  const nodePos = {};
+
+  function layout(){
+    // El motor con mas conexiones va al centro (normalmente Neo4j, que es
+    // el que encadena partido/equipo/jugador con el resto). Los demas se
+    // reparten en un anillo alrededor, ordenados para que los que se
+    // relacionan directamente entre si (sin pasar por el centro) queden
+    // uno al lado del otro: asi las lineas de relacion cruzan mucho menos.
+    const deg = {}; DATA.dbs.forEach(d=> deg[d.id]=0);
+    DATA.links.forEach(([a,b])=>{ deg[a]=(deg[a]||0)+1; deg[b]=(deg[b]||0)+1; });
+    let centerDb = DATA.dbs[0];
+    DATA.dbs.forEach(d=>{ if((deg[d.id]||0) > (deg[centerDb.id]||0)) centerDb = d; });
+
+    const outerLink = new Set();
+    DATA.links.forEach(([a,b])=>{
+      if(a!==centerDb.id && b!==centerDb.id){ outerLink.add(a+'|'+b); outerLink.add(b+'|'+a); }
+    });
+    // cadena que crece por los dos extremos: asi un motor con dos vecinos
+    // (ej. Mongo con Redis e IRIS) queda sandwicheado entre los dos, en
+    // vez de arrastrado a una sola punta del anillo.
+    const remaining = DATA.dbs.filter(d=> d.id!==centerDb.id);
+    const ordered = remaining.length ? [remaining.shift()] : [];
+    while(remaining.length){
+      const front = ordered[0], back = ordered[ordered.length-1];
+      let idx = remaining.findIndex(d=> outerLink.has(back.id+'|'+d.id));
+      if(idx!==-1){ ordered.push(remaining.splice(idx,1)[0]); continue; }
+      idx = remaining.findIndex(d=> outerLink.has(front.id+'|'+d.id));
+      if(idx!==-1){ ordered.unshift(remaining.splice(idx,1)[0]); continue; }
+      ordered.push(remaining.shift());
+    }
+
+    nodePos['hub:'+centerDb.id] = {x:0,y:0};
+    const cm = centerDb.entities.length;
+    centerDb.entities.forEach((ent,j)=>{
+      const a = -Math.PI/2 + j*(2*Math.PI/Math.max(cm,1));
+      nodePos['ent:'+centerDb.id+':'+ent.name] = { x:Math.cos(a)*200, y:Math.sin(a)*200 };
+    });
+
+    const ringR = 480, n = ordered.length;
+    ordered.forEach((db,i)=>{
+      const angle = -Math.PI/2 + i*(2*Math.PI/Math.max(n,1));
+      const hx = Math.cos(angle)*ringR, hy = Math.sin(angle)*ringR;
+      nodePos['hub:'+db.id] = {x:hx,y:hy};
+      const m = db.entities.length;
+      db.entities.forEach((ent,j)=>{
+        const perp = angle + Math.PI/2;
+        const offset = (j-(m-1)/2) * 150;
+        const ex = hx + Math.cos(angle)*230 + Math.cos(perp)*offset;
+        const ey = hy + Math.sin(angle)*230 + Math.sin(perp)*offset;
+        nodePos['ent:'+db.id+':'+ent.name] = {x:ex,y:ey};
+      });
+    });
+  }
+
+  function dotOf(id){ const d = DATA.dbs.find(d=>d.id===id); return d?d.dot:'var(--fg-dim)'; }
+
+  function buildDom(){
+    layout();
+    DATA.dbs.forEach(db=>{
+      const hub = document.createElement('div');
+      hub.className = 'hub-node'; hub.dataset.key = 'hub:'+db.id; hub.style.setProperty('--dot', db.dot);
+      hub.style.left = nodePos['hub:'+db.id].x+'px'; hub.style.top = nodePos['hub:'+db.id].y+'px';
+      hub.innerHTML = '<div class="nm">'+db.name+'</div><div class="ht">Hito '+db.hito+(db.missing?' · vacío':'')+'</div>';
+      world.appendChild(hub);
+      makeDraggable(hub, 'hub:'+db.id, ()=>{ switchView('nav'); setActive(db.id); });
+
+      db.entities.forEach(ent=>{
+        const key = 'ent:'+db.id+':'+ent.name;
+        const card = document.createElement('div');
+        card.className = 'canvas-entity'; card.dataset.key = key;
+        card.style.left = nodePos[key].x+'px'; card.style.top = nodePos[key].y+'px';
+        card.style.borderLeft = '3px solid '+db.dot;
+        const fieldsHtml = ent.fields.map(f=> '<div><b>'+f.n+'</b> <span style="opacity:.65">'+f.t+'</span>'+(f.d?' — '+f.d:'')+'</div>').join('');
+        const moreHtml = (ent.more&&ent.more.length) ? '<div style="margin-top:4px;opacity:.85">+ '+ent.more.length+' idea(s) para sumar</div>' : '';
+        card.innerHTML = '<div class="cn-title"><span>'+ent.name+'</span><span class="cn-kind">'+ent.kind+'</span></div><div class="cn-fields">'+fieldsHtml+moreHtml+'</div>';
+        world.appendChild(card);
+        makeDraggable(card, key, ()=> card.classList.toggle('open'));
+      });
+    });
+    renderStorageNotes();
+    drawEdges();
+  }
+
+  function renderStorageNotes(){
+    const box = document.getElementById('storageNotes');
+    box.innerHTML = DATA.dbs.map(db=>
+      '<div class="snote"><div class="snh"><span class="d" style="background:'+db.dot+'"></span>'+db.name+'</div><p>'+(db.storage||'')+'</p></div>'
+    ).join('');
+  }
+
+  function makeDraggable(el, key, onClick){
+    let sx,sy, moved, startPos, pid;
+    el.addEventListener('pointerdown', e=>{
+      pid = e.pointerId; el.setPointerCapture(pid);
+      sx = e.clientX; sy = e.clientY; moved=false;
+      startPos = { x: nodePos[key].x, y: nodePos[key].y };
+      el.classList.add('dragging');
+      e.stopPropagation();
+    });
+    el.addEventListener('pointermove', e=>{
+      if(e.pointerId!==pid || !el.classList.contains('dragging')) return;
+      const dx=(e.clientX-sx)/scale, dy=(e.clientY-sy)/scale;
+      if(Math.abs(e.clientX-sx)>4||Math.abs(e.clientY-sy)>4) moved=true;
+      if(!moved) return;
+      nodePos[key] = { x: startPos.x+dx, y: startPos.y+dy };
+      el.style.left = nodePos[key].x+'px'; el.style.top = nodePos[key].y+'px';
+      drawEdges();
+    });
+    el.addEventListener('pointerup', e=>{
+      if(e.pointerId!==pid) return;
+      el.classList.remove('dragging');
+      if(!moved && onClick) onClick();
+    });
+  }
+
+  const structEdges = [], relEdges = [];
+  DATA.dbs.forEach(db=> db.entities.forEach(ent=>{
+    structEdges.push(['hub:'+db.id, 'ent:'+db.id+':'+ent.name]);
+    (ent.rel||[]).forEach(r=>{
+      relEdges.push(['ent:'+db.id+':'+ent.name, 'ent:'+r.db+':'+r.e, dotOf(r.db)]);
+    });
+  }));
+
+  function curvedPath(pa, pb){
+    // arco hacia afuera del centro, para que las relaciones entre motores
+    // del anillo exterior no corten por el medio (donde esta el motor
+    // central con sus propias entidades).
+    const mx=(pa.x+pb.x)/2, my=(pa.y+pb.y)/2;
+    const dist = Math.hypot(mx,my) || 1;
+    const nx = mx/dist, ny = my/dist;
+    const bow = Math.min(130, Math.hypot(pb.x-pa.x, pb.y-pa.y) * 0.22);
+    const cx = mx + nx*bow, cy = my + ny*bow;
+    return 'M '+pa.x+' '+pa.y+' Q '+cx+' '+cy+' '+pb.x+' '+pb.y;
+  }
+
+  function drawEdges(){
+    let s = '';
+    structEdges.forEach(([a,b])=>{
+      const pa=nodePos[a], pb=nodePos[b]; if(!pa||!pb) return;
+      s += '<path class="struct" d="M '+pa.x+' '+pa.y+' L '+pb.x+' '+pb.y+'"/>';
+    });
+    relEdges.forEach(([a,b,color])=>{
+      const pa=nodePos[a], pb=nodePos[b]; if(!pa||!pb) return;
+      s += '<path class="rel" style="stroke:'+color+'" d="'+curvedPath(pa,pb)+'"/>';
+    });
+    edgesSvg.innerHTML = s;
+  }
+
+  function applyTransform(){
+    const t = 'translate('+panX+'px,'+panY+'px) scale('+scale+')';
+    world.style.transform = t; edgesSvg.style.transform = t;
+  }
+
+  function centerView(){
+    const r = viewport.getBoundingClientRect();
+    panX = r.width/2; panY = r.height/2; scale = 0.62;
+    applyTransform();
+  }
+
+  let panningPid=null, panStart=null, panOrigin=null;
+  viewport.addEventListener('pointerdown', e=>{
+    if(e.target.closest('.hub-node, .canvas-entity, .canvas-controls')) return;
+    panningPid = e.pointerId; viewport.setPointerCapture(panningPid);
+    viewport.classList.add('panning');
+    panStart = {x:e.clientX,y:e.clientY}; panOrigin = {x:panX,y:panY};
+  });
+  viewport.addEventListener('pointermove', e=>{
+    if(panningPid!==e.pointerId) return;
+    panX = panOrigin.x + (e.clientX-panStart.x);
+    panY = panOrigin.y + (e.clientY-panStart.y);
+    applyTransform();
+  });
+  ['pointerup','pointercancel'].forEach(ev=> viewport.addEventListener(ev, e=>{
+    if(panningPid===e.pointerId){ panningPid=null; viewport.classList.remove('panning'); }
+  }));
+
+  viewport.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const r = viewport.getBoundingClientRect();
+    const mx = e.clientX-r.left, my = e.clientY-r.top;
+    const prev = scale;
+    scale = Math.min(2.2, Math.max(0.3, scale * (1 - e.deltaY*0.0015)));
+    panX = mx - (mx-panX)*(scale/prev);
+    panY = my - (my-panY)*(scale/prev);
+    applyTransform();
+  }, {passive:false});
+
+  document.getElementById('zoomIn').addEventListener('click', ()=>{ scale=Math.min(2.2,scale*1.2); applyTransform(); });
+  document.getElementById('zoomOut').addEventListener('click', ()=>{ scale=Math.max(0.3,scale/1.2); applyTransform(); });
+  document.getElementById('zoomReset').addEventListener('click', centerView);
+
+  initCanvasView = function(){
+    if(built) return; built = true;
+    buildDom();
+    requestAnimationFrame(centerView);
+  };
+})();
+
+function switchView(name){
+  document.querySelectorAll('.view-toggle button').forEach(b=> b.classList.toggle('active', b.dataset.view===name));
+  document.getElementById('navView').classList.toggle('active', name==='nav');
+  document.getElementById('canvasViewWrap').classList.toggle('active', name==='canvas');
+  if(name==='canvas') initCanvasView();
+}
+document.querySelectorAll('.view-toggle button').forEach(b=> b.addEventListener('click', ()=> switchView(b.dataset.view)));
+</script>
+</body>
+</html>

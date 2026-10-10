@@ -1,0 +1,45 @@
+
+Node: 79de1d91845a, Instance: IRIS
+
+USER>
+
+Load of directory started on 10/03/2026 00:02:30 '*.cls'
+
+Loading file /tmp/src/Fixture2030.Jugador.cls as udl
+Loading file /tmp/src/Fixture2030.Arbitro.cls as udl
+Loading file /tmp/src/Fixture2030.Carga.cls as udl
+Loading file /tmp/src/Fixture2030.Evento.cls as udl
+Loading file /tmp/src/Fixture2030.Partido.cls as udl
+Loading file /tmp/src/Fixture2030.Persona.cls as udl
+Loading file /tmp/src/Fixture2030.Tecnico.cls as udl
+
+Compilation started on 10/03/2026 00:02:30 with qualifiers 'ck'
+Compiling 7 classes
+Compiling class Fixture2030.Carga
+Compiling class Fixture2030.Persona
+Compiling class Fixture2030.Partido
+Compiling class Fixture2030.Tecnico
+Compiling class Fixture2030.Jugador
+Compiling class Fixture2030.Arbitro
+Compiling class Fixture2030.Evento
+Compiling table Fixture2030.Arbitro
+Compiling table Fixture2030.Partido
+Compiling table Fixture2030.Evento
+Compiling table Fixture2030.Jugador
+Compiling table Fixture2030.Persona
+Compiling table Fixture2030.Tecnico
+Compiling routine Fixture2030.Carga.1
+Compiling routine Fixture2030.Persona.1
+Compiling routine Fixture2030.Partido.1
+Compiling routine Fixture2030.Tecnico.1
+Compiling routine Fixture2030.Arbitro.1
+Compiling routine Fixture2030.Jugador.1
+Compiling routine Fixture2030.Evento.1
+Compilation finished successfully in 0.367s.
+
+Load finished successfully.
+
+USER>
+errors=0
+
+USER>

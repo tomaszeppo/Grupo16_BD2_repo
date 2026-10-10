@@ -26,11 +26,11 @@ runq "SELECT COUNT(*) AS puntos_estadisticas FROM estadisticas_partido"
 echo "=== Conteo usuarios ==="
 runq "SELECT COUNT(*) AS puntos_usuarios FROM usuarios_conectados"
 
-echo "=== Distribucion M001 por equipo ==="
-runq "SELECT equipo_id, COUNT(*) AS puntos FROM estadisticas_partido WHERE partido_id='M001' GROUP BY equipo_id ORDER BY equipo_id"
+echo "=== Distribucion P-01 por equipo ==="
+runq "SELECT equipo_codigo, COUNT(*) AS puntos FROM estadisticas_partido WHERE partido_codigo='P-01' GROUP BY equipo_codigo ORDER BY equipo_codigo"
 
-echo "=== Distribucion M001 por fuente ==="
-runq "SELECT fuente, COUNT(*) AS puntos FROM estadisticas_partido WHERE partido_id='M001' GROUP BY fuente ORDER BY fuente"
+echo "=== Distribucion P-01 por fuente ==="
+runq "SELECT fuente, COUNT(*) AS puntos FROM estadisticas_partido WHERE partido_codigo='P-01' GROUP BY fuente ORDER BY fuente"
 
 echo "=== Retencion ==="
 docker compose exec -T influxdb influxdb3 show retention --database "$DB" --token "$TOKEN"

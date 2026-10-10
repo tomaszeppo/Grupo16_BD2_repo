@@ -37,12 +37,12 @@ def main() -> int:
     token_file = ROOT / ".secrets" / "influxdb_admin_token"
     token = token_file.read_text(encoding="utf-8").strip()
     query = (
-        "SELECT equipo_id, AVG(posesion_pct) AS promedio "
+        "SELECT equipo_codigo, AVG(posesion_pct) AS promedio "
         "FROM estadisticas_partido "
-        "WHERE partido_id = 'M001' "
+        "WHERE partido_codigo = 'P-01' "
         "AND time >= '2030-06-15T18:30:00Z' "
         "AND time < '2030-06-15T18:40:00Z' "
-        "GROUP BY equipo_id ORDER BY equipo_id"
+        "GROUP BY equipo_codigo ORDER BY equipo_codigo"
     )
     q_start = time.perf_counter()
     query_out = run([

@@ -17,11 +17,13 @@ La selección es consistente con las decisiones anteriores del grupo, donde Infl
 Fenómeno: evolución de métricas deportivas de cada equipo durante cada partido.
 
 **Tags (dimensiones indexables):**
-- `partido_id`: M001–M127.
-- `equipo_id`: código de selección, reutilizado desde los hitos previos.
+- `partido_codigo`: P-01–P-127 (mismo formato `P-NN` que usan Neo4j, Cassandra, Redis e IRIS para identificar partidos; mismo nombre de tag que usa Cassandra para su columna `partido_codigo`). †
+- `equipo_codigo`: código de selección, reutilizado desde los hitos previos.
 - `sede`: una de 20 sedes sintéticas, acorde al inventario previo.
 - `fuente`: fuente de observación de baja cardinalidad.
 - `fase`: grupo, ronda_32, octavos, cuartos, semifinal, final.
+
+† Hasta la corrección de consistencia entre módulos, este tag se llamaba `partido_id` y usaba el formato propio `M001`–`M127` (y `equipo_codigo` se llamaba `equipo_id`), distinto de los demás módulos. Ver `CHANGELOG.md` (raíz del repo) para el detalle del cambio y por qué se hizo. El PDF de evidencia (`docs/evidencia/evidencias-influxdb.pdf`) es anterior a esta corrección y todavía muestra `partido_id=M001`; hay que recapturarlo después de volver a correr la carga con el generador corregido.
 
 **Fields (valores observados):**
 - `posesion_pct` (float): porcentaje de posesión medido en el instante; se puede promediar o comparar.
@@ -34,7 +36,7 @@ Fenómeno: evolución de métricas deportivas de cada equipo durante cada partid
 
 Fenómeno: evolución de usuarios activos por región durante un partido.
 
-**Tags:** `partido_id`, `region`.  
+**Tags:** `partido_codigo`, `region`.  
 **Field:** `usuarios_activos` (integer).
 
 No se utiliza `usuario_id` como tag porque sería una dimensión de alta variación sin una necesidad de consulta que lo justifique; el objetivo es medir carga agregada por región.
@@ -90,7 +92,7 @@ La implementación aplica la parte obligatoria mediante la retención de la base
 - **Neo4j:** relaciones entre usuarios, grupos, predicciones y partidos.
 - **InfluxDB:** evolución temporal de estadísticas y métricas históricas.
 
-Los códigos de equipos y los identificadores de partidos siguen el criterio previo (`ARG`, `FRA`, `M001`, etc.) para conservar trazabilidad entre módulos.
+Los códigos de equipos y los identificadores de partidos siguen el criterio previo (`ARG`, `FRA`, `P-01`, etc.) para conservar trazabilidad entre módulos.
 
 ## 8. Inicio
 

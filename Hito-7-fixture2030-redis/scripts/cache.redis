@@ -21,25 +21,6 @@ GET cache:equipo:ARG
 SET cache:equipo:BRA "{\"codigo\":\"BRA\",\"confederacion\":\"CONMEBOL\",\"ranking\":4}" EX 300
 GET cache:equipo:BRA
 
-# --- Caso real (reemplaza al de equipo como ejemplo principal de RF6/RF7) ---
-# Marcador en vivo de un partido: write-through, no cache-aside. Se escribe
-# en el mismo momento en que se confirma un evento en Neo4j, no se espera
-# a un miss. Ver docs/ciclo_de_vida_e_invalidacion.md.
-
-HSET marcador:P-01 goles_local 0 goles_visitante 0 minuto 0 ultimo_evento "Arranca el partido" actualizado_en 2030-06-08T18:00:00
-
-# Llega un gol: la aplicacion escribe el nuevo estado completo, no espera
-# a que alguien pida el marcador y falle.
-HSET marcador:P-01 goles_local 1 minuto 23 ultimo_evento "Gol de ARG-20" actualizado_en 2030-06-08T18:23:00
-
-# Lectura normal durante el partido (altisima frecuencia, cero costo de
-# recalculo en Neo4j para cada una)
-HGETALL marcador:P-01
-
-# Si Redis no tiene la clave (por ejemplo, reinicio del servidor), la
-# aplicacion reconstruye UNA vez consultando Neo4j y vuelve a escribir --
-# eso si es cache-aside, como respaldo del write-through.
-
 # --- Resumen de un partido finalizado (cache-aside sobre una copia derivada) ---
 # Copia reconstruible de lo que responde la fuente de verdad (Mongo). La
 # revision_fuente permite ver, tras invalidar, que la copia nueva viene de la

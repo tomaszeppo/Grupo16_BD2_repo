@@ -3,24 +3,24 @@
 ## P1 — Evolución de una estadística de un equipo en un partido
 
 **Solicitante:** pantalla de partido / analítica operativa.  
-**Entrada:** `partido_id`, `equipo_id`, rango temporal.  
+**Entrada:** `partido_codigo`, `equipo_codigo`, rango temporal.  
 **Respuesta:** puntos ordenados por `time`, con posesión, pases, tiros, recuperaciones y velocidad.  
 **Frecuencia:** alta durante partidos.  
 **Datos temporales:** observaciones deportivas.  
-**Estructura:** tabla `estadisticas_partido` con `partido_id` y `equipo_id` como tags.
+**Estructura:** tabla `estadisticas_partido` con `partido_codigo` y `equipo_codigo` como tags.
 
 ## P2 — Comparar equipos de un partido
 
 **Solicitante:** pantalla de partido y módulo analítico.  
-**Entrada:** `partido_id` + ventana temporal.  
-**Respuesta:** promedio de posesión y velocidad, totales de pases/tiros/recuperaciones por `equipo_id`.  
+**Entrada:** `partido_codigo` + ventana temporal.  
+**Respuesta:** promedio de posesión y velocidad, totales de pases/tiros/recuperaciones por `equipo_codigo`.  
 **Frecuencia:** alta durante partidos.  
 **Estructura:** agregación SQL sobre la misma tabla; el equipo es una dimensión indexable.
 
 ## P3 — Comparar fuentes de una observación
 
 **Solicitante:** control de calidad / analítica.  
-**Entrada:** `partido_id` + rango.  
+**Entrada:** `partido_codigo` + rango.  
 **Respuesta:** agregaciones por `fuente`.  
 **Frecuencia:** media.  
 **Estructura:** `fuente` como tag de cardinalidad acotada.
@@ -28,10 +28,10 @@
 ## P4 — Pico de usuarios activos por región
 
 **Solicitante:** plataforma / capacidad operativa.  
-**Entrada:** `partido_id`, `region`, rango temporal.  
+**Entrada:** `partido_codigo`, `region`, rango temporal.  
 **Respuesta:** máximo o promedio de `usuarios_activos`.  
 **Frecuencia:** media-alta.  
-**Estructura:** tabla `usuarios_conectados` con `partido_id` y `region` como tags.
+**Estructura:** tabla `usuarios_conectados` con `partido_codigo` y `region` como tags.
 
 ## P5 — Tendencia temporal por minuto
 

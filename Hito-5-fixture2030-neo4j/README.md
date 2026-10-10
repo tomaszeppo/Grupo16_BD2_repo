@@ -102,8 +102,7 @@ Neo4j (5.26) y recursos de Docker:
 - `06_consultas_grafo.txt`: consultas de dos y tres saltos y el camino ARG–SCO
   de RF9.
 
-Quedan pendientes las capturas de pantalla del Neo4j Browser (vista del
-subgrafo, por ejemplo con `MATCH (n) RETURN n LIMIT 100`), que se sacan a mano.
+Las capturas de pantalla del Neo4j Browser (resultado del CRUD, consulta de camino, subgrafo e idempotencia) se sacan a mano; la lista y el orden estan en `docs/evidencia/CAPTURAS_PENDIENTES.md`.
 
 ## Variables de entorno
 

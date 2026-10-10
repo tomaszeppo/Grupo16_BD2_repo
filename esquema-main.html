@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture 2030 — Esquema (rama main)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#f7f6f2; --surface:#ffffff; --surface-2:#efece4; --fg:#1c1a15; --fg-dim:#6c6757;
+  --border:#ddd8c9; --accent:#2f5fd6; --accent-fg:#ffffff;
+  --pk:#b8860b; --fk:#2f5fd6;
+  --mongo:#3f8f4f; --neo4j:#2a6bb0; --cassandra:#c06a28; --redis:#c23b4b; --influx:#7b57c0; --iris:#9a948a;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15140f; --surface:#1d1b15; --surface-2:#242119; --fg:#ece7da; --fg-dim:#9b9484;
+    --border:#38342a; --accent:#7ea0ff; --accent-fg:#101225;
+    --pk:#e0b24a; --fk:#7ea0ff;
+    --mongo:#6fc17f; --neo4j:#6fa8e0; --cassandra:#e0924f; --redis:#e8707e; --influx:#ab8ce0; --iris:#6f6a5e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15140f; --surface:#1d1b15; --surface-2:#242119; --fg:#ece7da; --fg-dim:#9b9484;
+  --border:#38342a; --accent:#7ea0ff; --accent-fg:#101225;
+  --pk:#e0b24a; --fk:#7ea0ff;
+  --mongo:#6fc17f; --neo4j:#6fa8e0; --cassandra:#e0924f; --redis:#e8707e; --influx:#ab8ce0; --iris:#6f6a5e;
+  color-scheme: dark;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; padding:0; }
+body{ background:var(--bg); color:var(--fg); font-family:'IBM Plex Sans', system-ui, sans-serif; }
+code, .mono{ font-family:'IBM Plex Mono', ui-monospace, monospace; }
+
+.wrap{ max-width:1180px; margin:0 auto; padding:24px 16px 56px; }
+
+header.top{ margin-bottom:18px; }
+header.top .badge{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:'IBM Plex Mono',monospace; font-size:.72rem; letter-spacing:.04em; text-transform:uppercase;
+  background:var(--surface-2); border:1px solid var(--border); border-radius:999px; padding:3px 10px;
+  color:var(--fg-dim); margin-bottom:10px;
+}
+header.top .badge b{ color:var(--accent); }
+header.top h1{ font-size:clamp(1.5rem,3.6vw,2.1rem); margin:0 0 6px; text-wrap:balance; }
+header.top p{ margin:0; max-width:640px; color:var(--fg-dim); font-size:.92rem; line-height:1.5; }
+
+.view-toggle{ display:flex; gap:8px; margin:18px 0 16px; }
+.view-toggle button{
+  font-family:'IBM Plex Mono',monospace; font-size:.74rem; padding:6px 14px; border-radius:999px;
+  border:1.5px solid var(--border); background:var(--surface); color:var(--fg-dim); cursor:pointer;
+}
+.view-toggle button.active{ border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.view{ display:none; }
+.view.active{ display:block; }
+
+#map{ position:relative; margin:4px 0 20px; }
+#map svg{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+#map svg path{ fill:none; stroke:var(--border); stroke-width:1.4; }
+#map svg path.lit{ stroke:var(--accent); stroke-width:2; }
+.nodes-row{ display:flex; justify-content:space-between; gap:6px; position:relative; z-index:1; -webkit-user-select:none; user-select:none; }
+.node-btn{
+  flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:4px;
+  background:var(--surface); border:1.5px solid var(--border); border-radius:12px; padding:10px 6px;
+  cursor:pointer; font-family:inherit; color:var(--fg); transition:border-color .15s, transform .15s;
+  -webkit-user-select:none; user-select:none;
+}
+.node-btn:hover{ transform:translateY(-2px); }
+.node-btn.active{ border-color:var(--dot); box-shadow:0 0 0 2px color-mix(in srgb, var(--dot) 30%, transparent); }
+.node-btn.missing{ opacity:.55; border-style:dashed; }
+.node-btn .dot{ width:10px; height:10px; border-radius:50%; background:var(--dot); }
+.node-btn .nm{ font-size:.78rem; font-weight:600; text-align:center; line-height:1.2; }
+.node-btn .ht{ font-family:'IBM Plex Mono',monospace; font-size:.64rem; color:var(--fg-dim); }
+
+#panel-blurb{ font-size:.86rem; color:var(--fg-dim); margin:0 0 16px; max-width:720px; line-height:1.5; }
+#panel-blurb b{ color:var(--fg); }
+
+.entity-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:14px; }
+.entity{
+  background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 16px 14px;
+  scroll-margin-top:16px;
+}
+.entity.flash{ animation:flash 1.1s ease; }
+@keyframes flash{ 0%{ box-shadow:0 0 0 3px var(--accent); } 100%{ box-shadow:0 0 0 0 transparent; } }
+.entity h3{ margin:0 0 2px; font-size:1rem; display:flex; align-items:center; gap:8px; flex-wrap:wrap; overflow-wrap:anywhere; word-break:break-word; }
+.entity h3 .kind{
+  font-family:'IBM Plex Mono',monospace; font-size:.64rem; text-transform:uppercase; letter-spacing:.03em;
+  color:var(--fg-dim); border:1px solid var(--border); border-radius:5px; padding:1px 6px;
+}
+.entity .note{ font-size:.78rem; color:var(--fg-dim); margin:4px 0 10px; line-height:1.4; }
+
+table.fields{ width:100%; border-collapse:collapse; font-size:.8rem; margin-bottom:10px; }
+table.fields th{ text-align:left; font-size:.66rem; text-transform:uppercase; letter-spacing:.04em; color:var(--fg-dim); padding:3px 6px 5px 0; border-bottom:1px solid var(--border); }
+table.fields td{ padding:5px 6px 5px 0; border-bottom:1px solid var(--border); vertical-align:top; }
+table.fields tr:last-child td{ border-bottom:none; }
+table.fields td.fname{ font-family:'IBM Plex Mono',monospace; overflow-wrap:anywhere; word-break:break-word; }
+table.fields td.ftype{ font-family:'IBM Plex Mono',monospace; color:var(--fg-dim); overflow-wrap:anywhere; word-break:break-word; }
+table.fields td.fdesc{ color:var(--fg-dim); min-width:0; overflow-wrap:anywhere; word-break:break-word; }
+.key{ font-family:'IBM Plex Mono',monospace; font-size:.6rem; font-weight:600; border-radius:4px; padding:0 4px; margin-left:5px; }
+.key.pk{ background:color-mix(in srgb, var(--pk) 22%, transparent); color:var(--pk); }
+.key.fk{ background:color-mix(in srgb, var(--fk) 18%, transparent); color:var(--fk); }
+
+.rel-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.rel-chip{
+  font-family:'IBM Plex Mono',monospace; font-size:.68rem; background:var(--surface-2); border:1px solid var(--border);
+  border-radius:7px; padding:3px 8px; cursor:pointer; color:var(--fg); display:inline-flex; align-items:center; gap:5px;
+}
+.rel-chip:hover{ border-color:var(--accent); color:var(--accent); }
+.rel-chip .d{ width:7px; height:7px; border-radius:50%; flex:none; }
+
+.more{ margin:8px 0 0; padding:8px 10px; background:var(--surface-2); border-radius:9px; }
+.more .lbl{ font-size:.66rem; text-transform:uppercase; letter-spacing:.04em; color:var(--fg-dim); margin-bottom:4px; }
+.more ul{ margin:0; padding-left:16px; font-size:.78rem; line-height:1.5; }
+
+.empty{
+  background:var(--surface); border:1.5px dashed var(--border); border-radius:14px; padding:22px;
+  color:var(--fg-dim); font-size:.88rem; text-align:center; grid-column:1/-1;
+}
+
+footer.note{ margin-top:26px; font-size:.74rem; color:var(--fg-dim); text-align:center; }
+
+/* ---- canvas edgeless ---- */
+#canvasViewport{
+  position:relative; height:70vh; min-height:460px; max-height:760px;
+  border:1px solid var(--border); border-radius:14px; overflow:hidden; background:var(--surface);
+  touch-action:none; cursor:grab; -webkit-user-select:none; user-select:none;
+}
+#canvasViewport.panning{ cursor:grabbing; }
+#canvasWorld{ position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; }
+#canvasEdges{ position:absolute; top:0; left:0; overflow:visible; pointer-events:none; transform-origin:0 0; will-change:transform; }
+#canvasEdges path.struct{ fill:none; stroke:var(--border); stroke-width:1.3; }
+#canvasEdges path.rel{ fill:none; stroke-width:1.3; stroke-dasharray:3 5; opacity:.75; }
+
+.canvas-controls{ position:absolute; right:12px; bottom:12px; display:flex; flex-direction:column; gap:6px; z-index:5; }
+.canvas-controls button{
+  width:32px; height:32px; border-radius:8px; border:1px solid var(--border); background:var(--surface);
+  color:var(--fg); font-size:1rem; cursor:pointer; line-height:1;
+}
+.storage-intro{ margin:18px 0 10px; max-width:720px; }
+.storage-intro h2{ font-size:1rem; margin:0 0 4px; }
+.storage-intro p{ margin:0; font-size:.84rem; color:var(--fg-dim); line-height:1.5; }
+.storage-notes{ display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:10px; }
+.storage-notes .snote{ background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+.storage-notes .snh{ display:flex; align-items:center; gap:6px; font-weight:600; font-size:.84rem; margin-bottom:4px; }
+.storage-notes .snh .d{ width:8px; height:8px; border-radius:50%; flex:none; }
+.storage-notes p{ margin:0; font-size:.78rem; color:var(--fg-dim); line-height:1.5; }
+
+.canvas-hint{
+  position:absolute; left:12px; bottom:12px; font-size:.66rem; color:var(--fg-dim); font-family:'IBM Plex Mono',monospace;
+  z-index:5; background:color-mix(in srgb, var(--surface) 82%, transparent); padding:3px 8px; border-radius:6px;
+}
+
+.hub-node{
+  position:absolute; width:116px; height:116px; margin:-58px 0 0 -58px; border-radius:50%;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  background:var(--surface); border:2.5px solid var(--dot); cursor:grab; -webkit-user-select:none; user-select:none; text-align:center; padding:6px;
+}
+.hub-node.dragging{ cursor:grabbing; z-index:20; }
+.hub-node .nm{ font-weight:700; font-size:.8rem; }
+.hub-node .ht{ font-family:'IBM Plex Mono',monospace; font-size:.6rem; color:var(--fg-dim); }
+
+.canvas-entity{
+  position:absolute; width:190px; margin:-18px 0 0 -95px; background:var(--surface); border:1.5px solid var(--border);
+  border-radius:10px; padding:7px 9px; cursor:grab; -webkit-user-select:none; user-select:none; font-size:.76rem;
+}
+.canvas-entity.dragging{ cursor:grabbing; z-index:20; }
+.canvas-entity .cn-title{ font-family:'IBM Plex Mono',monospace; font-weight:600; display:flex; align-items:center; justify-content:space-between; gap:6px; flex-wrap:wrap; overflow-wrap:anywhere; word-break:break-word; }
+.canvas-entity .cn-kind{ font-size:.6rem; color:var(--fg-dim); text-transform:uppercase; white-space:nowrap; }
+.canvas-entity .cn-fields{ display:none; margin-top:6px; padding-top:6px; border-top:1px dashed var(--border); }
+.canvas-entity.open{ width:250px; margin-left:-125px; }
+.canvas-entity.open .cn-fields{ display:block; }
+.canvas-entity .cn-fields div{ font-family:'IBM Plex Mono',monospace; font-size:.67rem; line-height:1.6; color:var(--fg-dim); overflow-wrap:anywhere; word-break:break-word; }
+.canvas-entity .cn-fields b{ color:var(--fg); }
+
+@media (max-width:720px){
+  .nodes-row{ flex-wrap:wrap; }
+  .node-btn{ flex:1 1 30%; }
+  #map svg{ display:none; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="badge">rama <b>main</b> · última entrega formal</div>
+    <h1>Esquema del Fixture 2030</h1>
+    <p>Qué tiene hoy cada motor en <code>main</code>, sin las correcciones que se hicieron en la otra rama. Cassandra queda marcada aparte: no tiene esquema ejecutable todavía. IRIS se agregó después de las otras correcciones, como implementación propia e independiente.</p>
+  </header>
+
+  <div class="view-toggle">
+    <button data-view="nav" class="active" type="button">Navegador</button>
+    <button data-view="canvas" type="button">Canvas</button>
+  </div>
+
+  <div id="navView" class="view active">
+    <div id="map">
+      <svg id="lines"></svg>
+      <div class="nodes-row" id="nodesRow"></div>
+    </div>
+    <p id="panel-blurb"></p>
+    <div class="entity-grid" id="panel"></div>
+  </div>
+
+  <div id="canvasViewWrap" class="view">
+    <div id="canvasViewport">
+      <svg id="canvasEdges" width="1" height="1"></svg>
+      <div id="canvasWorld"></div>
+      <div class="canvas-controls">
+        <button id="zoomIn" type="button" title="Acercar">+</button>
+        <button id="zoomOut" type="button" title="Alejar">−</button>
+        <button id="zoomReset" type="button" title="Centrar">⟲</button>
+      </div>
+      <div class="canvas-hint">arrastrá el fondo para moverte · rueda para zoom · tocá una tarjeta para abrirla</div>
+    </div>
+
+    <div class="storage-intro">
+      <h2>¿Guarda todo o solo una parte?</h2>
+      <p>Que dos motores tengan una entidad "Partido" no significa que guarden lo mismo. Cada uno se queda con el subconjunto de datos que necesita para su trabajo — el resto lo busca en otro lado.</p>
+    </div>
+    <div class="storage-notes" id="storageNotes"></div>
+  </div>
+
+  <footer class="note">Mapa generado a partir de los esquemas reales de main (validaciones.mongodb.js, modelo_grafo.md, modelo_clave_valor.md, las clases .cls de Hito-9-fixture2030-iris-objetos y los PDF/README de Cassandra e InfluxDB).</footer>
+</div>
+
+<script>
+const DATA = {
+  dbs: [
+    { id:'mongo', name:'MongoDB', hito:4, dot:'var(--mongo)',
+      blurb:'Ficha de equipo y jugador, con una validación más simple que en la rama correcciones.',
+      storage:'Guarda poco: nombre y código de equipo, nombre/apellido/dorsal/posición de jugador. No tiene confederación, ranking ni código propio de jugador — eso se agregó recién en correcciones.',
+      entities: [
+        { name:'equipos', kind:'Colección', fields:[
+            {n:'codigo',t:'string',k:'pk',d:'3 letras mayúsculas'},
+            {n:'nombre',t:'string',d:''},
+          ],
+          rel:[ {db:'neo4j',e:'Equipo',label:'mismo codigo'} ],
+          more:['confederación, ranking, sede base, contador de convocados — se agregaron recién en la rama correcciones'] },
+        { name:'jugadores', kind:'Colección', fields:[
+            {n:'nombre',t:'string',d:''}, {n:'apellido',t:'string',d:''}, {n:'dorsal',t:'int',d:'1 a 99'},
+            {n:'equipo',t:'string',k:'fk',d:'→ equipos.codigo (el campo se llama "equipo", no "equipoCodigo")'},
+            {n:'posicion',t:'enum',d:'Portero / Defensa / Centrocampista / Delantero'},
+          ],
+          rel:[ {db:'mongo',e:'equipos',label:'pertenece a'} ],
+          note:'No tiene código propio: no hay forma de referenciar un jugador puntual desde otro motor (en correcciones, "ARG-10" cumple ese rol).',
+          more:['código propio de jugador','fecha de nacimiento y si está convocado'] },
+      ] },
+
+    { id:'neo4j', name:'Neo4j', hito:5, dot:'var(--neo4j)',
+      blurb:'Modelo más amplio que en correcciones: acá también vive el dominio de usuarios, grupos y predicciones.',
+      storage:'Acá guarda de más, no de menos: además de equipos y partidos, duplica usuarios, grupos y predicciones enteros — un dominio que en correcciones se resolvió en otros motores, no en Neo4j.',
+      entities:[
+        { name:'Equipo', kind:'Nodo', fields:[ {n:'codigo',t:'string',k:'pk',d:''}, {n:'nombre',t:'string',d:''} ],
+          rel:[ {db:'mongo',e:'equipos',label:'mismo codigo'}, {db:'neo4j',e:'Jugador',label:'PERTENECE_A ←'}, {db:'neo4j',e:'Partido',label:'PARTICIPA_EN ←'} ], more:[] },
+        { name:'Jugador', kind:'Nodo', fields:[
+            {n:'id',t:'string',k:'pk',d:'formato J-<codigo>-<numero>'}, {n:'nombre',t:'string',d:''}, {n:'apellido',t:'string',d:''},
+            {n:'dorsal',t:'int',d:''}, {n:'posicion',t:'string',d:''},
+          ],
+          rel:[ {db:'neo4j',e:'Equipo',label:'PERTENECE_A →'} ],
+          note:'id propio generado para Neo4j — no es el mismo identificador que usa Mongo, porque los registros de main no tenían un código de jugador.',
+          more:['usar el mismo código que Mongo en vez de un id generado aparte'] },
+        { name:'Partido', kind:'Nodo', fields:[ {n:'id',t:'string',k:'pk',d:''}, {n:'fecha',t:'date',d:''}, {n:'fase',t:'string',d:''} ],
+          rel:[ {db:'neo4j',e:'Equipo',label:'PARTICIPA_EN ×2'}, {db:'neo4j',e:'Estadio',label:'SE_JUEGA_EN →'}, {db:'neo4j',e:'Evento',label:'OCURRE_EN ←'}, {db:'neo4j',e:'Prediccion',label:'SOBRE ←'} ], more:[] },
+        { name:'Estadio', kind:'Nodo', fields:[ {n:'id',t:'string',k:'pk',d:''}, {n:'nombre',t:'string',d:''}, {n:'ciudad',t:'string',d:''} ],
+          rel:[ {db:'neo4j',e:'Partido',label:'SE_JUEGA_EN ←'} ], more:[] },
+        { name:'Evento', kind:'Nodo', fields:[ {n:'id',t:'string',k:'pk',d:''}, {n:'tipo',t:'string',d:''}, {n:'minuto',t:'int',d:''} ],
+          rel:[ {db:'neo4j',e:'Partido',label:'OCURRE_EN →'} ], more:[] },
+        { name:'Usuario', kind:'Nodo', fields:[
+            {n:'idUsuario',t:'string',k:'pk',d:''}, {n:'nombre',t:'string',d:''}, {n:'origen',t:'string',d:''},
+            {n:'email',t:'string',d:''}, {n:'fechaRegistro',t:'date',d:''}, {n:'activo',t:'bool',d:''},
+          ],
+          rel:[ {db:'neo4j',e:'Grupo',label:'PERTENECE_A →'}, {db:'neo4j',e:'Prediccion',label:'REALIZA →'} ],
+          note:'En correcciones este dominio se repartió entre Redis (sesiones) e IRIS (grupos); el Neo4j de correcciones no tiene nodo Usuario.',
+          more:[] },
+        { name:'Grupo', kind:'Nodo', fields:[ {n:'idGrupo',t:'string',k:'pk',d:''}, {n:'nombreGrupo',t:'string',d:''}, {n:'fechaCreacion',t:'date',d:''} ],
+          rel:[ {db:'neo4j',e:'Usuario',label:'PERTENECE_A ←'} ],
+          note:'En correcciones, "grupos y puntajes" se resolvió en IRIS, no en Neo4j.', more:[] },
+        { name:'Prediccion', kind:'Nodo', fields:[
+            {n:'idPrediccion',t:'string',k:'pk',d:''}, {n:'paisGanador',t:'string',d:''}, {n:'paisPerdedor',t:'string',d:''},
+            {n:'golesPG',t:'int',d:''}, {n:'golesPP',t:'int',d:''},
+          ],
+          rel:[ {db:'neo4j',e:'Usuario',label:'REALIZA ←'}, {db:'neo4j',e:'Partido',label:'SOBRE →'} ], more:[] },
+      ] },
+
+    { id:'cassandra', name:'Cassandra', hito:6, dot:'var(--cassandra)', missing:true,
+      blurb:'Sin esquema ejecutable: la entrega de main son dos PDF (evidencia y justificación), sin docker-compose ni .cql.',
+      storage:'No guarda nada: no hay esquema ejecutable en esta rama, solo quedan los PDF de la entrega vieja.',
+      entities:[] },
+
+    { id:'redis', name:'Redis', hito:7, dot:'var(--redis)',
+      blurb:'Mismo tipo de estructuras que en correcciones, pero con otro namespace y un ranking por partido en vez de uno global.',
+      storage:'Guarda copias temporales por partido (resumen, ranking, contador), pero a diferencia de correcciones no cachea nada de equipos ni jugadores de Mongo.',
+      entities:[
+        { name:'f2030:sesion:{usuario_id}', kind:'Hash', fields:[
+            {n:'(campos)',t:'hash',d:'no detallados en el doc; se actualizan parcialmente (ultimo_acceso, acciones)'},
+          ], rel:[], note:'Clave por usuario directamente, no por un sesion_id separado como en correcciones.', more:[] },
+        { name:'f2030:cache:partido:{partido_id}:resumen', kind:'String', fields:[
+            {n:'(valor)',t:'string',d:'respuesta serializada, se reconstruye entera si cambia la fuente'},
+          ], rel:[ {db:'neo4j',e:'Partido',label:'resumen de (si coincide el id)'} ], more:[] },
+        { name:'f2030:ranking:partido:{partido_id}:figura', kind:'Sorted Set', fields:[
+            {n:'miembro / score',t:'zset',d:''},
+          ], rel:[], note:'Ranking por partido, no un ranking público global como en correcciones.', more:[] },
+        { name:'f2030:contador:partido:{partido_id}:visitas / :meta', kind:'String + Hash', fields:[
+            {n:'visitas',t:'int',d:'INCRBY'}, {n:'meta',t:'hash',d:'metadatos de la operación concurrente'},
+          ], rel:[], more:[] },
+        { name:'f2030:demo:usuario:{id}', kind:'—', fields:[
+            {n:'(valor)',t:'?',d:'datos sintéticos de apoyo al laboratorio'},
+          ], rel:[], more:[] },
+      ] },
+
+    { id:'influx', name:'InfluxDB', hito:8, dot:'var(--influx)',
+      blurb:'Igual que en correcciones, pero acá nunca se corrigió: el id de partido no sigue la convención del resto de los módulos.',
+      storage:'Igual que en correcciones: solo números que cambian con el tiempo más los tags para identificarlos — pero acá el id de partido (M001) no coincide con el del resto de los módulos.',
+      entities:[
+        { name:'estadisticas_partido', kind:'Medición', fields:[
+            {n:'partido_id',t:'tag',d:'formato M001–M127, no P-01 como en Neo4j'},
+            {n:'equipo_id',t:'tag',d:''}, {n:'sede',t:'tag',d:''}, {n:'fuente',t:'tag',d:''}, {n:'fase',t:'tag',d:''},
+            {n:'posesion_pct',t:'field',d:'float'}, {n:'pases_completados',t:'field',d:'int'}, {n:'tiros',t:'field',d:'int'},
+            {n:'recuperaciones',t:'field',d:'int'}, {n:'velocidad_kmh',t:'field',d:'float'}, {n:'time',t:'timestamp',d:''},
+          ],
+          rel:[],
+          note:'partido_id = "M001"..."M127" no coincide con el "P-01"..."P-32" que usan Neo4j/Redis — no se puede cruzar por id directamente. Corregido solo en la rama correcciones.',
+          more:['renombrar partido_id → partido_codigo, igual que ya se hizo en correcciones'] },
+        { name:'usuarios_conectados', kind:'Medición', fields:[
+            {n:'partido_id',t:'tag',d:'mismo problema de formato'}, {n:'region',t:'tag',d:''}, {n:'usuarios_activos',t:'field',d:'int'}, {n:'time',t:'timestamp',d:''},
+          ], rel:[], more:[] },
+      ] },
+
+    { id:'iris', name:'IRIS', hito:9, dot:'var(--iris)',
+      blurb:'Se agregó después, en la carpeta "Hito-9-fixture2030-iris-objetos" (no "...-iris"): una implementación propia e independiente de la de correcciones, con su propia máquina de estados para el partido.',
+      storage:'Guarda un Partido con todo su árbol de Eventos (en memoria hasta un único %Save()), pero con un código de partido generado en el momento — no es el mismo partido que ya existe en Neo4j o Mongo, aunque use los mismos equipos (ARG, FRA...).',
+      entities:[
+        { name:'Persona', kind:'Clase base', fields:[
+            {n:'Nombre',t:'%String',d:'obligatorio'}, {n:'Nacionalidad',t:'%String',d:'obligatoria, con índice'}, {n:'FechaNacimiento',t:'%Date',d:'obligatoria'},
+          ], rel:[], note:'Acá las tres propiedades son obligatorias; en correcciones, Nacionalidad y FechaNacimiento son opcionales.', more:[] },
+        { name:'Jugador', kind:'Extends Persona', fields:[
+            {n:'CodigoJugador',t:'%String',k:'pk',d:'único, ej. J-H9-67852-73429'}, {n:'NumeroCamiseta',t:'%Integer',d:'sin rango validado'}, {n:'Posicion',t:'%String',d:'texto libre, sin enum'},
+          ], rel:[], note:'No tiene ningún campo que lo vincule a un equipo (no existe un EquipoCodigo) — no se puede cruzar con Mongo ni Neo4j.', more:[] },
+        { name:'Arbitro', kind:'Extends Persona', fields:[
+            {n:'Licencia',t:'%String',k:'pk',d:'única'}, {n:'Rol',t:'%String',d:'obligatorio'},
+          ], rel:[], more:[] },
+        { name:'Tecnico', kind:'Extends Persona', fields:[
+            {n:'Especialidad',t:'%String',d:'obligatoria'}, {n:'AniosExperiencia',t:'%Integer',d:'opcional'},
+          ], rel:[], more:[] },
+        { name:'Partido', kind:'Clase', fields:[
+            {n:'Codigo',t:'%String',k:'pk',d:'generado, ej. H9-M-67852-73429 — no es P-NN'}, {n:'EquipoLocal',t:'%String',d:''}, {n:'EquipoVisitante',t:'%String',d:''},
+            {n:'FechaHora',t:'%TimeStamp',d:''}, {n:'Sede',t:'%String',d:'texto libre (ej. "Estadio Monumental"), no un código de sede'},
+            {n:'Estado',t:'%String',d:'Programado → En juego → Finalizado, vía CambiarEstado()'}, {n:'Eventos',t:'relationship',d:'children, cardinalidad 1:N'},
+          ],
+          rel:[],
+          note:'El código de partido es un timestamp generado (H9-M-...), no el P-NN que usan los demás módulos — no se puede cruzar directamente con Neo4j, Cassandra, Redis ni InfluxDB.',
+          more:['usar el mismo código P-NN que el resto de los módulos','referenciar la Sede por código en vez de texto libre'] },
+        { name:'Evento', kind:'Clase', fields:[
+            {n:'Partido',t:'relationship',d:'parent, obligatorio, inverso de Partido.Eventos'}, {n:'Tipo',t:'%String',d:'obligatorio'},
+            {n:'Minuto',t:'%Integer',d:'1 a 130, validado en AgregarEvento()'}, {n:'Descripcion',t:'%String',d:'opcional'}, {n:'JugadorCodigo',t:'%String',d:'texto libre, no referencia real'},
+          ], rel:[], more:[] },
+      ] },
+  ],
+  links:[ ['mongo','neo4j'], ['neo4j','redis'] ],
+};
+
+let setActive;
+(function(){
+  const row = document.getElementById('nodesRow');
+  const svg = document.getElementById('lines');
+  const panel = document.getElementById('panel');
+  const blurbEl = document.getElementById('panel-blurb');
+  const byId = Object.fromEntries(DATA.dbs.map(d=>[d.id,d]));
+  let active = DATA.dbs[0].id;
+
+  DATA.dbs.forEach(db=>{
+    const b = document.createElement('button');
+    b.className = 'node-btn' + (db.missing ? ' missing' : ''); b.dataset.id = db.id; b.style.setProperty('--dot', db.dot);
+    b.innerHTML = '<span class="dot"></span><span class="nm">'+db.name+'</span><span class="ht">Hito '+db.hito+(db.missing?' · vacío':'')+'</span>';
+    b.addEventListener('click', ()=> setActive(db.id));
+    row.appendChild(b);
+  });
+
+  function drawLines(){
+    svg.innerHTML = '';
+    const rowRect = row.getBoundingClientRect();
+    svg.setAttribute('viewBox','0 0 '+rowRect.width+' '+rowRect.height);
+    const centers = {};
+    DATA.dbs.forEach(db=>{
+      const el = row.querySelector('[data-id="'+db.id+'"]');
+      const r = el.getBoundingClientRect();
+      centers[db.id] = { x: r.left - rowRect.left + r.width/2, y: r.top - rowRect.top + r.height - 2 };
+    });
+    DATA.links.forEach(([a,b])=>{
+      const c1 = centers[a], c2 = centers[b];
+      if(!c1||!c2) return;
+      const dy = Math.max(18, Math.abs(c2.x-c1.x)*0.12);
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('d', 'M '+c1.x+' '+c1.y+' C '+c1.x+' '+(c1.y+dy)+', '+c2.x+' '+(c2.y+dy)+', '+c2.x+' '+c2.y);
+      path.dataset.a=a; path.dataset.b=b;
+      svg.appendChild(path);
+    });
+  }
+
+  setActive = function(id, focusEntity){
+    active = id;
+    row.querySelectorAll('.node-btn').forEach(b=> b.classList.toggle('active', b.dataset.id===id));
+    svg.querySelectorAll('path').forEach(p=> p.classList.toggle('lit', p.dataset.a===id || p.dataset.b===id));
+    render();
+    if (focusEntity){
+      requestAnimationFrame(()=>{
+        const card = panel.querySelector('[data-entity="'+CSS.escape(focusEntity)+'"]');
+        if(card){ card.scrollIntoView({behavior:'smooth', block:'center'}); card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash'); }
+      });
+    }
+  };
+
+  function chip(r){
+    const target = byId[r.db];
+    const span = document.createElement('button');
+    span.className = 'rel-chip';
+    span.innerHTML = '<span class="d" style="background:'+(target?target.dot:'var(--fg-dim)')+'"></span>'+(target?target.name:r.db)+' · '+r.e+' <span style="opacity:.6">— '+r.label+'</span>';
+    span.addEventListener('click', ()=> setActive(r.db, r.e));
+    return span;
+  }
+
+  function render(){
+    const db = byId[active];
+    blurbEl.innerHTML = '<b>'+db.name+'</b> (Hito '+db.hito+') — '+db.blurb;
+    panel.innerHTML = '';
+    if (!db.entities.length){
+      const d = document.createElement('div');
+      d.className = 'empty';
+      d.textContent = 'Este motor no tiene entidades definidas en esta rama.';
+      panel.appendChild(d);
+      return;
+    }
+    db.entities.forEach(ent=>{
+      const card = document.createElement('div');
+      card.className = 'entity'; card.dataset.entity = ent.name;
+      const h = document.createElement('h3');
+      h.innerHTML = '<span class="mono">'+ent.name+'</span><span class="kind">'+ent.kind+'</span>';
+      card.appendChild(h);
+      if (ent.note){ const n=document.createElement('p'); n.className='note'; n.textContent=ent.note; card.appendChild(n); }
+
+      const table = document.createElement('table'); table.className='fields';
+      table.innerHTML = '<tr><th>Campo</th><th>Tipo</th><th>Nota</th></tr>';
+      ent.fields.forEach(f=>{
+        const tr = document.createElement('tr');
+        const keyBadge = f.k ? '<span class="key '+f.k+'">'+f.k.toUpperCase()+'</span>' : '';
+        tr.innerHTML = '<td class="fname">'+f.n+keyBadge+'</td><td class="ftype">'+f.t+'</td><td class="fdesc">'+(f.d||'')+'</td>';
+        table.appendChild(tr);
+      });
+      card.appendChild(table);
+
+      if (ent.rel && ent.rel.length){
+        const relRow = document.createElement('div'); relRow.className='rel-row';
+        ent.rel.forEach(r=> relRow.appendChild(chip(r)));
+        card.appendChild(relRow);
+      }
+      if (ent.more && ent.more.length){
+        const more = document.createElement('div'); more.className='more';
+        more.innerHTML = '<div class="lbl">Qué podría sumar</div>';
+        const ul = document.createElement('ul');
+        ent.more.forEach(m=>{ const li=document.createElement('li'); li.textContent=m; ul.appendChild(li); });
+        more.appendChild(ul);
+        card.appendChild(more);
+      }
+      panel.appendChild(card);
+    });
+  }
+
+  window.addEventListener('resize', drawLines);
+  requestAnimationFrame(()=>{ drawLines(); setActive(active); });
+  setTimeout(drawLines, 200);
+})();
+
+/* ---------- Canvas (edgeless) view ---------- */
+let initCanvasView;
+(function(){
+  const viewport = document.getElementById('canvasViewport');
+  const world = document.getElementById('canvasWorld');
+  const edgesSvg = document.getElementById('canvasEdges');
+  let built = false;
+  let scale = 0.62, panX = 0, panY = 0;
+  const nodePos = {};
+
+  function layout(){
+    // El motor con mas conexiones va al centro (normalmente Neo4j, que es
+    // el que encadena partido/equipo/jugador con el resto). Los demas se
+    // reparten en un anillo alrededor, ordenados para que los que se
+    // relacionan directamente entre si (sin pasar por el centro) queden
+    // uno al lado del otro: asi las lineas de relacion cruzan mucho menos.
+    const deg = {}; DATA.dbs.forEach(d=> deg[d.id]=0);
+    DATA.links.forEach(([a,b])=>{ deg[a]=(deg[a]||0)+1; deg[b]=(deg[b]||0)+1; });
+    let centerDb = DATA.dbs[0];
+    DATA.dbs.forEach(d=>{ if((deg[d.id]||0) > (deg[centerDb.id]||0)) centerDb = d; });
+
+    const outerLink = new Set();
+    DATA.links.forEach(([a,b])=>{
+      if(a!==centerDb.id && b!==centerDb.id){ outerLink.add(a+'|'+b); outerLink.add(b+'|'+a); }
+    });
+    // cadena que crece por los dos extremos: asi un motor con dos vecinos
+    // (ej. Mongo con Redis e IRIS) queda sandwicheado entre los dos, en
+    // vez de arrastrado a una sola punta del anillo.
+    const remaining = DATA.dbs.filter(d=> d.id!==centerDb.id);
+    const ordered = remaining.length ? [remaining.shift()] : [];
+    while(remaining.length){
+      const front = ordered[0], back = ordered[ordered.length-1];
+      let idx = remaining.findIndex(d=> outerLink.has(back.id+'|'+d.id));
+      if(idx!==-1){ ordered.push(remaining.splice(idx,1)[0]); continue; }
+      idx = remaining.findIndex(d=> outerLink.has(front.id+'|'+d.id));
+      if(idx!==-1){ ordered.unshift(remaining.splice(idx,1)[0]); continue; }
+      ordered.push(remaining.shift());
+    }
+
+    nodePos['hub:'+centerDb.id] = {x:0,y:0};
+    const cm = centerDb.entities.length;
+    centerDb.entities.forEach((ent,j)=>{
+      const a = -Math.PI/2 + j*(2*Math.PI/Math.max(cm,1));
+      nodePos['ent:'+centerDb.id+':'+ent.name] = { x:Math.cos(a)*200, y:Math.sin(a)*200 };
+    });
+
+    const ringR = 480, n = ordered.length;
+    ordered.forEach((db,i)=>{
+      const angle = -Math.PI/2 + i*(2*Math.PI/Math.max(n,1));
+      const hx = Math.cos(angle)*ringR, hy = Math.sin(angle)*ringR;
+      nodePos['hub:'+db.id] = {x:hx,y:hy};
+      const m = db.entities.length;
+      db.entities.forEach((ent,j)=>{
+        const perp = angle + Math.PI/2;
+        const offset = (j-(m-1)/2) * 150;
+        const ex = hx + Math.cos(angle)*230 + Math.cos(perp)*offset;
+        const ey = hy + Math.sin(angle)*230 + Math.sin(perp)*offset;
+        nodePos['ent:'+db.id+':'+ent.name] = {x:ex,y:ey};
+      });
+    });
+  }
+
+  function dotOf(id){ const d = DATA.dbs.find(d=>d.id===id); return d?d.dot:'var(--fg-dim)'; }
+
+  function buildDom(){
+    layout();
+    DATA.dbs.forEach(db=>{
+      const hub = document.createElement('div');
+      hub.className = 'hub-node'; hub.dataset.key = 'hub:'+db.id; hub.style.setProperty('--dot', db.dot);
+      hub.style.left = nodePos['hub:'+db.id].x+'px'; hub.style.top = nodePos['hub:'+db.id].y+'px';
+      hub.innerHTML = '<div class="nm">'+db.name+'</div><div class="ht">Hito '+db.hito+(db.missing?' · vacío':'')+'</div>';
+      world.appendChild(hub);
+      makeDraggable(hub, 'hub:'+db.id, ()=>{ switchView('nav'); setActive(db.id); });
+
+      db.entities.forEach(ent=>{
+        const key = 'ent:'+db.id+':'+ent.name;
+        const card = document.createElement('div');
+        card.className = 'canvas-entity'; card.dataset.key = key;
+        card.style.left = nodePos[key].x+'px'; card.style.top = nodePos[key].y+'px';
+        card.style.borderLeft = '3px solid '+db.dot;
+        const fieldsHtml = ent.fields.map(f=> '<div><b>'+f.n+'</b> <span style="opacity:.65">'+f.t+'</span>'+(f.d?' — '+f.d:'')+'</div>').join('');
+        const moreHtml = (ent.more&&ent.more.length) ? '<div style="margin-top:4px;opacity:.85">+ '+ent.more.length+' idea(s) para sumar</div>' : '';
+        card.innerHTML = '<div class="cn-title"><span>'+ent.name+'</span><span class="cn-kind">'+ent.kind+'</span></div><div class="cn-fields">'+fieldsHtml+moreHtml+'</div>';
+        world.appendChild(card);
+        makeDraggable(card, key, ()=> card.classList.toggle('open'));
+      });
+    });
+    renderStorageNotes();
+    drawEdges();
+  }
+
+  function renderStorageNotes(){
+    const box = document.getElementById('storageNotes');
+    box.innerHTML = DATA.dbs.map(db=>
+      '<div class="snote"><div class="snh"><span class="d" style="background:'+db.dot+'"></span>'+db.name+'</div><p>'+(db.storage||'')+'</p></div>'
+    ).join('');
+  }
+
+  function makeDraggable(el, key, onClick){
+    let sx,sy, moved, startPos, pid;
+    el.addEventListener('pointerdown', e=>{
+      pid = e.pointerId; el.setPointerCapture(pid);
+      sx = e.clientX; sy = e.clientY; moved=false;
+      startPos = { x: nodePos[key].x, y: nodePos[key].y };
+      el.classList.add('dragging');
+      e.stopPropagation();
+    });
+    el.addEventListener('pointermove', e=>{
+      if(e.pointerId!==pid || !el.classList.contains('dragging')) return;
+      const dx=(e.clientX-sx)/scale, dy=(e.clientY-sy)/scale;
+      if(Math.abs(e.clientX-sx)>4||Math.abs(e.clientY-sy)>4) moved=true;
+      if(!moved) return;
+      nodePos[key] = { x: startPos.x+dx, y: startPos.y+dy };
+      el.style.left = nodePos[key].x+'px'; el.style.top = nodePos[key].y+'px';
+      drawEdges();
+    });
+    el.addEventListener('pointerup', e=>{
+      if(e.pointerId!==pid) return;
+      el.classList.remove('dragging');
+      if(!moved && onClick) onClick();
+    });
+  }
+
+  const structEdges = [], relEdges = [];
+  DATA.dbs.forEach(db=> db.entities.forEach(ent=>{
+    structEdges.push(['hub:'+db.id, 'ent:'+db.id+':'+ent.name]);
+    (ent.rel||[]).forEach(r=>{
+      relEdges.push(['ent:'+db.id+':'+ent.name, 'ent:'+r.db+':'+r.e, dotOf(r.db)]);
+    });
+  }));
+
+  function curvedPath(pa, pb){
+    // arco hacia afuera del centro, para que las relaciones entre motores
+    // del anillo exterior no corten por el medio (donde esta el motor
+    // central con sus propias entidades).
+    const mx=(pa.x+pb.x)/2, my=(pa.y+pb.y)/2;
+    const dist = Math.hypot(mx,my) || 1;
+    const nx = mx/dist, ny = my/dist;
+    const bow = Math.min(130, Math.hypot(pb.x-pa.x, pb.y-pa.y) * 0.22);
+    const cx = mx + nx*bow, cy = my + ny*bow;
+    return 'M '+pa.x+' '+pa.y+' Q '+cx+' '+cy+' '+pb.x+' '+pb.y;
+  }
+
+  function drawEdges(){
+    let s = '';
+    structEdges.forEach(([a,b])=>{
+      const pa=nodePos[a], pb=nodePos[b]; if(!pa||!pb) return;
+      s += '<path class="struct" d="M '+pa.x+' '+pa.y+' L '+pb.x+' '+pb.y+'"/>';
+    });
+    relEdges.forEach(([a,b,color])=>{
+      const pa=nodePos[a], pb=nodePos[b]; if(!pa||!pb) return;
+      s += '<path class="rel" style="stroke:'+color+'" d="'+curvedPath(pa,pb)+'"/>';
+    });
+    edgesSvg.innerHTML = s;
+  }
+
+  function applyTransform(){
+    const t = 'translate('+panX+'px,'+panY+'px) scale('+scale+')';
+    world.style.transform = t; edgesSvg.style.transform = t;
+  }
+
+  function centerView(){
+    const r = viewport.getBoundingClientRect();
+    panX = r.width/2; panY = r.height/2; scale = 0.62;
+    applyTransform();
+  }
+
+  let panningPid=null, panStart=null, panOrigin=null;
+  viewport.addEventListener('pointerdown', e=>{
+    if(e.target.closest('.hub-node, .canvas-entity, .canvas-controls')) return;
+    panningPid = e.pointerId; viewport.setPointerCapture(panningPid);
+    viewport.classList.add('panning');
+    panStart = {x:e.clientX,y:e.clientY}; panOrigin = {x:panX,y:panY};
+  });
+  viewport.addEventListener('pointermove', e=>{
+    if(panningPid!==e.pointerId) return;
+    panX = panOrigin.x + (e.clientX-panStart.x);
+    panY = panOrigin.y + (e.clientY-panStart.y);
+    applyTransform();
+  });
+  ['pointerup','pointercancel'].forEach(ev=> viewport.addEventListener(ev, e=>{
+    if(panningPid===e.pointerId){ panningPid=null; viewport.classList.remove('panning'); }
+  }));
+
+  viewport.addEventListener('wheel', e=>{
+    e.preventDefault();
+    const r = viewport.getBoundingClientRect();
+    const mx = e.clientX-r.left, my = e.clientY-r.top;
+    const prev = scale;
+    scale = Math.min(2.2, Math.max(0.3, scale * (1 - e.deltaY*0.0015)));
+    panX = mx - (mx-panX)*(scale/prev);
+    panY = my - (my-panY)*(scale/prev);
+    applyTransform();
+  }, {passive:false});
+
+  document.getElementById('zoomIn').addEventListener('click', ()=>{ scale=Math.min(2.2,scale*1.2); applyTransform(); });
+  document.getElementById('zoomOut').addEventListener('click', ()=>{ scale=Math.max(0.3,scale/1.2); applyTransform(); });
+  document.getElementById('zoomReset').addEventListener('click', centerView);
+
+  initCanvasView = function(){
+    if(built) return; built = true;
+    buildDom();
+    requestAnimationFrame(centerView);
+  };
+})();
+
+function switchView(name){
+  document.querySelectorAll('.view-toggle button').forEach(b=> b.classList.toggle('active', b.dataset.view===name));
+  document.getElementById('navView').classList.toggle('active', name==='nav');
+  document.getElementById('canvasViewWrap').classList.toggle('active', name==='canvas');
+  if(name==='canvas') initCanvasView();
+}
+document.querySelectorAll('.view-toggle button').forEach(b=> b.addEventListener('click', ()=> switchView(b.dataset.view)));
+</script>
+</body>
+</html>

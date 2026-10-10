@@ -1,5 +1,5 @@
 # 03 - Sesiones (renovacion en MULTI/EXEC), dos corridas
-# Fecha: 2026-10-09 14:47:18 -0300
+# Fecha: 2026-10-09 16:02:45 -0300
 # Redis: Redis server v=8.10.2 sha=00000000:1 malloc=jemalloc-5.3.0 bits=64 build=fbc5ac9ab55dc180 | Docker: CPUs=12 RAM=16644243456 bytes
 
 $ grep -v '^#' /scripts/sesiones.redis | redis-cli
@@ -37,7 +37,7 @@ sess-demo-001
 2
 0
 
-## Segunda corrida (mismas claves de demo, mismo resultado)
+## Segunda corrida
 QUEUED
 QUEUED
 QUEUED

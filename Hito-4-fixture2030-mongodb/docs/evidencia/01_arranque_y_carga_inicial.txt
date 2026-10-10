@@ -1,10 +1,10 @@
 # 01 - Arranque desde cero y carga inicial (init-scripts)
-# Fecha: 2026-10-09 14:30:34
+# Fecha: 2026-10-09 15:56:58
 # Motor: MongoDB db version v7.0.43
 # Docker: CPUs=12 RAM=16644243456 bytes
 
-NAME                  IMAGE     COMMAND                  SERVICE   CREATED             STATUS                       PORTS
-fixture2030-mongodb   mongo:7   "docker-entrypoint.s…"   mongodb   About an hour ago   Up About an hour (healthy)   0.0.0.0:27017->27017/tcp, [::]:27017->27017/tcp
+NAME                  IMAGE     COMMAND                  SERVICE   CREATED          STATUS                    PORTS
+fixture2030-mongodb   mongo:7   "docker-entrypoint.s…"   mongodb   36 seconds ago   Up 35 seconds (healthy)   0.0.0.0:27017->27017/tcp, [::]:27017->27017/tcp
 
 Creando coleccion 'equipos' con validacion...
 Creando coleccion 'jugadores' con validacion...

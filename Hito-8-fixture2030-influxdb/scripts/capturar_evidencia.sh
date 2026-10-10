@@ -41,10 +41,10 @@ mkdir -p "$ROOT_DIR/docs/evidencia"
   docker compose exec -T influxdb influxdb3 query --database "$DB" --token "$TOKEN" "SELECT COUNT(*) AS puntos_estadisticas FROM estadisticas_partido"
   docker compose exec -T influxdb influxdb3 query --database "$DB" --token "$TOKEN" "SELECT COUNT(*) AS puntos_usuarios FROM usuarios_conectados"
   echo
-  echo "=== Distribución M001 por equipo ==="
-  docker compose exec -T influxdb influxdb3 query --database "$DB" --token "$TOKEN" "SELECT equipo_id, COUNT(*) AS puntos FROM estadisticas_partido WHERE partido_id='M001' GROUP BY equipo_id ORDER BY equipo_id"
+  echo "=== Distribución P-01 por equipo ==="
+  docker compose exec -T influxdb influxdb3 query --database "$DB" --token "$TOKEN" "SELECT equipo_codigo, COUNT(*) AS puntos FROM estadisticas_partido WHERE partido_codigo='P-01' GROUP BY equipo_codigo ORDER BY equipo_codigo"
   echo
-  echo "=== Consulta temporal M001/ARG ==="
+  echo "=== Consulta temporal P-01/ARG ==="
   for q in q01_ventana.sql q02_comparacion_equipos.sql q03_comparacion_fuentes.sql q04_pico_usuarios.sql; do
     echo "--- $q ---"
     docker compose exec -T influxdb influxdb3 query --database "$DB" --token "$TOKEN" --file "/scripts/$q" | head -80

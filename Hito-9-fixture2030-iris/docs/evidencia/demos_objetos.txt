@@ -1,0 +1,23 @@
+
+Node: 79de1d91845a, Instance: IRIS
+
+USER>
+Carga completa. Partido ID interno: 1
+
+USER>
+Partido P-01 (ARG vs URU) - EnCurso
+Arbitro: Daniele Orsato
+Eventos:
+  - Minuto 23: Gol (ARG-20)
+  - Minuto 41: TarjetaAmarilla (URU-05)
+
+USER>
+Rechazado correctamente: ERROR #5001: No se puede registrar un evento en el minuto 0 de un partido ya finalizado.
+
+USER>
+Rechazado correctamente (falta Codigo): ERROR #5659: Property 'Fixture2030.Partido::Codigo(16@Fixture2030.Partido,ID=)' required
+ERROR #5659: Property 'Fixture2030.Partido::Fecha(16@Fixture2030.Partido,ID=)' required
+ERROR #7208: Datatype value '' is not a valid timestamp format
+  > ERROR #5802: Datatype validation failed on property 'Fixture2030.Partido:Fecha', with value equal to ""
+
+USER>

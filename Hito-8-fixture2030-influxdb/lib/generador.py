@@ -61,7 +61,7 @@ def match_info(idx: int) -> MatchInfo:
     home_idx = ((idx - 1) * 2) % len(TEAMS)
     away_idx = (home_idx + 1) % len(TEAMS)
     return MatchInfo(
-        match_id=f"M{idx:03d}",
+        match_id=f"P-{idx:02d}",
         home=TEAMS[home_idx],
         away=TEAMS[away_idx],
         venue=VENUES[(idx - 1) % len(VENUES)],
@@ -89,8 +89,8 @@ def iter_match_points(idx: int, start_time: datetime = BASE_TIME) -> Iterator[st
                 source_possession = min(65.0, max(35.0, possession + ((source_offset - 3) * 0.7)))
                 source_velocity = round(max(3.0, velocity + source_offset * 0.2), 1)
                 yield (
-                    f"estadisticas_partido,partido_id={info.match_id},"
-                    f"equipo_id={team},sede={info.venue},fuente={source},fase={info.phase} "
+                    f"estadisticas_partido,partido_codigo={info.match_id},"
+                    f"equipo_codigo={team},sede={info.venue},fuente={source},fase={info.phase} "
                     f"posesion_pct={source_possession:.2f},pases_completados={passes}i,"
                     f"tiros={shots}i,recuperaciones={recoveries}i,velocidad_kmh={source_velocity:.1f} {ts}"
                 )
@@ -107,7 +107,7 @@ def iter_users_points(matches: int) -> Iterator[str]:
             for region_offset, region in enumerate(regions):
                 users = 12000 + ((idx * 137 + minute * 311 + region_offset * 503) % 18000)
                 yield (
-                    f"usuarios_conectados,partido_id={info.match_id},region={region} "
+                    f"usuarios_conectados,partido_codigo={info.match_id},region={region} "
                     f"usuarios_activos={users}i {ts}"
                 )
 

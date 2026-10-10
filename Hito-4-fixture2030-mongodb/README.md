@@ -1,9 +1,8 @@
 # Fixture 2030 — Módulo Documental (Hito 4)
 
 Módulo de persistencia de Equipos y Jugadores del Fixture 2030, sobre MongoDB.
-Retoma las decisiones del Hito 2 (modelo Documental) y del Hito 3 (Información
-deportiva con prioridad de disponibilidad y consistencia eventual). El detalle
-completo está en `docs/decisiones-de-diseno.md`.
+Retoma la decisión de los Hitos 1 y 2 (modelo documental para datos estables como
+selecciones y jugadores). El detalle completo está en `docs/decisiones-de-diseno.md`.
 
 ## Qué incluye
 
@@ -87,7 +86,7 @@ docker exec fixture2030-mongodb sh -c 'mongosh -u "$MONGO_INITDB_ROOT_USERNAME" 
   dos agregaciones.
 - `02-actualizaciones.js`: inserción y actualización. Imprime el `matchedCount`
   de cada update y corta con error si no encontró el documento. Al final borra
-  los documentos de prueba. Deja cambios en la base (ranking de MAR, un gol de
+  los documentos de prueba. Deja cambios en la base (ranking de MAR, el nombre de
   ARG-10, JPN-07 no convocado) que la recarga de datos no pisa.
 - `03-analisis-indices.js`: `explain()` con y sin índice (IXSCAN contra COLLSCAN).
 - `04-verificar-idempotencia.js`: cuenta, vuelve a cargar, cuenta de nuevo y
@@ -102,9 +101,9 @@ docker exec fixture2030-mongodb sh -c 'mongosh -u "$MONGO_INITDB_ROOT_USERNAME" 
 
 La carga hace un upsert por `codigo`, así que se puede repetir sin duplicar: la
 segunda vez informa 0 documentos nuevos y los mismos totales. Los datos de
-referencia se corrigen si cambiaron en el script; `convocado`, `estadisticas` y
-el contador de convocados solo se escriben cuando el documento no existía, para
-no perder lo acumulado durante el torneo.
+referencia se corrigen si cambiaron en el script; `convocado` y el contador
+de convocados solo se escriben cuando el documento no existía, para no pisar lo que
+se modificó después de la carga.
 
 ## Reiniciar o empezar de cero
 

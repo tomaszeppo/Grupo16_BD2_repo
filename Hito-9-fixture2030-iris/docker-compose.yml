@@ -1,0 +1,27 @@
+# Ambiente local de InterSystems IRIS para el modulo de entidades complejas
+# del Fixture 2030 (Hito 9). Imagen community, con Durable %SYS montada en
+# la convencion de la materia (~/docker/data/iris).
+
+services:
+  iris:
+    image: intersystems/iris-community:latest-cd
+    container_name: fixture2030-iris
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1972:1972"    # SuperServer: terminal, ObjectScript, drivers nativos
+      - "127.0.0.1:52773:52773"  # Management Portal, REST, SQL via web
+    volumes:
+      - ~/docker/data/iris:/durable
+      - ./src:/opt/src:ro
+    environment:
+      - ISC_DATA_DIRECTORY=/durable/irissys
+    networks:
+      - fixture2030
+
+networks:
+  # Red compartida entre los 6 modulos de base de datos, para cuando se
+  # integren (ver CHANGELOG.md). Hoy cada modulo se sigue levantando solo,
+  # esto no cambia ese flujo: Compose crea la red si no existe y la
+  # reutiliza si otro modulo ya la creo.
+  fixture2030:
+    name: fixture2030_net

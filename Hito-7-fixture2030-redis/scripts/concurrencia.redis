@@ -1,50 +1,35 @@
 # concurrencia.redis
-# Operaciones concurrentes del modulo (RF8). Dos casos, de menor a mayor
-# complejidad de atomicidad.
+# Operaciones concurrentes del modulo (RF8). Dos casos, de menor a mayor complejidad.
+# La prueba con varios procesos en paralelo esta en prueba_concurrencia.py.
 
-# --- Caso simple: contador nativo (INCR es atomico por diseno) ---
-# Likes de un comentario (reemplaza el contador de reacciones generico).
-# Cassandra (Hito 6) documento esto como limitacion: un int plano sin
-# atomicidad real. Acá el contador en caliente vive en Redis.
-INCR likes:comentario:P-01-EV1
-INCR likes:comentario:P-01-EV1
-SADD likes:pendientes_sync P-01-EV1
-GET likes:comentario:P-01-EV1
-# Un proceso periodico (no implementado en este hito) lee este SET con
-# SSCAN, escribe el valor consolidado en Cassandra, y recien ahi hace SREM.
-SMEMBERS likes:pendientes_sync
+# --- Caso simple: contador de visitas con INCRBY ---
+# INCRBY es atomico: Redis lo ejecuta de una sola vez, sin importar cuantos clientes
+# lo manden a la vez. Hacer GET, sumar en la aplicacion y despues SET, en cambio,
+# pierde actualizaciones cuando dos clientes leen el mismo valor antes de escribir.
+DEL contador:partido:P-01:visitas
+SET contador:partido:P-01:visitas 0 EX 3600
+INCRBY contador:partido:P-01:visitas 1
+INCRBY contador:partido:P-01:visitas 1
+INCRBY contador:partido:P-01:visitas 5
+GET contador:partido:P-01:visitas
+TTL contador:partido:P-01:visitas
 
-# --- Rate limiting: EXPIRE con NX, para que el TTL se fije una sola vez ---
-# por ventana (no se reinicia en cada comentario del mismo usuario).
-INCR ratelimit:comentarios:user-00001
-EXPIRE ratelimit:comentarios:user-00001 10 NX
-INCR ratelimit:comentarios:user-00001
-TTL ratelimit:comentarios:user-00001
-GET ratelimit:comentarios:user-00001
+# --- Dos cambios que tienen que verse juntos: MULTI/EXEC ---
+# Se suma a las visitas y se anota cuando fue la ultima. Redis ejecuta el bloque sin
+# intercalar otros comandos. El EXPIRE va dentro del bloque para que la clave de
+# metadatos tambien venza.
+MULTI
+INCRBY contador:partido:P-01:visitas 10
+HSET contador:partido:P-01:meta ultima_operacion incremento-demo
+EXPIRE contador:partido:P-01:meta 3600
+EXEC
+GET contador:partido:P-01:visitas
+HGETALL contador:partido:P-01:meta
 
-# --- Caso complejo: actualizar puntaje + antelacion + ranking, atomico ---
-# Esta es la operacion critica del hito: actualizar puntos y antelacion
-# acumulada de un usuario, y reflejarlo en el ranking, todo en un unico
-# paso indivisible. El detalle de por que hace falta un script (y no dos
-# comandos sueltos) esta en docs/ciclo_de_vida_e_invalidacion.md.
-#
-# El guion fuente, comentado y legible, esta en actualizar_ranking.lua.
-# Acá va la misma logica en una sola linea, porque es como hay que pasarla
-# a EVAL desde redis-cli. ARGV, en orden: usuario_id, delta_puntos,
-# delta_antelacion (de ESTE partido, se suma al acumulado existente),
-# antelacion_max (cota de normalizacion), timestamp.
-#
-# Ejemplo: el usuario user-00001 suma 300 puntos y 5000 minutos de
-# antelacion por un partido puntual.
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00001 ranking:publico user-00001 300 5000 10000000 2030-07-20T22:00:00
-
-# Para uso repetido en produccion, cachear el script compilado en vez de
-# mandar el texto completo en cada EVAL (asi lo haria la aplicacion real):
-SCRIPT LOAD "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}"
-
-# Esa llamada devuelve un SHA1. Con el SHA ya cargado, las actualizaciones
-# siguientes se mandan con EVALSHA (mas liviano, no reenvia el script):
-# EVALSHA <sha_devuelto_arriba> 2 ranking:publico:usuario:user-00002 ranking:publico user-00002 300 1200 10000000 2030-07-20T22:00:01
-
-# Ver el ranking resultante, ya ordenado y desempatado, sin ningun paso extra:
-ZREVRANGE ranking:publico 0 -1 WITHSCORES
+# --- Caso del ranking: sumar puntos y antelacion al score de un usuario ---
+# ZINCRBY suma el delta al score de forma atomica. El delta combina los dos criterios:
+# puntos + antelacion / 10.000.000. El usuario suma 3 puntos y 10 minutos de antelacion.
+ZSCORE ranking:publico user-00001
+ZINCRBY ranking:publico 3.000001 user-00001
+ZSCORE ranking:publico user-00001
+ZREVRANGE ranking:publico 0 4 WITHSCORES

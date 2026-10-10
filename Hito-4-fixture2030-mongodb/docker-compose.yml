@@ -28,6 +28,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - fixture2030
 
   # Interfaz web opcional: docker compose --profile interfaz up -d
   mongo-express:
@@ -47,7 +49,17 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+    networks:
+      - fixture2030
 
 volumes:
   fixture2030_mongo_data:
     name: fixture2030_mongo_data
+
+networks:
+  # Red compartida entre los 6 modulos de base de datos, para cuando se
+  # integren (ver CHANGELOG.md). Hoy cada modulo se sigue levantando solo,
+  # esto no cambia ese flujo: Compose crea la red si no existe y la
+  # reutiliza si otro modulo ya la creo.
+  fixture2030:
+    name: fixture2030_net

@@ -38,10 +38,6 @@ estructura tal como queda validada en `init-scripts/01-create-collections.js`.
 | `dorsal` | int | No | Numero de camiseta (1 a 26). |
 | `fechaNacimiento` | date | No | Fecha de nacimiento. |
 | `convocado` | bool | Si | Si integra la lista final. |
-| `estadisticas.partidosJugados` | int | No | Se actualiza partido a partido. |
-| `estadisticas.goles` | int | No | Se actualiza partido a partido. |
-| `estadisticas.tarjetasAmarillas` | int | No | Se actualiza partido a partido. |
-| `estadisticas.tarjetasRojas` | int | No | Se actualiza partido a partido. |
 
 ```json
 {
@@ -52,13 +48,7 @@ estructura tal como queda validada en `init-scripts/01-create-collections.js`.
   "posicion": "Delantero",
   "dorsal": 10,
   "fechaNacimiento": "2004-03-15T00:00:00.000Z",
-  "convocado": true,
-  "estadisticas": {
-    "partidosJugados": 3,
-    "goles": 2,
-    "tarjetasAmarillas": 1,
-    "tarjetasRojas": 0
-  }
+  "convocado": true
 }
 ```
 

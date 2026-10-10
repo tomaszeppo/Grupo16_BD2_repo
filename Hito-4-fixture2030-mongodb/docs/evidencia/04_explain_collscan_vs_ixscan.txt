@@ -1,17 +1,17 @@
 # 04 - explain: COLLSCAN contra IXSCAN
-# Fecha: 2026-10-09 14:30:54
+# Fecha: 2026-10-09 15:58:22
 # Motor: MongoDB db version v7.0.43
 # Docker: CPUs=12 RAM=16644243456 bytes
 
 CON indice ix_jugadores_equipoCodigo:
   etapa: IXSCAN (ix_jugadores_equipoCodigo)
-  nReturned: 24 | totalKeysExamined: 24 | totalDocsExamined: 24 | executionTimeMillis: 3
+  nReturned: 24 | totalKeysExamined: 24 | totalDocsExamined: 24 | executionTimeMillis: 2
 SIN indices por equipoCodigo (esperado COLLSCAN y 1536 documentos examinados):
   etapa: COLLSCAN
-  nReturned: 24 | totalKeysExamined: 0 | totalDocsExamined: 1536 | executionTimeMillis: 2
+  nReturned: 24 | totalKeysExamined: 0 | totalDocsExamined: 1536 | executionTimeMillis: 3
 De nuevo CON indices (plan elegido por el optimizador):
   etapa: IXSCAN (ix_jugadores_equipoCodigo)
-  nReturned: 24 | totalKeysExamined: 24 | totalDocsExamined: 24 | executionTimeMillis: 3
+  nReturned: 24 | totalKeysExamined: 24 | totalDocsExamined: 24 | executionTimeMillis: 4
 [
   '_id_',
   'ix_jugadores_codigo_unico',

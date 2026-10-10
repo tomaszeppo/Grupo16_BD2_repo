@@ -6,6 +6,18 @@ Grupo 16 · Ingeniería de Datos II
 
 Se recupera el inventario, las prioridades y los supuestos del Hito 1: nueve tipos de datos agrupados en datos de referencia, datos que cambian rápido durante los partidos y datos ligados a la cantidad de usuarios conectados. Los números del proyecto son 2 a 3 millones de usuarios simultáneos y picos de más de 100.000 solicitudes por segundo.
 
+No se vuelven a evaluar acá los nueve datos del Hito 1: este hito profundiza solo en los seis casos donde la elección de motor no era obvia o dependía de un trade-off. El resto (Selecciones, Estadios, Jugadores, Usuarios, Sesiones) sigue con el modelo ya definido en el Hito 1, sin cambios. La siguiente tabla deja explícito, para cada dato del Hito 1, dónde queda cubierto en este hito y si el motor elegido cambió respecto a la propuesta original:
+
+| Dato (Hito 1) | Modelo en Hito 1 | Necesidad equivalente acá | Modelo acá | ¿Cambió? |
+| :--- | :--- | :--- | :--- | :--- |
+| Selecciones, Estadios, Jugadores | MongoDB | Partidos finalizados y datos estáticos | MongoDB | No. Se agrupan bajo la misma necesidad por compartir el mismo patrón de acceso (datos estables, de lectura). |
+| Partidos | MongoDB (documento único con estado y eventos) | Se separa en dos necesidades: *Partidos y valores en tiempo real* y *Partidos finalizados y datos estáticos* | Redis (en vivo) + MongoDB (finalizado) | **Sí.** En el Hito 1 todavía no se distinguía el partido en vivo del partido ya jugado. Acá se separa porque el problema de latencia en vivo (Redis, en memoria) no es el mismo problema que guardar el resultado definitivo (MongoDB, en disco). |
+| Estadísticas de grupos y partidos (ranking) | Redis (sorted set, sin bloqueos) | Grupos y puntajes | IRIS | **Sí.** Cambió el criterio que más pesa: en el Hito 1 se priorizó la velocidad de actualización sin bloqueos; acá se prioriza que todos los integrantes de un grupo vean el mismo puntaje y la misma posición (consistencia fuerte), que es lo que mejor resuelve IRIS. No es un error, es un cambio de prioridad que conviene dejar explícito porque antes se había argumentado exactamente lo contrario. |
+| Grupos privados (alta de grupo) | MongoDB (documento por grupo) | Grupos y puntajes | IRIS | **Sí.** Se fusiona con la necesidad anterior: la composición del grupo y sus puntajes pasan a tratarse como un mismo problema de consistencia, en vez de dos problemas separados (alta masiva por un lado, ranking por otro). |
+| Estadísticas de partido (posesión, pases, tiros momento a momento) | Cassandra (escritura masiva y sostenida) | Métricas y estadísticas históricas | InfluxDB | **Sí.** El propio Hito 1 ya había anotado a InfluxDB como alternativa seria para este mismo dato ("ambas opciones son técnicamente válidas"). Acá se retoma esa alternativa y se elige InfluxDB, mejor preparada para series temporales y agregaciones por período. |
+| *(sin equivalente directo en el Hito 1)* | — | Logs generados durante el partido | Cassandra | Cassandra no desaparece: pasa a cubrir otro problema, el volumen de eventos/logs en crudo, que el Hito 1 no había separado de las estadísticas de partido. |
+| *(sin equivalente en el Hito 1)* | — | Predicciones de usuarios | Neo4j | Es una necesidad nueva, no identificada como dato propio en el Hito 1: la relación usuario-partido-pronóstico. |
+
 ## RF2. Criterios de comparación
 
 1. **Capacidad y volumen de datos.** ¿Puede manejar el volumen que necesita el módulo, tanto los registros constantes de los partidos como una gran cantidad de usuarios que entran de forma esporádica?

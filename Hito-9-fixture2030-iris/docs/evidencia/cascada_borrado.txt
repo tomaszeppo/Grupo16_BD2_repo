@@ -1,0 +1,19 @@
+
+Node: f1f1f5eb8685, Instance: IRIS
+
+USER>
+Carga completa. Partido ID interno: 1
+
+USER>
+Eventos antes de borrar el partido: 2
+
+USER>
+Borrado OK: 1
+
+USER>
+Eventos despues de borrar el partido: 0
+
+USER>
+Carga completa. Partido ID interno: 1
+
+USER>

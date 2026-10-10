@@ -1,12 +1,11 @@
 # carga_muestra.redis
-# Datos de ejemplo para desarrollo: sesiones, cache de equipos, y el
-# ranking publico con el caso de empate ya armado (ver
-# docs/ciclo_de_vida_e_invalidacion.md para la explicacion completa).
+# Datos de ejemplo: sesiones, cache de equipos, contador de visitas y ranking con
+# el caso de empate ya armado (ver docs/ciclo_de_vida_e_invalidacion.md).
+# Se puede correr todas las veces que haga falta: empieza borrando sus propias claves
+# (lista finita, nunca KEYS), porque INCRBY y ZINCRBY suman sobre lo que ya hay y
+# sin el DEL inicial una segunda corrida duplicaria los puntos.
 
-# --- Limpieza previa: borra las claves de muestra (lista finita, nunca KEYS) ---
-# HINCRBY, INCR y EVAL suman sobre lo que ya hay; sin esto, correr la carga dos
-# veces duplicaria puntos, antelacion y likes. Con el DEL inicial el resultado es
-# el mismo en la primera y en la N-esima corrida.
+# --- Limpieza previa ---
 DEL sesion:sess-000001
 DEL usuario:user-00001:sesion_activa
 DEL sesion:sess-000002
@@ -33,29 +32,10 @@ DEL cache:equipo:ESP
 DEL cache:equipo:FRA
 DEL cache:equipo:GER
 DEL cache:equipo:JPN
-DEL ranking:publico:usuario:user-00001
+DEL contador:partido:P-01:visitas
 DEL ranking:publico
-DEL ranking:publico:usuario:user-00002
-DEL ranking:publico:usuario:user-00003
-DEL ranking:publico:usuario:user-00004
-DEL ranking:publico:usuario:user-00005
-DEL ranking:publico:usuario:user-00006
-DEL ranking:publico:usuario:user-00007
-DEL ranking:publico:usuario:user-00008
-DEL ranking:publico:usuario:user-00009
-DEL ranking:publico:usuario:user-00010
-DEL ranking:publico:usuario:user-00011
-DEL ranking:publico:usuario:user-00012
-DEL ranking:publico:usuario:user-00013
-DEL ranking:publico:usuario:user-00014
-DEL ranking:publico:usuario:user-00015
-DEL marcador:P-01
-DEL marcador:P-02
-DEL likes:comentario:P-01-EV1
-DEL likes:pendientes_sync
-DEL espectadores:P-01
 
-# --- Sesiones de muestra (10 usuarios con sesion activa) ---
+# --- Sesiones de muestra (10 usuarios con sesion activa, 30 minutos) ---
 HSET sesion:sess-000001 usuario_id user-00001 creado_en 2030-07-20T20:01:00 ultima_actividad 2030-07-20T20:01:00 estado activa
 EXPIRE sesion:sess-000001 1800
 SET usuario:user-00001:sesion_activa sess-000001 EX 1800
@@ -87,7 +67,7 @@ HSET sesion:sess-000010 usuario_id user-00010 creado_en 2030-07-20T20:10:00 ulti
 EXPIRE sesion:sess-000010 1800
 SET usuario:user-00010:sesion_activa sess-000010 EX 1800
 
-# --- Cache de catalogo (equipos mas consultados) ---
+# --- Cache de catalogo (equipos mas consultados, 5 minutos) ---
 SET cache:equipo:ARG "{\"codigo\":\"ARG\",\"confederacion\":\"CONMEBOL\",\"ranking\":1}" EX 300
 SET cache:equipo:BRA "{\"codigo\":\"BRA\",\"confederacion\":\"CONMEBOL\",\"ranking\":4}" EX 300
 SET cache:equipo:ESP "{\"codigo\":\"ESP\",\"confederacion\":\"UEFA\",\"ranking\":9}" EX 300
@@ -95,46 +75,32 @@ SET cache:equipo:FRA "{\"codigo\":\"FRA\",\"confederacion\":\"UEFA\",\"ranking\"
 SET cache:equipo:GER "{\"codigo\":\"GER\",\"confederacion\":\"UEFA\",\"ranking\":13}" EX 300
 SET cache:equipo:JPN "{\"codigo\":\"JPN\",\"confederacion\":\"AFC\",\"ranking\":33}" EX 300
 
-# --- Ranking publico: caso de empate (el mismo que se valido antes de
-#     escribir el script) mas otros usuarios para que la tabla no sea trivial ---
-# El orden esperado despues de cargar todo esto, de 1ro a ultimo:
-#   1) user-00003 (300 puntos, 8800 de antelacion)
-#   2) user-00001 (300 puntos, 5000 de antelacion)
-#   3) user-00002 (300 puntos, 1200 de antelacion)
-#   4) user-00006 (280 puntos)
-#   5) user-00004 (250 puntos, pese a tener la mayor antelacion de todos)
-#   6) user-00005 (210 puntos)
-#   ... y el resto, mas abajo, puntaje descendente
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00001 ranking:publico user-00001 300 5000 10000000 2030-07-20T22:00:00
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00002 ranking:publico user-00002 300 1200 10000000 2030-07-20T22:00:01
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00003 ranking:publico user-00003 300 8800 10000000 2030-07-20T22:00:02
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00004 ranking:publico user-00004 250 9000 10000000 2030-07-20T22:00:03
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00005 ranking:publico user-00005 210 3000 10000000 2030-07-20T22:00:04
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00006 ranking:publico user-00006 280 4000 10000000 2030-07-20T22:00:05
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00007 ranking:publico user-00007 142 1735 10000000 2030-07-20T22:00:07
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00008 ranking:publico user-00008 161 5832 10000000 2030-07-20T22:00:08
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00009 ranking:publico user-00009 72 1093 10000000 2030-07-20T22:00:09
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00010 ranking:publico user-00010 197 1271 10000000 2030-07-20T22:00:10
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00011 ranking:publico user-00011 153 5274 10000000 2030-07-20T22:00:11
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00012 ranking:publico user-00012 74 4656 10000000 2030-07-20T22:00:12
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00013 ranking:publico user-00013 114 807 10000000 2030-07-20T22:00:13
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00014 ranking:publico user-00014 82 4052 10000000 2030-07-20T22:00:14
-EVAL "local hash_key = KEYS[1]; local zset_key = KEYS[2]; local usuario_id = ARGV[1]; local delta_puntos = tonumber(ARGV[2]); local delta_antelacion = tonumber(ARGV[3]); local antelacion_max = tonumber(ARGV[4]); local puntos = redis.call('HINCRBY', hash_key, 'puntos', delta_puntos); local antelacion = redis.call('HINCRBYFLOAT', hash_key, 'antelacion_total', delta_antelacion); redis.call('HSET', hash_key, 'actualizado_en', ARGV[5]); local score = tonumber(puntos) + (tonumber(antelacion) / antelacion_max); redis.call('ZADD', zset_key, score, usuario_id); return {puntos, antelacion, tostring(score)}" 2 ranking:publico:usuario:user-00015 ranking:publico user-00015 167 1072 10000000 2030-07-20T22:00:15
+# --- Contador de visitas del partido P-01 (1 hora) ---
+SET contador:partido:P-01:visitas 0 EX 3600
+
+# --- Ranking publico: caso de empate ---
+# Score = puntos + antelacion_total / 10.000.000. ZINCRBY suma al score del miembro
+# de forma atomica (si el miembro no existe, lo crea). La parte entera son los puntos;
+# la decimal, siempre menor a 1, es la antelacion y desempata.
+# Orden esperado: 1) user-00003 (300 puntos, 8800 de antelacion)
+#                 2) user-00001 (300, 5000)   3) user-00002 (300, 1200)
+#                 4) user-00006 (280)   5) user-00004 (250, pese a tener la mayor antelacion)
+#                 6) user-00005 (210) ... y el resto por puntaje descendente
+ZINCRBY ranking:publico 300.0005000 user-00001
+ZINCRBY ranking:publico 300.0001200 user-00002
+ZINCRBY ranking:publico 300.0008800 user-00003
+ZINCRBY ranking:publico 250.0009000 user-00004
+ZINCRBY ranking:publico 210.0003000 user-00005
+ZINCRBY ranking:publico 280.0004000 user-00006
+ZINCRBY ranking:publico 142.0001735 user-00007
+ZINCRBY ranking:publico 161.0005832 user-00008
+ZINCRBY ranking:publico 72.0001093 user-00009
+ZINCRBY ranking:publico 197.0001271 user-00010
+ZINCRBY ranking:publico 153.0005274 user-00011
+ZINCRBY ranking:publico 74.0004656 user-00012
+ZINCRBY ranking:publico 114.0000807 user-00013
+ZINCRBY ranking:publico 82.0004052 user-00014
+ZINCRBY ranking:publico 167.0001072 user-00015
 
 # Verificar el resultado:
 ZREVRANGE ranking:publico 0 -1 WITHSCORES
-
-# --- Marcador en vivo (reemplaza/complementa la caché de equipo) ---
-HSET marcador:P-01 goles_local 1 goles_visitante 0 minuto 23 ultimo_evento "Gol de ARG-20" actualizado_en 2030-06-08T18:23:00
-HSET marcador:P-02 goles_local 0 goles_visitante 0 minuto 10 ultimo_evento "Arranca el partido" actualizado_en 2030-06-09T18:10:00
-
-# --- Likes de comentarios ---
-INCR likes:comentario:P-01-EV1
-INCR likes:comentario:P-01-EV1
-INCR likes:comentario:P-01-EV1
-SADD likes:pendientes_sync P-01-EV1
-
-# --- Espectadores en vivo de P-01 (timestamps de ejemplo) ---
-ZADD espectadores:P-01 1907172000 sess-000001
-ZADD espectadores:P-01 1907172005 sess-000002
-ZADD espectadores:P-01 1907172010 sess-000003

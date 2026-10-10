@@ -1,0 +1,66 @@
+
+Node: 79de1d91845a, Instance: IRIS
+
+USER>
+Carga completa. Partido ID interno: 1
+
+USER>
+
+USER>
+
+--- Consulta 1 ---
+
+USER>
+
+USER>
+Codigo	EquipoLocal	EquipoVisitante	Estado	GolesLocal	GolesVisitante
+P-01	ARG	URU	EnCurso	0	0
+
+1 Rows(s) Affected
+USER>
+
+--- Consulta 2 ---
+
+USER>
+
+USER>
+PartidoCodigo	Tipo	Minuto	JugadorCodigo
+P-01	Gol	23	ARG-20
+P-01	TarjetaAmarilla	41	URU-05
+
+2 Rows(s) Affected
+USER>
+
+--- Consulta 3 ---
+
+USER>
+
+USER>
+Codigo	EquipoLocal	EquipoVisitante	Minuto	Tipo	JugadorCodigo
+P-01	ARG	URU	23	Gol	ARG-20
+P-01	ARG	URU	41	TarjetaAmarilla	URU-05
+
+2 Rows(s) Affected
+USER>
+
+--- Consulta 4 ---
+
+USER>
+
+USER>
+Nombre	Categoria	PaisOrigen
+Daniele Orsato	FIFA	Italia
+
+1 Rows(s) Affected
+USER>
+
+--- Consulta 5 ---
+
+USER>
+
+USER>
+ID	Nombre	Nacionalidad
+1	Daniele Orsato	Italia
+
+1 Rows(s) Affected
+USER>

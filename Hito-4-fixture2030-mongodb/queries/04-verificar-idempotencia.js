@@ -16,8 +16,8 @@ function contar() {
 const antes = contar();
 print("Antes   -> equipos: " + antes.equipos + ", jugadores: " + antes.jugadores);
 
-// Dato acumulado que la recarga no debe pisar (si el torneo ya lo modifico).
-const golesAntes = db.jugadores.findOne({ codigo: "ARG-10" }).estadisticas.goles;
+// Datos modificados despues de la carga que la recarga no debe pisar.
+const apellidoAntes = db.jugadores.findOne({ codigo: "BRA-05" }).apellido;
 const convocadoAntes = db.jugadores.findOne({ codigo: "JPN-07" }).convocado;
 
 // 2) Se ejecuta de nuevo la misma carga.
@@ -27,8 +27,6 @@ load("/scripts/cargar-datos.js");
 const despues = contar();
 print("Despues -> equipos: " + despues.equipos + ", jugadores: " + despues.jugadores);
 
-const golesDespues = db.jugadores.findOne({ codigo: "ARG-10" }).estadisticas.goles;
-print("Goles de ARG-10 antes / despues de recargar: " + golesAntes + " / " + golesDespues);
 
 const convocadoDespues = db.jugadores.findOne({ codigo: "JPN-07" }).convocado;
 print("JPN-07 convocado antes / despues de recargar: " + convocadoAntes + " / " + convocadoDespues);
@@ -37,7 +35,10 @@ const igual = antes.equipos === despues.equipos && antes.jugadores === despues.j
 const esperado = despues.equipos === ESPERADO_EQUIPOS && despues.jugadores === ESPERADO_JUGADORES;
 print("Totales iguales antes y despues: " + igual);
 print("Totales iguales a los esperados (" + ESPERADO_EQUIPOS + " / " + ESPERADO_JUGADORES + "): " + esperado);
-const intactos = golesAntes === golesDespues && convocadoAntes === convocadoDespues;
+// El apellido es dato de referencia: la recarga lo vuelve al valor del script.
+const apellidoDespues = db.jugadores.findOne({ codigo: "BRA-05" }).apellido;
+print("Apellido de BRA-05 antes / despues de recargar (dato de referencia, se corrige): " + apellidoAntes + " / " + apellidoDespues);
+const intactos = convocadoAntes === convocadoDespues;
 print("Datos del torneo intactos: " + intactos);
 if (!igual || !esperado || !intactos) {
   throw new Error("La carga no es idempotente");

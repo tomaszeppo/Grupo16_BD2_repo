@@ -1,10 +1,10 @@
 # 08 - Hit rate con INFO stats (justo despues de cargar la muestra)
-# Fecha: 2026-10-09 14:48:18 -0300
-# Docker: CPUs=12 RAM=16644243456 bytes
+# Fecha: 2026-10-09 16:04:22 -0300
+# Redis: Redis server v=8.10.2 sha=00000000:1 malloc=jemalloc-5.3.0 bits=64 build=fbc5ac9ab55dc180 | Docker: CPUs=12 RAM=16644243456 bytes
 
 Redis 8.10.2
-Antes   -> keyspace_hits: 85 | keyspace_misses: 18
-Despues -> keyspace_hits: 785 | keyspace_misses: 318
+Antes   -> keyspace_hits: 40824 | keyspace_misses: 328
+Despues -> keyspace_hits: 41524 | keyspace_misses: 628
 Diferencia -> hits: 700 | misses: 300
 Hit rate de la microprueba: 70.0% (700 de 1000)
 (esperado por construccion: 700 hits y 300 misses; si la carga de muestra no esta cargada o vencio el TTL de 300 s, hay mas misses)

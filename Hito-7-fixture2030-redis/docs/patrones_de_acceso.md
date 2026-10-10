@@ -43,9 +43,9 @@ Durante los partidos, millones de usuarios navegan la plataforma en simultáneo:
 - **Quién:** la aplicación, cada vez que se confirma el resultado de un partido y se recalculan los puntos de las predicciones afectadas.
 - **Entrada:** `usuario_id`, delta de puntos, delta de antelación (ver `ciclo_de_vida_e_invalidacion.md` para de dónde sale ese segundo valor).
 - **Respuesta:** puntaje actualizado, reflejado al instante en el ranking.
-- **Frecuencia:** en ráfaga justo después de que termina cada partido — y con muchísima concurrencia justo cuando termina el último partido del torneo, que es el escenario que más nos importa resolver bien.
-- **Riesgo si no es atómico:** dos actualizaciones del mismo usuario que se pisen, o un cálculo de desempate que quede desactualizado un instante.
-- **Estructura:** hash con los valores crudos del usuario + ZSET con el score combinado ya resuelto (ver abajo). Se actualizan juntos, en un solo paso atómico.
+- **Frecuencia:** en ráfaga justo después de que termina cada partido, y con muchísima concurrencia cuando termina el último del torneo, que es el escenario que más importa resolver bien.
+- **Riesgo si no es atómico:** dos actualizaciones del mismo usuario que se pisen y se pierda una.
+- **Estructura:** Sorted Set actualizado con `ZINCRBY`, que suma el delta al score de forma atómica.
 
 ### 6. Ver el ranking público
 - **Quién:** cualquier usuario, en cualquier momento, muy frecuentemente durante y después del torneo.
@@ -55,40 +55,13 @@ Durante los partidos, millones de usuarios navegan la plataforma en simultáneo:
 - **Temporal:** es una proyección calculada a partir de las predicciones (cuya fuente de verdad, a futuro, será el módulo documental). Si se pierde, se puede reconstruir recalculando desde ahí — por eso es caché en sentido amplio, aunque no tenga TTL (ver `memoria_y_escalabilidad.md`).
 - **Estructura:** Sorted Set (ZSET). Es la estructura de Redis pensada exactamente para esto: mantiene el orden siempre actualizado en O(log N) por escritura, sin tener que ordenar nada al leer.
 
-### 7. Reacciones de los usuarios
-- Se resuelven con los likes de comentarios (patrón 9). No hay un contador genérico de reacciones por partido: un único conjunto de claves cubre este caso.
+### 7. Contar visitas de un partido (concurrencia simple)
+- **Quién:** la aplicación, cada vez que un usuario abre un partido.
+- **Entrada:** `partido_codigo`. **Respuesta:** contador actualizado.
+- **Frecuencia:** muy alta durante los partidos populares.
+- **Estructura:** string con `INCRBY`, atómico sin necesidad de otro mecanismo; si hay que actualizar también un dato de apoyo, se agrupa en `MULTI/EXEC`.
 
 ## Qué NO es parte de este módulo
 
 - Los datos completos de equipos, jugadores, partidos y predicciones — viven en Mongo, Neo4j o Cassandra según corresponda. Redis nunca es la fuente de verdad de nada acá.
 - Autenticación o verificación de contraseña — este módulo asume que el usuario ya fue autenticado por otro componente; Redis solo administra la sesión una vez que eso ya pasó.
-
----
-
-## Revisión: de demos a casos reales
-
-El patrón 4 de arriba (caché de equipo) se armó al principio para mostrar el mecanismo de Redis, no porque sea el mejor uso real una vez que el sistema esté unificado. Se complementa con estos casos, que sí salen de necesidades ya identificadas en hitos anteriores. Las reacciones genéricas por partido se reemplazaron por los likes del patrón 9:
-
-### 4′. Marcador en vivo de un partido (reemplaza la caché de equipo como ejemplo principal de RF6/RF7)
-- **Por qué esto y no el catálogo de equipos:** 64 equipos que casi no cambian apenas se benefician de caché — Mongo ya responde rápido ahí. El marcador en vivo sí lo justifica: en Neo4j (Hito 5) el resultado de un partido no es un campo guardado, es un cálculo (contar nodos `Evento` de tipo `Gol` conectados al partido, por equipo) — carísimo de recalcular en cada request de millones de usuarios mirando el mismo partido.
-- **Entrada:** `partido_codigo`. **Respuesta:** goles por equipo, minuto, último evento.
-- **Frecuencia:** lectura altísima durante el partido; escritura rara (solo cuando hay un evento nuevo).
-- **Fuente de verdad:** Neo4j (`Partido`, `Evento`, Hito 5).
-- **Estructura:** hash, actualizado por escritura (no por TTL) — ver `ciclo_de_vida_e_invalidacion.md`.
-
-### 9. Likes de un comentario (reemplaza el contador de reacciones genérico del patrón 7)
-- **De dónde sale:** en el Hito 6 (Cassandra) quedó documentado como limitación que `likes` era un int plano sin atomicidad real, porque Cassandra no deja mezclar counters con otros campos en la misma tabla.
-- **Quién:** cualquier usuario, al reaccionar a un comentario.
-- **Frecuencia:** muy alta en los comentarios de un gol.
-- **Fuente de verdad final:** Cassandra (`comentarios_por_partido.likes`), pero el conteo en caliente vive en Redis y se sincroniza después — Cassandra no es buena recibiendo escrituras de +1 constantes sobre la misma fila.
-- **Estructura:** contador simple (`INCR`) + un set de comentarios con cambios pendientes de sincronizar.
-
-### 10. Límite de comentarios por usuario (rate limiting) — nuevo, no existía en ningún hito
-- **Por qué hace falta:** nada en el módulo de Cassandra frena a un usuario (o un bot) mandando cientos de comentarios por segundo durante un partido viral.
-- **Quién:** la aplicación, antes de aceptar un comentario nuevo.
-- **Estructura:** contador con ventana fija (`INCR` + `EXPIRE NX`).
-
-### 11. Espectadores en vivo de un partido — nuevo, estaba en el diagnóstico del Hito 1 y se había perdido
-- **De dónde sale:** el Hito 1 pedía "cantidad de gente en vivo" como parte de Interacciones; terminó absorbido por Cassandra junto con Comentarios, pero un conteo de presencia instantánea es puramente efímero — no tiene sentido como historial en una tabla.
-- **Quién:** la aplicación, con un latido periódico mientras el usuario tiene el partido abierto.
-- **Estructura:** Sorted Set con latido (score = momento del último latido), contando miembros recientes. Cada latido renueva un TTL de respaldo de 6 horas.

@@ -21,13 +21,11 @@ maxmemory-policy volatile-lru
 | :--- | :--- | :--- |
 | `sesion:*` y `usuario:*:sesion_activa` | 30 minutos, renovado en cada acceso | Sí |
 | `cache:equipo:*` | 5 minutos | Sí |
-| `ratelimit:comentarios:*` | 10 segundos | Sí |
-| `espectadores:{partido}` | 6 horas de respaldo, renovado en cada latido | Sí |
-| `ranking:publico` y `ranking:publico:usuario:*` | ninguno | No |
-| `marcador:*` | ninguno | No |
-| `likes:comentario:*` y `likes:pendientes_sync` | ninguno | No |
+| `cache:partido:*:resumen` | 30 segundos | Sí |
+| `contador:partido:*` | 1 hora | Sí |
+| `ranking:publico` | ninguno | No |
 
-El ranking, el marcador, los likes, `likes:pendientes_sync` y los espectadores (antes del TTL de respaldo) no tienen TTL, y por eso `volatile-lru` no los desaloja. Si la memoria se llena y no quedan claves con TTL para liberar, Redis rechaza las escrituras nuevas con un error en lugar de borrar algo. Por eso `espectadores:{partido}` lleva un TTL de respaldo de 6 horas, renovado con `EXPIRE` en cada latido junto al `ZADD`: sin él, las claves de partidos ya terminados quedarían ocupando memoria que `volatile-lru` no podría recuperar.
+El ranking no tiene TTL y por eso `volatile-lru` no lo desaloja. Si la memoria se llena y no quedan claves con TTL para liberar, Redis rechaza las escrituras nuevas con un error en lugar de borrar algo. Por eso todo lo demás lleva TTL.
 
 ## TTL vencido vs. evicción por memoria: la diferencia
 
@@ -37,7 +35,7 @@ El ranking, el marcador, los likes, `likes:pendientes_sync` y los espectadores (
 **Efecto sobre cada tipo de dato si se queda sin memoria:**
 - Sesiones: alguna sesión poco usada se evicta antes de su TTL natural — el usuario queda deslogueado antes de lo esperado, pero no es un error de datos, solo una sesión que termina antes.
 - Caché de equipo: se evicta y listo — el siguiente `GET` es un miss común, se reconstruye desde Mongo sin que nadie note la diferencia salvo una lectura más lenta esa vez.
-- Ranking, marcador y likes: no se evictan (no tienen TTL). Si no queda memoria libre, lo que falla es la escritura nueva.
+- Ranking: no se evicta (no tiene TTL). Si no queda memoria libre, lo que falla es la escritura nueva.
 
 ## Por qué 256MB para este laboratorio
 
@@ -47,12 +45,10 @@ No es un número arbitrario: es una cota chica a propósito, para forzar que la 
 | :--- | :--- | :--- | :--- |
 | Sesión (hash + puntero) | ~250 bytes | 2.000.000 a 3.000.000 de usuarios simultáneos | ~500-750 MB |
 | Caché de equipo | ~300 bytes | 64 equipos (todo el catálogo cabe fácil) | ~20 KB |
-| Ranking público (ZSET + hashes) | ~150 bytes por usuario | Varios millones de participantes | Cientos de MB, según cuántos usuarios predicen |
+| Ranking público (ZSET) | ~80 bytes por usuario | Varios millones de participantes | Cientos de MB, según cuántos usuarios predicen |
 
 Solo las sesiones en el pico de un partido popular ya superan ampliamente los 256MB de este laboratorio — es exactamente la evidencia de que **un solo nodo local no alcanza para producción**, y de que esto necesitaría Redis Cluster (particionado horizontal entre varios nodos) o, como mínimo, réplicas de lectura con Sentinel para alta disponibilidad. Este ambiente es de aprendizaje; no se presenta en ningún momento como una topología productiva.
 
-## Próximos pasos de escala (fuera del alcance de este hito)
+## Pendiente
 
-- Particionar el ranking por fase del torneo (en vez de un único ZSET con todos los participantes activos todo el tiempo).
 - Medir el tamaño real de una sesión serializada contra el supuesto de 250 bytes de la tabla de arriba, en vez de estimarlo.
-- Evaluar Redis Cluster para repartir las sesiones entre varios nodos según el pico de usuarios concurrentes del Hito 3.

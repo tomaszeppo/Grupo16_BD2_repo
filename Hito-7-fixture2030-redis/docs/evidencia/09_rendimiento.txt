@@ -1,0 +1,16 @@
+# 09 - Medicion de operaciones por segundo (prueba_rendimiento.py)
+# Fecha: 2026-10-09 16:04:37 -0300
+# Redis: Redis server v=8.10.2 sha=00000000:1 malloc=jemalloc-5.3.0 bits=64 build=fbc5ac9ab55dc180 | Docker: CPUs=12 RAM=16644243456 bytes
+
+Conectado a Redis 8.10.2 en redis:6379
+
+=== Resultado ===
+Fecha de ejecucion (UTC): 2026-10-09T19:05:14.251010+00:00
+Version de Redis: 8.10.2
+Operaciones por prueba: 10000
+ZINCRBY (actualizar ranking): 16.02s -> 624 ops/seg
+GET (lectura de cache):       5.74s -> 1742 ops/seg
+Python: 3.11.16 — SO: Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41
+
+Copiar estos valores a docs/rendimiento.md junto con los recursos de
+CPU/RAM asignados a Docker Desktop al momento de la prueba (RNF10).

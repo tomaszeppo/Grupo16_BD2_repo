@@ -89,16 +89,6 @@ db.createCollection("jugadores", {
         convocado: {
           bsonType: "bool",
           description: "si integra la lista final de convocados, obligatorio"
-        },
-        estadisticas: {
-          bsonType: "object",
-          description: "estadisticas del jugador durante el torneo, se actualizan partido a partido",
-          properties: {
-            partidosJugados: { bsonType: "int" },
-            goles: { bsonType: "int" },
-            tarjetasAmarillas: { bsonType: "int" },
-            tarjetasRojas: { bsonType: "int" }
-          }
         }
       }
     }

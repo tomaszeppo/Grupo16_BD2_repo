@@ -58,12 +58,12 @@ echo "=== Tablas ==="
 if ! docker compose exec -T influxdb influxdb3 query --database "$DB" --token "$TOKEN" "SHOW TABLES" | grep -q "estadisticas_partido"; then
   docker compose exec -T influxdb influxdb3 create table estadisticas_partido \
     --database "$DB" --token "$TOKEN" \
-    --tags partido_id,equipo_id,sede,fuente,fase
+    --tags partido_codigo,equipo_codigo,sede,fuente,fase
 fi
 if ! docker compose exec -T influxdb influxdb3 query --database "$DB" --token "$TOKEN" "SHOW TABLES" | grep -q "usuarios_conectados"; then
   docker compose exec -T influxdb influxdb3 create table usuarios_conectados \
     --database "$DB" --token "$TOKEN" \
-    --tags partido_id,region
+    --tags partido_codigo,region
 fi
 
 echo "=== SHOW TABLES ==="

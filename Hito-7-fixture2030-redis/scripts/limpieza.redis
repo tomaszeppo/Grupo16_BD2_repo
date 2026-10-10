@@ -1,0 +1,33 @@
+# limpieza.redis
+# Borra las claves del modulo (lista finita, nunca KEYS ni FLUSHALL).
+
+DEL sesion:sess-000001
+DEL usuario:user-00001:sesion_activa
+DEL sesion:sess-000002
+DEL usuario:user-00002:sesion_activa
+DEL sesion:sess-000003
+DEL usuario:user-00003:sesion_activa
+DEL sesion:sess-000004
+DEL usuario:user-00004:sesion_activa
+DEL sesion:sess-000005
+DEL usuario:user-00005:sesion_activa
+DEL sesion:sess-000006
+DEL usuario:user-00006:sesion_activa
+DEL sesion:sess-000007
+DEL usuario:user-00007:sesion_activa
+DEL sesion:sess-000008
+DEL usuario:user-00008:sesion_activa
+DEL sesion:sess-000009
+DEL usuario:user-00009:sesion_activa
+DEL sesion:sess-000010
+DEL usuario:user-00010:sesion_activa
+DEL cache:equipo:ARG
+DEL cache:equipo:BRA
+DEL cache:equipo:ESP
+DEL cache:equipo:FRA
+DEL cache:equipo:GER
+DEL cache:equipo:JPN
+DEL contador:partido:P-01:visitas
+DEL ranking:publico
+DEL contador:partido:P-01:meta
+DEL cache:partido:P-01:resumen

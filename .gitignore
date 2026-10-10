@@ -1,0 +1,22 @@
+# Rastros de herramientas de IA (no se entregan)
+.claude/
+CLAUDE.md
+
+# Credenciales reales (se versiona .env.example, nunca .env)
+.env
+*.env.local
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Zona de descarga de Windows
+*:Zone.Identifier
+
+# Cachés y temporales de Python
+__pycache__/
+*.pyc
+
+# Datos de los contenedores montados localmente (nunca deberían versionarse)
+docker/data/

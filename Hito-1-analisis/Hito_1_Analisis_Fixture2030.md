@@ -61,11 +61,13 @@ Para cada tipo de dato se propone el modelo más adecuado, la razón de la elecc
 | Selecciones | Documental (MongoDB) | Dato estable con estructura anidada |
 | Estadios | Documental (MongoDB) | Dato estable y de bajo volumen |
 | Jugadores | Documental (MongoDB) | Dato estable con estadísticas incluidas |
-| Estadísticas de grupos y partidos | Clave-valor (Redis) | Posiciones que se leen y actualizan muy rápido |
-| Grupos privados | Documental (MongoDB) | Altas masivas al inicio, sin relaciones de muchos a muchos |
+| Estadísticas de grupos y partidos | Clave-valor (Redis) † | Posiciones que se leen y actualizan muy rápido |
+| Grupos privados | Documental (MongoDB) † | Altas masivas al inicio, sin relaciones de muchos a muchos |
 | Usuarios | Documental (MongoDB) | Perfil con estructura flexible y consulta por campos |
 | Sesiones | Clave-valor (Redis) | Acceso rápido por clave |
-| Estadísticas de partido | Columnar (Cassandra) | Escritura masiva y sostenida durante todo el torneo |
+| Estadísticas de partido | Columnar (Cassandra) † | Escritura masiva y sostenida durante todo el torneo |
+
+† Elección revisada en el Hito 2: "Estadísticas de grupos y partidos" y "Grupos privados" pasan a IRIS (se prioriza consistencia fuerte entre los integrantes de un grupo por sobre la velocidad de escritura sin bloqueos); "Estadísticas de partido" pasa a InfluxDB (la alternativa que ya se había dejado anotada acá mismo como "técnicamente válida", mejor preparada para series temporales). El detalle y el motivo de cada cambio están en `Hito-2-matriz-decision/Hito_2_Matriz_Decision_Fixture2030.md`, sección "RF1. Punto de partida".
 
 ## 4. Conclusión
 

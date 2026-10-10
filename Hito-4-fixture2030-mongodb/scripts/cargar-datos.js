@@ -5,7 +5,7 @@
 // totales y no pisa lo que cambia durante el torneo.
 //   - Datos de referencia (nombre, ranking, posicion, etc.): van con $set, se
 //     corrigen si cambiaron en este script.
-//   - Datos que cambian durante el torneo (convocado, estadisticas y el contador
+//   - Datos que se pueden modificar despues de la carga (convocado y el contador
 //     cantidadJugadoresConvocados): van con $setOnInsert, solo se escriben si el
 //     documento todavia no existia.
 // Lo llama init-scripts/03-load-data.js en el primer arranque y tambien se puede
@@ -166,15 +166,7 @@ equipos.forEach((equipo) => {
             dorsal: NumberInt(dorsal),
             fechaNacimiento: fechaNacimientoDeterministica(semilla)
           },
-          $setOnInsert: {
-            convocado: true,
-            estadisticas: {
-              partidosJugados: NumberInt(0),
-              goles: NumberInt(0),
-              tarjetasAmarillas: NumberInt(0),
-              tarjetasRojas: NumberInt(0)
-            }
-          }
+          $setOnInsert: { convocado: true }
         },
         upsert: true
       }

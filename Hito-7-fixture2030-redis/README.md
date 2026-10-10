@@ -11,16 +11,15 @@ redis/
 ├── docker-compose.yml           Ambiente Redis (redis:latest)
 ├── scripts/
 │   ├── inicializacion.redis       Verificaciones de arranque y configuración
-│   ├── carga_muestra.redis        Sesiones, caché, ranking, likes y espectadores de ejemplo (se puede repetir)
+│   ├── carga_muestra.redis        Sesiones, caché, contador y ranking de ejemplo (se puede repetir)
 │   ├── sesiones.redis             Ciclo de vida de una sesión (renovación en MULTI/EXEC)
 │   ├── cache.redis                Patrón cache-aside: miss, hit, invalidación
-│   ├── concurrencia.redis         Likes, límite de comentarios y actualización atómica del ranking
-│   ├── actualizar_ranking.lua     El script de concurrencia.redis, legible, comentado
-│   ├── espectadores.redis         Latidos y conteo de gente en vivo, con TTL de respaldo de 6 horas
+│   ├── concurrencia.redis         Contador con INCRBY, MULTI/EXEC y actualización atómica del ranking con ZINCRBY
+│   ├── limpieza.redis             Borra las claves del módulo (lista finita)
 │   ├── metricas.redis             Memoria, SCAN (no KEYS), ranking, TTL
 │   ├── prueba_concurrencia.py     Varios procesos en paralelo sobre el mismo usuario y el mismo contador
 │   ├── hit_rate.py                Hit rate con INFO stats antes y después de una microprueba
-│   └── prueba_rendimiento.py      Mide EVALSHA (ranking) y GET (caché) reales
+│   └── prueba_rendimiento.py      Mide ZINCRBY (ranking) y GET (caché) reales
 ├── docs/
 │   ├── patrones_de_acceso.md      Qué operaciones motivan el diseño
 │   ├── modelo_clave_valor.md      Claves, estructuras, convención de nombres
@@ -74,8 +73,8 @@ docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/carga_mue
 docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/sesiones.redis | redis-cli"
 docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/cache.redis | redis-cli"
 docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/concurrencia.redis | redis-cli"
-docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/espectadores.redis | redis-cli"
 docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/metricas.redis | redis-cli"
+docker exec fixture2030-redis sh -c "grep -v '^[[:space:]]*#' /scripts/limpieza.redis | redis-cli"
 ```
 
 Para confirmar la carga de muestra:
@@ -107,14 +106,15 @@ compose. Sin instalar nada en el anfitrión:
 docker run --rm --network <proyecto>_default -v "${PWD}/scripts:/scripts:ro" python:3.11-slim sh -c "pip install -q redis && python /scripts/prueba_concurrencia.py --host redis --procesos 8 --repeticiones 5000"
 ```
 
-- `prueba_concurrencia.py`: varios procesos ejecutan `EVALSHA` del script de
-  ranking sobre el mismo usuario y `INCR` sobre el mismo contador de likes. Al
-  final el total tiene que ser exactamente procesos × repeticiones × delta; si no,
-  sale con error.
+- `prueba_concurrencia.py`: varios procesos ejecutan `INCRBY` sobre el mismo contador y
+  `ZINCRBY` sobre el mismo usuario del ranking. Al final el total tiene que ser exactamente
+  procesos × repeticiones × delta; si no, sale con error. Para comparar, repite el
+  contador con lectura y escritura desde el programa (GET + SET) y muestra cuántas
+  sumas se pierden.
 - `hit_rate.py`: toma `keyspace_hits` y `keyspace_misses` de `INFO stats` antes y
   después de una microprueba de lecturas de caché. Correrlo justo después de
   `carga_muestra.redis` (la caché de equipo vence a los 5 minutos).
-- `prueba_rendimiento.py`: mide `EVALSHA` y `GET` por separado (RF12). El
+- `prueba_rendimiento.py`: mide `ZINCRBY` y `GET` por separado (RF12). El
   resultado y el ambiente están en `docs/rendimiento.md`.
 
 (`<proyecto>` es el nombre de la carpeta del módulo en minúsculas; se ve con

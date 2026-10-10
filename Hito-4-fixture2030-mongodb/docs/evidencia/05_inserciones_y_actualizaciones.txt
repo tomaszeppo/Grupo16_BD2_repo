@@ -1,5 +1,5 @@
 # 05 - Insercion y actualizacion con matchedCount
-# Fecha: 2026-10-09 14:31:22
+# Fecha: 2026-10-09 15:58:50
 # Motor: MongoDB db version v7.0.43
 # Docker: CPUs=12 RAM=16644243456 bytes
 
@@ -7,10 +7,10 @@ Equipo TST insertado. Equipos en la base: 65
 Jugador TST-01 insertado. Jugadores en la base: 1537
 ranking de MAR -> matchedCount: 1, modifiedCount: 1
 JPN-07 no convocado -> matchedCount: 1, modifiedCount: 1
-estadisticas de ARG-10 -> matchedCount: 1, modifiedCount: 1
-partido jugado a los convocados de ARG -> matchedCount: 24, modifiedCount: 24
-amarilla a BRA-05 -> matchedCount: 1, modifiedCount: 1
-contador de convocados de JPN -> matchedCount: 1, modifiedCount: 1
+nombre de ARG-10 -> matchedCount: 1, modifiedCount: 1
+porteros de ARG convocados -> matchedCount: 3, modifiedCount: 0
+apellido de BRA-05 -> matchedCount: 1, modifiedCount: 1
+contador de convocados de JPN -> matchedCount: 1, modifiedCount: 0
 {
   codigo: 'JPN',
   cantidadJugadoresConvocados: 23

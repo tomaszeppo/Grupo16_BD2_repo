@@ -5,14 +5,14 @@
 | Elemento | Decisión |
 |---|---|
 | Tabla | `estadisticas_partido` |
-| Tags | `partido_id`, `equipo_id`, `sede`, `fuente`, `fase` |
+| Tags | `partido_codigo`, `equipo_codigo`, `sede`, `fuente`, `fase` |
 | Fields | `posesion_pct`, `pases_completados`, `tiros`, `recuperaciones`, `velocidad_kmh` |
 | Tiempo | `time`, precisión de segundos |
 | Serie | combinación de tabla + los cinco tags |
 
 ### Por qué estos tags
 
-`partido_id` y `equipo_id` son filtros centrales. `sede` tiene solo 20 valores en el contexto del grupo. `fuente` está acotada a ocho valores. `fase` también está acotada.
+`partido_codigo` y `equipo_codigo` son filtros centrales. `sede` tiene solo 20 valores en el contexto del grupo. `fuente` está acotada a ocho valores. `fase` también está acotada.
 
 No se agregan como tags medidas (`posesion_pct`, `velocidad_kmh`, etc.), timestamps ni identificadores únicos por punto.
 
@@ -21,7 +21,7 @@ No se agregan como tags medidas (`posesion_pct`, `velocidad_kmh`, etc.), timesta
 | Elemento | Decisión |
 |---|---|
 | Tabla | `usuarios_conectados` |
-| Tags | `partido_id`, `region` |
+| Tags | `partido_codigo`, `region` |
 | Field | `usuarios_activos` |
 | Tiempo | `time`, segundos |
 

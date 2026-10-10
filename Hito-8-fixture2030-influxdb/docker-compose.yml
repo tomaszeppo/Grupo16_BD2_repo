@@ -18,3 +18,13 @@ services:
       - ${HOME}/docker/data/influxdb:/var/lib/influxdb3/data
       - ${HOME}/docker/data/influxdb/plugins:/var/lib/influxdb3/plugins
       - ./scripts:/scripts:ro
+    networks:
+      - fixture2030
+
+networks:
+  # Red compartida entre los 6 modulos de base de datos, para cuando se
+  # integren (ver CHANGELOG.md). Hoy cada modulo se sigue levantando solo,
+  # esto no cambia ese flujo: Compose crea la red si no existe y la
+  # reutiliza si otro modulo ya la creo.
+  fixture2030:
+    name: fixture2030_net

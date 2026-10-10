@@ -1,9 +1,9 @@
 # 01 - Arranque y configuracion
-# Fecha: 2026-10-09 14:46:56 -0300
+# Fecha: 2026-10-09 16:02:31 -0300
 # Redis: Redis server v=8.10.2 sha=00000000:1 malloc=jemalloc-5.3.0 bits=64 build=fbc5ac9ab55dc180 | Docker: CPUs=12 RAM=16644243456 bytes
 
-NAME                IMAGE          COMMAND                  SERVICE   CREATED              STATUS                        PORTS
-fixture2030-redis   redis:latest   "docker-entrypoint.s…"   redis     About a minute ago   Up About a minute (healthy)   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+NAME                IMAGE          COMMAND                  SERVICE   CREATED             STATUS                       PORTS
+fixture2030-redis   redis:latest   "docker-entrypoint.s…"   redis     About an hour ago   Up About an hour (healthy)   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
 
 $ grep -v '^#' /scripts/inicializacion.redis | redis-cli
 PONG
@@ -23,12 +23,12 @@ process_id:1
 process_supervised:no
 run_id:e2c1c9f492e3a12241d9d9b7e51806cadaf33633
 tcp_port:6379
-server_time_usec:1791568024146149
-uptime_in_seconds:104
+server_time_usec:1791572556780898
+uptime_in_seconds:4636
 uptime_in_days:0
 hz:10
 configured_hz:10
-lru_clock:13183128
+lru_clock:13187660
 executable:/data/redis-server
 config_file:
 io_threads_active:0
@@ -39,5 +39,5 @@ maxmemory-policy
 volatile-lru
 appendonly
 yes
-45
+0
 

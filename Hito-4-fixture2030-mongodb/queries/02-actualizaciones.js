@@ -38,13 +38,7 @@ db.jugadores.insertOne({
   posicion: "Delantero",
   dorsal: NumberInt(1),
   fechaNacimiento: new Date("2005-01-01"),
-  convocado: true,
-  estadisticas: {
-    partidosJugados: NumberInt(0),
-    goles: NumberInt(0),
-    tarjetasAmarillas: NumberInt(0),
-    tarjetasRojas: NumberInt(0)
-  }
+  convocado: true
 });
 print("Jugador TST-01 insertado. Jugadores en la base: " + db.jugadores.countDocuments());
 
@@ -64,30 +58,23 @@ comprobar("JPN-07 no convocado", db.jugadores.updateOne(
   { $set: { convocado: false } }
 ), 1);
 
-// Actualizar las estadisticas de un jugador despues de un partido.
-// Esta operacion solo toca el documento del jugador, nunca el documento del
-// equipo (ver docs/decisiones-de-diseno.md).
-comprobar("estadisticas de ARG-10", db.jugadores.updateOne(
+// Corregir el nombre de un jugador (su codigo no cambia).
+comprobar("nombre de ARG-10", db.jugadores.updateOne(
   { codigo: "ARG-10" },
-  {
-    $inc: {
-      "estadisticas.partidosJugados": 1,
-      "estadisticas.goles": 1
-    }
-  }
+  { $set: { nombre: "Lionel" } }
 ), 1);
 
-// Actualizar varios jugadores que cumplan una condicion (por ejemplo, sumar un
-// partido jugado a todos los convocados de un equipo). Esperado: los 24 de ARG.
-comprobar("partido jugado a los convocados de ARG", db.jugadores.updateMany(
-  { equipoCodigo: "ARG", convocado: true },
-  { $inc: { "estadisticas.partidosJugados": 1 } }
-), 24);
+// Actualizar varios jugadores que cumplan una condicion (por ejemplo, volver a
+// convocar a los tres porteros de un equipo). Esperado: los 3 de ARG.
+comprobar("porteros de ARG convocados", db.jugadores.updateMany(
+  { equipoCodigo: "ARG", posicion: "Portero" },
+  { $set: { convocado: true } }
+), 3);
 
-// Registrar una tarjeta amarilla.
-comprobar("amarilla a BRA-05", db.jugadores.updateOne(
+// Corregir el apellido de un jugador.
+comprobar("apellido de BRA-05", db.jugadores.updateOne(
   { codigo: "BRA-05" },
-  { $inc: { "estadisticas.tarjetasAmarillas": 1 } }
+  { $set: { apellido: "Da Silva" } }
 ), 1);
 
 // Mantener el contador desnormalizado de "equipos.cantidadJugadoresConvocados"
