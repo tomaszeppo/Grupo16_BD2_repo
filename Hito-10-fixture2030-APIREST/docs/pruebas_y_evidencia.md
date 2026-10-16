@@ -7,9 +7,9 @@
 | Unitarias (118) | Rutas y servicios con adaptadores falsos: válido, inválido, inexistente, vacío, sesión expirada, dependencia caída, paginación, escritura repetida, contrato OpenAPI y colección Postman | Notebook (solo `requirements.txt`) | `scripts/ejecutar_pruebas.sh unit` |
 | Dependencia inaccesible (6) | Cada adaptador real contra un host inaccesible: error controlado, acotado en tiempo y sin filtrar hosts | Contenedor `api` (necesita los drivers) | `scripts/ejecutar_pruebas.sh drivers` |
 | Integración (18) | Black-box contra la API y las seis bases reales | Notebook, contra la API en `:8000` | `scripts/ejecutar_pruebas.sh integration` |
-| Postman / cURL | Mismos escenarios, reproducibles a mano | Postman o `postman/ejemplos_curl.sh` | ver README |
+| Postman / Newman / cURL | Mismos escenarios: 38 requests con 95 aserciones (estado, `X-Request-ID`, formato de error) | Postman, `npx newman run postman/fixture2030_collection.json` o `postman/ejemplos_curl.sh` | ver README |
 
-Resultado de la última ejecución (stack real levantado con `scripts/levantar_servicios.sh`): unitarias 118/118, dependencia inaccesible 6/6, integración 18/18.
+Resultado de la última ejecución (stack real levantado con `scripts/levantar_servicios.sh`): unitarias 118/118, dependencia inaccesible 6/6, integración 18/18, Newman 38 requests / 95 aserciones sin fallos. La entrega también se verificó desde un clon limpio del repositorio, siguiendo el README desde cero.
 
 ## Cobertura de §5.12 de la consigna
 
@@ -26,7 +26,7 @@ Resultado de la última ejecución (stack real levantado con `scripts/levantar_s
 | Documentación y respuesta real compatibles | `test_contrato`, fixture `documentado`, `test_postman` | — |
 | Request lenta | `test_request_lenta_se_corta_con_504_dentro_del_deadline` | `*_dependencia_caida.txt` |
 
-La evidencia está en [evidencia/](evidencia/): `*_endpoints.txt` (respuestas reales de cada endpoint y escenario de error), `*_dependencia_caida.txt` (Redis detenido), `*_logs_api.txt` (logs de la API) y `*_latencia.txt`. Se genera con `scripts/capturar_evidencia.sh` y `scripts/medir_latencia.py`.
+La evidencia está en [evidencia/](evidencia/): `*_endpoints.txt` (respuestas reales de cada endpoint y escenario de error), `*_dependencia_caida.txt` (Redis detenido), `*_logs_api.txt` (logs de la API), `*_latencia.txt` y `*_newman.txt` (colección Postman ejecutada con Newman: 38 requests, 95 aserciones, 0 fallos). Se genera con `scripts/capturar_evidencia.sh` y `scripts/medir_latencia.py`.
 
 ## Rendimiento básico
 

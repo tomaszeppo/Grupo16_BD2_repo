@@ -4,7 +4,7 @@ API REST (FastAPI) que expone los seis módulos NoSQL del Fixture 2030 —MongoD
 
 - Contrato: [openapi/openapi.yaml](openapi/openapi.yaml) (generado desde el código) · Swagger UI en `http://localhost:8000/docs`.
 - Pruebas: 118 unitarias, 6 de dependencia inaccesible y 18 de integración contra las bases reales (ver [tests/README.md](tests/README.md)).
-- Colección Postman: [postman/fixture2030_collection.json](postman/fixture2030_collection.json) · ejemplos cURL: [postman/ejemplos_curl.sh](postman/ejemplos_curl.sh).
+- Colección Postman (38 requests, 95 aserciones; ejecutada con Newman sin fallos, ver `docs/evidencia/`): [postman/fixture2030_collection.json](postman/fixture2030_collection.json) · ejemplos cURL: [postman/ejemplos_curl.sh](postman/ejemplos_curl.sh).
 
 ## Requisitos
 
@@ -20,7 +20,7 @@ API REST (FastAPI) que expone los seis módulos NoSQL del Fixture 2030 —MongoD
 3. **Iniciar la API.** `bash scripts/iniciar_api.sh` (contenedor, puerto 8000). Alternativa en el notebook: `bash scripts/iniciar_api.sh --local` (requiere instalar también `requirements-drivers.txt`).
 4. **Verificar conectividad.** `bash scripts/verificar_conectividad.sh` comprueba los puertos de cada base y `GET /health`.
 5. **Explorar.** Swagger UI: `http://localhost:8000/docs`.
-6. **Reproducir escenarios.** Importar `postman/fixture2030_collection.json` en Postman (variable `base_url`) o ejecutar `bash postman/ejemplos_curl.sh`.
+6. **Reproducir escenarios.** Importar `postman/fixture2030_collection.json` en Postman (variable `base_url`), ejecutarla por consola con `npx newman run postman/fixture2030_collection.json --env-var idem_key=<valor único>` (requiere Node), o correr `bash postman/ejemplos_curl.sh`.
 7. **Correr las pruebas.** `bash scripts/ejecutar_pruebas.sh todo` (o `unit`, `drivers`, `integration`).
 8. **Detener sin perder datos.** `docker compose --profile api stop`. Los datos quedan en volúmenes nombrados. **No usar `docker compose down -v`**, que los borra.
 
@@ -68,4 +68,5 @@ docs/       documentación y evidencia/
 
 - Las sesiones de demostración expiran a los 30 minutos (TTL de inactividad, como en el Hito 7). Para recrearlas: `docker compose --profile api run --rm api python -m seed.run --solo redis`.
 - La colección Postman usa `idem_key` fijo: la primera corrida de "Crear comentario" da 201 y las siguientes 200; cambiar la variable entre corridas completas.
+- Si Docker avisa `additional privileges requested: pass "--allow=fs.read=Dockerfile"` al construir la imagen, ejecutar antes `export BUILDX_BAKE_ENTITLEMENTS_FS=0`.
 - Todos los datos son sintéticos. Los marcadores de los partidos son simulados (`origen: SIMULADO`).

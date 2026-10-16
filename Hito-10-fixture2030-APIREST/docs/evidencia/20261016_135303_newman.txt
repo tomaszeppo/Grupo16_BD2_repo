@@ -1,0 +1,244 @@
+# Colección Postman ejecutada con Newman contra la API real (las 6 bases en Docker)
+# Comando: npx newman run postman/fixture2030_collection.json --env-var idem_key=<valor único por corrida>
+
+(node:26620) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+newman
+
+Fixture 2030 — API integrada
+
+□ Sistema
+└ GET /health (200)
+  GET http://localhost:8000/health [200 OK, 461B, 36ms]
+  √  status 200
+  √  X-Request-ID presente
+
+□ MongoDB
+└ Equipo existente (200)
+  GET http://localhost:8000/equipos/ARG [200 OK, 210B, 18ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Equipo inexistente (404)
+  GET http://localhost:8000/equipos/ZZZ [404 Not Found, 304B, 6ms]
+  √  status 404
+  √  X-Request-ID presente
+  √  formato de error
+
+└ Código inválido (422)
+  GET http://localhost:8000/equipos/arg [422 Unprocessable Entity, 422B, 8ms]
+  √  status 422
+  √  X-Request-ID presente
+  √  formato de error
+
+└ Jugadores paginados (200)
+  GET http://localhost:8000/equipos/ARG/jugadores?limit=2&offset=1 [200 OK, 405B, 18ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Jugadores filtro Delantero (200)
+  GET http://localhost:8000/equipos/ARG/jugadores?posicion=Delantero [200 OK, 410B, 15ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ limit fuera de rango (422)
+  GET http://localhost:8000/equipos/ARG/jugadores?limit=101 [422 Unprocessable Entity, 423B, 4ms]
+  √  status 422
+  √  X-Request-ID presente
+  √  formato de error
+
+□ Neo4j
+└ Partido existente (200)
+  GET http://localhost:8000/partidos/P-01 [200 OK, 501B, 2s]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Partido inexistente (404)
+  GET http://localhost:8000/partidos/P-99 [404 Not Found, 306B, 18ms]
+  √  status 404
+  √  X-Request-ID presente
+  √  formato de error
+
+└ ID inválido (422)
+  GET http://localhost:8000/partidos/p-01 [422 Unprocessable Entity, 428B, 4ms]
+  √  status 422
+  √  X-Request-ID presente
+  √  formato de error
+
+└ Eventos del partido (200)
+  GET http://localhost:8000/partidos/P-01/eventos [200 OK, 363B, 222ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Partido sin eventos (200 vacío)
+  GET http://localhost:8000/partidos/P-03/eventos [200 OK, 216B, 17ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Eventos de partido inexistente (404)
+  GET http://localhost:8000/partidos/P-99/eventos [404 Not Found, 306B, 14ms]
+  √  status 404
+  √  X-Request-ID presente
+  √  formato de error
+
+□ Cassandra
+└ Comentarios ARG ventana 18:30 (200)
+  GET http://localhost:8000/partidos/P-01/comentarios?pais=ARG&ventana=2030-06-15T18:30:00Z&limit=2 [200 OK, 778B, 19ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Partición vacía (200 vacío)
+  GET http://localhost:8000/partidos/P-01/comentarios?pais=BRA&ventana=2030-06-15T18:30:00Z [200 OK, 282B, 11ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Sin ventana (422)
+  GET http://localhost:8000/partidos/P-01/comentarios?pais=ARG [422 Unprocessable Entity, 398B, 7ms]
+  √  status 422
+  √  X-Request-ID presente
+  √  formato de error
+
+└ Ventana no alineada (422)
+  GET http://localhost:8000/partidos/P-01/comentarios?pais=ARG&ventana=2030-06-15T18:45:00Z [422 Unprocessable Entity, 345B, 8ms]
+  √  status 422
+  √  X-Request-ID presente
+  √  formato de error
+
+└ Crear comentario (201)
+  POST http://localhost:8000/partidos/P-01/comentarios [201 Created, 466B, 76ms]
+  √  status 201
+  √  X-Request-ID presente
+
+└ Repetir con la misma clave (200)
+  POST http://localhost:8000/partidos/P-01/comentarios [200 OK, 461B, 45ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Misma clave, otro partido (409)
+  POST http://localhost:8000/partidos/P-02/comentarios [409 Conflict, 324B, 28ms]
+  √  status 409
+  √  X-Request-ID presente
+  √  formato de error
+
+└ Sin Idempotency-Key (422)
+  POST http://localhost:8000/partidos/P-01/comentarios [422 Unprocessable Entity, 407B, 10ms]
+  √  status 422
+  √  X-Request-ID presente
+  √  formato de error
+
+└ Partido inexistente (404)
+  POST http://localhost:8000/partidos/P-99/comentarios [404 Not Found, 306B, 18ms]
+  √  status 404
+  √  X-Request-ID presente
+  √  formato de error
+
+□ Redis
+└ Sesión vigente (200)
+  GET http://localhost:8000/sesiones/U001 [200 OK, 375B, 10ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Sesión cerrada (404)
+  GET http://localhost:8000/sesiones/U002 [404 Not Found, 315B, 5ms]
+  √  status 404
+  √  X-Request-ID presente
+  √  formato de error
+
+└ Sesión inexistente/expirada (404)
+  GET http://localhost:8000/sesiones/U999 [404 Not Found, 349B, 5ms]
+  √  status 404
+  √  X-Request-ID presente
+  √  formato de error
+
+└ Invalidar sesión (204)
+  DELETE http://localhost:8000/sesiones/U003 [204 No Content, 129B, 8ms]
+  √  status 204
+  √  X-Request-ID presente
+
+└ Invalidar de nuevo, idempotente (204)
+  DELETE http://localhost:8000/sesiones/U003 [204 No Content, 129B, 5ms]
+  √  status 204
+  √  X-Request-ID presente
+
+└ Usuario inválido (422)
+  GET http://localhost:8000/sesiones/u1 [422 Unprocessable Entity, 427B, 4ms]
+  √  status 422
+  √  X-Request-ID presente
+  √  formato de error
+
+□ InfluxDB
+└ Agregado 1m (200)
+  GET http://localhost:8000/partidos/P-01/estadisticas?desde=2030-06-15T18:30:00Z&hasta=2030-06-15T18:35:00Z&agregacion=1m [200 OK, 4.71kB, 64ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Raw truncado (200)
+  GET http://localhost:8000/partidos/P-01/estadisticas?desde=2030-06-15T18:30:00Z&hasta=2030-06-15T18:40:00Z&agregacion=raw [200 OK, 81.26kB, 66ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Sin datos (200 vacío)
+  GET http://localhost:8000/partidos/P-05/estadisticas?desde=2030-06-15T18:30:00Z&hasta=2030-06-15T18:35:00Z [200 OK, 321B, 23ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Fechas invertidas (422)
+  GET http://localhost:8000/partidos/P-01/estadisticas?desde=2030-06-15T18:35:00Z&hasta=2030-06-15T18:30:00Z [422 Unprocessable Entity, 323B, 8ms]
+  √  status 422
+  √  X-Request-ID presente
+  √  formato de error
+
+└ Ventana demasiado ancha (422)
+  GET http://localhost:8000/partidos/P-01/estadisticas?desde=2030-06-15T18:30:00Z&hasta=2030-06-15T22:30:00Z [422 Unprocessable Entity, 326B, 10ms]
+  √  status 422
+  √  X-Request-ID presente
+  √  formato de error
+
+□ IRIS
+└ Detalle del partido (200)
+  GET http://localhost:8000/partidos/P-01/detalle [200 OK, 480B, 23ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Detalle inexistente (404)
+  GET http://localhost:8000/partidos/P-99/detalle [404 Not Found, 306B, 9ms]
+  √  status 404
+  √  X-Request-ID presente
+  √  formato de error
+
+└ Transición válida (200)
+  POST http://localhost:8000/partidos/P-08/estado [200 OK, 329B, 16ms]
+  √  status 200
+  √  X-Request-ID presente
+
+└ Transición inválida (409)
+  POST http://localhost:8000/partidos/P-03/estado [409 Conflict, 337B, 12ms]
+  √  status 409
+  √  X-Request-ID presente
+  √  formato de error
+
+└ Estado fuera del dominio (422)
+  POST http://localhost:8000/partidos/P-01/estado [422 Unprocessable Entity, 438B, 4ms]
+  √  status 422
+  √  X-Request-ID presente
+  √  formato de error
+
+┌─────────────────────────┬──────────────────┬─────────────────┐
+│                         │         executed │          failed │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│              iterations │                1 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│                requests │               38 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│            test-scripts │               38 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│      prerequest-scripts │                0 │               0 │
+├─────────────────────────┼──────────────────┼─────────────────┤
+│              assertions │               95 │               0 │
+├─────────────────────────┴──────────────────┴─────────────────┤
+│ total run duration: 6s                                       │
+├──────────────────────────────────────────────────────────────┤
+│ total data received: 92.3kB (approx)                         │
+├──────────────────────────────────────────────────────────────┤
+│ average response time: 76ms [min: 4ms, max: 2s, s.d.: 320ms] │
+└──────────────────────────────────────────────────────────────┘
