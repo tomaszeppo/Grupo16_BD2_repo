@@ -63,10 +63,11 @@ class Neo4jAdapter:
         return self._driver
 
     def _leer(self, cypher: str, **params) -> list[dict]:
-        from neo4j import Query
+        from neo4j import unit_of_work
 
+        @unit_of_work(timeout=self._s.timeout_segundos)  # timeout de la transacción (el servidor la aborta al vencer)
         def trabajo(tx):
-            return [r.data() for r in tx.run(Query(cypher, timeout=self._s.timeout_segundos), **params)]
+            return [r.data() for r in tx.run(cypher, **params)]
 
         with self._drv().session(database=self._s.neo4j_db) as sesion:
             return sesion.execute_read(trabajo)

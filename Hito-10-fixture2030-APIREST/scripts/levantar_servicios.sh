@@ -45,7 +45,8 @@ if ! docker compose exec -T influxdb influxdb3 show databases --token "$INFLUX_T
   docker compose exec -T influxdb influxdb3 create database --retention-period 90d --token "$INFLUX_TOKEN" fixture2030_metrics
 fi
 
-echo "== IRIS: compilando clases del Hito 9 =="
+echo "== IRIS: usuario de la API y clases del Hito 9 =="
+docker compose exec -T iris iris session IRIS -U %SYS < seed/iris/crear_usuario.mac
 docker compose exec -T iris iris session IRIS -U USER < seed/iris/cargar_clases.mac
 
 echo "== Sembrando datos (P-01..P-08) =="

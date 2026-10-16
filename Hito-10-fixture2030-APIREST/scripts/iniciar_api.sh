@@ -9,7 +9,7 @@ if [[ "${1:-}" == "--local" ]]; then
   PY=python
   [[ -x .venv/Scripts/python ]] && PY=.venv/Scripts/python
   [[ -x .venv/bin/python ]] && PY=.venv/bin/python
-  exec "$PY" -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+  exec "$PY" -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000
 fi
 
 docker compose --profile api up -d --build api

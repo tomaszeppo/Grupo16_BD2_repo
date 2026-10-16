@@ -44,10 +44,11 @@ class IrisAdapter:
             fila = cur.fetchone()
             if fila is None:
                 return None
+            fila = tuple(fila)  # las DataRow del driver quedan ligadas al cursor: se copian antes de reutilizarlo
             cur.execute(SQL_EVENTOS, [fila[0]])
             eventos = [
                 {"tipo": r[0], "minuto": r[1], "descripcion": r[2] or None, "jugador_codigo": r[3] or None}
-                for r in cur.fetchall()
+                for r in (tuple(x) for x in cur.fetchall())
             ]
             return {
                 "codigo": fila[1], "equipo_local": fila[2], "equipo_visitante": fila[3],
@@ -63,6 +64,7 @@ class IrisAdapter:
             fila = cur.fetchone()
             if fila is None:
                 raise NoEncontrado(f"No existe el partido '{codigo}'.")
+            fila = tuple(fila)
             api = iris.createIRIS(self._conn())
             partido = api.classMethodObject("Fixture.Partido", "%OpenId", fila[0])
             if not partido.invoke("CambiarEstado", nuevo):  # la regla de transición vive en la clase del Hito 9
