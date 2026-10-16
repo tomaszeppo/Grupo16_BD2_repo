@@ -61,3 +61,45 @@ def test_operacion_deja_pasar_errores_de_dominio_y_bugs():
         with operacion("x", "y", lambda e: None):
             raise ValueError("bug")
     assert issubclass(NoEncontrado, ApiError)
+
+
+def test_request_lenta_se_corta_con_504_dentro_del_deadline():
+    """Se mide a nivel ASGI cuándo sale la respuesta (TestClient esperaría a que termine el hilo bloqueado)."""
+    import asyncio
+    import json
+    import time
+
+    from app.config.settings import Settings
+    from app.main import create_app
+
+    app = create_app(Settings(_env_file=None, deadline_segundos=0.3))
+    app.add_api_route("/lenta", lambda: time.sleep(2) or {"ok": True})
+    visto = {}
+
+    async def llamar():
+        inicio = time.perf_counter()
+        scope = {
+            "type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1", "method": "GET", "scheme": "http",
+            "path": "/lenta", "raw_path": b"/lenta", "query_string": b"", "headers": [], "root_path": "",
+            "server": ("test", 80), "client": ("test", 1),
+        }
+
+        async def receive():
+            return {"type": "http.request", "body": b"", "more_body": False}
+
+        async def send(msg):
+            if msg["type"] == "http.response.start" and "status" not in visto:
+                visto["status"] = msg["status"]
+                visto["tras"] = time.perf_counter() - inicio
+                visto["headers"] = dict(msg["headers"])
+            if msg["type"] == "http.response.body":
+                visto["cuerpo"] = visto.get("cuerpo", b"") + msg.get("body", b"")
+
+        await app(scope, receive, send)
+
+    asyncio.run(llamar())
+    assert visto["status"] == 504
+    assert visto["tras"] < 1.0, "la respuesta no debe esperar a que termine la dependencia lenta"
+    error = json.loads(visto["cuerpo"])["error"]
+    assert error["codigo"] == "DEPENDENCIA_TIMEOUT"
+    assert error["request_id"].encode() == visto["headers"][b"x-request-id"]

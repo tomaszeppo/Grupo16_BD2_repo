@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     timeout_segundos: float = 3.0
+    deadline_segundos: float = 10.0  # tope duro por request (RNF9): vencido, la API responde 504 sin esperar al driver
     max_limit: int = 100
     influx_max_puntos: int = 500
     influx_max_ventana_minutos: int = 120

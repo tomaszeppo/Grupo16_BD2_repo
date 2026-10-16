@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 
+from app.config.settings import Settings, get_settings
 from app.manejadores import registrar_manejadores
-from app.observability import configurar_logging, request_id_middleware
+from app.observability import configurar_logging, crear_middleware
 
 DESCRIPCION = (
     "API REST integrada del Fixture Mundial 2030. Cada endpoint resuelve un caso de uso concreto contra "
@@ -20,7 +21,8 @@ TAGS = [
 ]
 
 
-def create_app() -> FastAPI:
+def create_app(settings: Settings | None = None) -> FastAPI:
+    settings = settings or get_settings()
     configurar_logging()
     app = FastAPI(
         title="Fixture 2030 — API integrada",
@@ -29,7 +31,7 @@ def create_app() -> FastAPI:
         servers=[{"url": "http://localhost:8000", "description": "Local (notebook o contenedor, puerto 8000)"}],
         openapi_tags=TAGS,
     )
-    app.middleware("http")(request_id_middleware)
+    app.middleware("http")(crear_middleware(settings.deadline_segundos))
     registrar_manejadores(app)
 
     from app.routes import comentarios, equipos, estadisticas, health, partidos_grafo, partidos_iris, sesiones

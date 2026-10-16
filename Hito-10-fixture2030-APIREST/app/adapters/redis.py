@@ -32,11 +32,14 @@ class RedisAdapter:
     def _cli(self):
         if self._r is None:
             import redis
+            from redis.backoff import NoBackoff
+            from redis.retry import Retry
 
             t = self._s.timeout_segundos
             self._r = redis.Redis(
                 host=self._s.redis_host, port=self._s.redis_port, password=self._s.redis_password or None,
                 socket_timeout=t, socket_connect_timeout=t, decode_responses=True,
+                retry=Retry(NoBackoff(), 0),  # sin reintentos internos: cada intento puede costar un timeout completo
             )
         return self._r
 
