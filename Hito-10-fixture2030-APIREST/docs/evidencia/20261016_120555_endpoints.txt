@@ -1,0 +1,192 @@
+# Evidencia de endpoints — 2026-10-16T15:05:55Z
+# Obtenida con: bash scripts/capturar_evidencia.sh contra http://127.0.0.1:8000 (stack levantado con scripts/levantar_servicios.sh)
+
+## Salud de las seis dependencias
+$ curl -s -i http://127.0.0.1:8000/health
+HTTP/1.1 200 OK
+content-length: 287
+content-type: application/json
+x-request-id: 2ac44b487ce34ee5bb464fc8f523f756
+
+{"estado":"ok","fuentes":{"mongodb":{"estado":"ok","latencia_ms":3.1},"neo4j":{"estado":"ok","latencia_ms":8.7},"cassandra":{"estado":"ok","latencia_ms":9.5},"redis":{"estado":"ok","latencia_ms":3.1},"influxdb":{"estado":"ok","latencia_ms":4.9},"iris":{"estado":"ok","latencia_ms":3.9}}}
+
+
+## MongoDB · equipo (200)
+$ curl -s -i http://127.0.0.1:8000/equipos/ARG
+HTTP/1.1 200 OK
+content-length: 37
+content-type: application/json
+x-request-id: 7c4a174b3baa4e30a7edb96872e1d33e
+
+{"codigo":"ARG","nombre":"Argentina"}
+
+
+## MongoDB · equipo inexistente (404)
+$ curl -s -i http://127.0.0.1:8000/equipos/ZZZ
+HTTP/1.1 404 Not Found
+content-length: 123
+content-type: application/json
+x-request-id: 552eb94b8752409fbdc16708212f2b1d
+
+{"error":{"codigo":"NO_ENCONTRADO","mensaje":"No existe el equipo 'ZZZ'.","request_id":"552eb94b8752409fbdc16708212f2b1d"}}
+
+
+## MongoDB · validación (422)
+$ curl -s -i http://127.0.0.1:8000/equipos/arg
+HTTP/1.1 422 Unprocessable Entity
+content-length: 230
+content-type: application/json
+x-request-id: 58dce8ec877c453a8cf898b409f7eb30
+
+{"error":{"codigo":"VALIDACION","mensaje":"Los parámetros de la solicitud no son válidos.","request_id":"58dce8ec877c453a8cf898b409f7eb30","detalle":[{"campo":"path.codigo","motivo":"String should match pattern '^[A-Z]{3}$'"}]}}
+
+
+## MongoDB · jugadores paginados (200)
+$ curl -s -i http://127.0.0.1:8000/equipos/ARG/jugadores?limit=2&offset=1
+HTTP/1.1 200 OK
+content-length: 231
+content-type: application/json
+x-request-id: e4d841247a9d46e2848a8e9f841e1c4c
+
+{"equipo":"ARG","total":5,"limit":2,"offset":1,"items":[{"nombre":"Lucas","apellido":"Alvarez","dorsal":1,"posicion":"Portero","equipo":"ARG"},{"nombre":"Mateo","apellido":"Alvarez","dorsal":2,"posicion":"Defensa","equipo":"ARG"}]}
+
+
+## Neo4j · partido (200)
+$ curl -s -i http://127.0.0.1:8000/partidos/P-01
+HTTP/1.1 200 OK
+content-length: 327
+content-type: application/json
+x-request-id: 7bc4e2288fd846afb01e962e15c119bf
+
+{"id":"P-01","fecha":"2030-06-15","fase":"Fase de grupos","estadio":{"id":"EST001","nombre":"Estadio Monumental","ciudad":"Buenos Aires"},"equipos":[{"codigo":"ARG","nombre":"Argentina"},{"codigo":"BRA","nombre":"Brasil"}],"resultado":{"ganador":"ARG","perdedor":"BRA","goles_ganador":2,"goles_perdedor":1,"origen":"SIMULADO"}}
+
+
+## Neo4j · eventos (200)
+$ curl -s -i http://127.0.0.1:8000/partidos/P-01/eventos
+HTTP/1.1 200 OK
+content-length: 189
+content-type: application/json
+x-request-id: adeb19e4915c4b248f690cf00a18d439
+
+{"partido_id":"P-01","limit":50,"items":[{"id":"EV-P-01-INICIO","tipo":"Inicio","minuto":0},{"id":"EV-P-01-GOL","tipo":"Gol","minuto":32},{"id":"EV-P-01-FINAL","tipo":"Final","minuto":90}]}
+
+
+## Neo4j · partido sin eventos (200 vacío)
+$ curl -s -i http://127.0.0.1:8000/partidos/P-03/eventos
+HTTP/1.1 200 OK
+content-length: 43
+content-type: application/json
+x-request-id: 74bda5fad3c64b1a9f81c4fb436d5096
+
+{"partido_id":"P-03","limit":50,"items":[]}
+
+
+## Neo4j · partido inexistente (404)
+$ curl -s -i http://127.0.0.1:8000/partidos/P-99
+HTTP/1.1 404 Not Found
+content-length: 125
+content-type: application/json
+x-request-id: 44c8a9cfc9c0450a92022711b41d656d
+
+{"error":{"codigo":"NO_ENCONTRADO","mensaje":"No existe el partido 'P-99'.","request_id":"44c8a9cfc9c0450a92022711b41d656d"}}
+
+
+## Cassandra · comentarios (200)
+$ curl -s -i http://127.0.0.1:8000/partidos/P-01/comentarios?pais=ARG&ventana=2030-06-15T18:30:00Z&limit=2
+HTTP/1.1 200 OK
+content-length: 604
+content-type: application/json
+x-request-id: 42659815cb6b4d3dabf32dab5b5da990
+
+{"partido_id":"P-01","pais":"ARG","ventana":"2030-06-15T18:30:00Z","limit":2,"items":[{"comentario_id":"1edcaa31-ab97-5afb-a0f5-402f3ac72166","usuario_id":"U002","usuario_nombre":"Gabriela","contenido":"Se viene el segundo tiempo","likes":0,"estado_moderacion":"PUBLICADO","creado_en":"2030-06-15T18:50:00.000Z"},{"comentario_id":"cad860db-240d-5f9b-83e7-a74d4d91ad5a","usuario_id":"U001","usuario_nombre":"Facundo","contenido":"Increíble la defensa","likes":2,"estado_moderacion":"PUBLICADO","creado_en":"2030-06-15T18:42:00.000Z"}],"next_cursor":"ABsACAAAAbwwgjjAEMrYYNskDV-bg-enTU2RrVrwf____fB____9"}
+
+
+## Cassandra · alta (201)
+$ curl -s -i -X POST http://127.0.0.1:8000/partidos/P-01/comentarios -H Idempotency-Key: evidencia-1792163156 -H Content-Type: application/json -d {"pais":"ARG","usuario_id":"U001","usuario_nombre":"Facundo","contenido":"Comentario de evidencia"}
+HTTP/1.1 201 Created
+content-length: 292
+content-type: application/json
+x-request-id: a54395ba963b4cb98a5fd35455b38d88
+
+{"comentario_id":"3f6abe2b-6612-5984-aa96-4bd804a4d5e9","usuario_id":"U001","usuario_nombre":"Facundo","contenido":"Comentario de evidencia","likes":0,"estado_moderacion":"PUBLICADO","creado_en":"2026-10-16T15:05:56.923Z","partido_id":"P-01","pais":"ARG","ventana":"2026-10-16T15:00:00.000Z"}
+
+
+## Cassandra · repetición idempotente (200)
+$ curl -s -i -X POST http://127.0.0.1:8000/partidos/P-01/comentarios -H Idempotency-Key: evidencia-1792163156 -H Content-Type: application/json -d {"pais":"ARG","usuario_id":"U001","usuario_nombre":"Facundo","contenido":"Comentario de evidencia"}
+HTTP/1.1 200 OK
+content-length: 292
+content-type: application/json
+x-request-id: b967609cf3e1463cb7a9e56b3d1f56e4
+
+{"comentario_id":"3f6abe2b-6612-5984-aa96-4bd804a4d5e9","usuario_id":"U001","usuario_nombre":"Facundo","contenido":"Comentario de evidencia","likes":0,"estado_moderacion":"PUBLICADO","creado_en":"2026-10-16T15:05:56.923Z","partido_id":"P-01","pais":"ARG","ventana":"2026-10-16T15:00:00.000Z"}
+
+
+## Cassandra · misma clave, otro partido (409)
+$ curl -s -i -X POST http://127.0.0.1:8000/partidos/P-02/comentarios -H Idempotency-Key: evidencia-1792163156 -H Content-Type: application/json -d {"pais":"ARG","usuario_id":"U001","usuario_nombre":"Facundo","contenido":"Comentario de evidencia"}
+HTTP/1.1 409 Conflict
+content-length: 144
+content-type: application/json
+x-request-id: 130c0f0ae7884e0ba64270fc4e490baf
+
+{"error":{"codigo":"CONFLICTO","mensaje":"La Idempotency-Key ya se usó para otro comentario.","request_id":"130c0f0ae7884e0ba64270fc4e490baf"}}
+
+
+## Redis · sesión vigente (200)
+$ curl -s -i http://127.0.0.1:8000/sesiones/U001
+HTTP/1.1 200 OK
+content-length: 201
+content-type: application/json
+x-request-id: a31d3b0ccd3a46939cbf2c0e5fa299c6
+
+{"usuario_id":"U001","session_id":"S-DEMO-001","rol":"fan","estado_acceso":"ACTIVA","creado_en":"2030-06-14T10:00:00-03:00","ultimo_acceso":"2030-06-14T10:05:00-03:00","acciones":1,"ttl_segundos":1796}
+
+
+## Redis · sesión inexistente o expirada (404)
+$ curl -s -i http://127.0.0.1:8000/sesiones/U999
+HTTP/1.1 404 Not Found
+content-length: 168
+content-type: application/json
+x-request-id: 660e39ca0d294028b1cbdf44db14e89d
+
+{"error":{"codigo":"SESION_NO_VIGENTE","mensaje":"No existe una sesión vigente para 'U999' (inexistente o expirada).","request_id":"660e39ca0d294028b1cbdf44db14e89d"}}
+
+
+## InfluxDB · ventana agregada (200)
+$ curl -s -i http://127.0.0.1:8000/partidos/P-01/estadisticas?desde=2030-06-15T18:30:00Z&hasta=2030-06-15T18:33:00Z&agregacion=1m&equipo=ARG
+HTTP/1.1 200 OK
+content-length: 1474
+content-type: application/json
+x-request-id: 5ca2549c919d47e8a6ed64bfdb1ecb70
+
+{"partido_id":"P-01","agregacion":"1m","desde":"2030-06-15T18:30:00Z","hasta":"2030-06-15T18:33:00Z","max_puntos":500,"truncado":false,"puntos":[{"ventana":"2030-06-15T18:30:00Z","equipo_id":"ARG","fuente":"broadcast","posesion_pct_prom":53.62,"pases_completados":120,"tiros":1,"recuperaciones":20,"velocidad_kmh_prom":8.95,"velocidad_kmh_max":12.9},{"ventana":"2030-06-15T18:30:00Z","equipo_id":"ARG","fuente":"scouting","posesion_pct_prom":53.92,"pases_completados":120,"tiros":1,"recuperaciones":20,"velocidad_kmh_prom":8.95,"velocidad_kmh_max":12.9},{"ventana":"2030-06-15T18:31:00Z","equipo_id":"ARG","fuente":"broadcast","posesion_pct_prom":57.64666666666669,"pases_completados":120,"tiros":1,"recuperaciones":20,"velocidad_kmh_prom":8.816666666666666,"velocidad_kmh_max":12.8},{"ventana":"2030-06-15T18:31:00Z","equipo_id":"ARG","fuente":"scouting","posesion_pct_prom":57.94666666666665,"pases_completados":120,"tiros":1,"recuperaciones":20,"velocidad_kmh_prom":8.816666666666666,"velocidad_kmh_max":12.8},{"ventana":"2030-06-15T18:32:00Z","equipo_id":"ARG","fuente":"broadcast","posesion_pct_prom":54.646666666666675,"pases_completados":120,"tiros":0,"recuperaciones":20,"velocidad_kmh_prom":9.083333333333334,"velocidad_kmh_max":12.9},{"ventana":"2030-06-15T18:32:00Z","equipo_id":"ARG","fuente":"scouting","posesion_pct_prom":54.94666666666665,"pases_completados":120,"tiros":0,"recuperaciones":20,"velocidad_kmh_prom":9.083333333333334,"velocidad_kmh_max":12.9}]}
+
+
+## InfluxDB · fechas invertidas (422)
+$ curl -s -i http://127.0.0.1:8000/partidos/P-01/estadisticas?desde=2030-06-15T18:35:00Z&hasta=2030-06-15T18:30:00Z
+HTTP/1.1 422 Unprocessable Entity
+content-length: 131
+content-type: application/json
+x-request-id: 6f484eec06794bd19e6f4e804be34020
+
+{"error":{"codigo":"VALIDACION","mensaje":"'hasta' debe ser posterior a 'desde'.","request_id":"6f484eec06794bd19e6f4e804be34020"}}
+
+
+## IRIS · detalle (200)
+$ curl -s -i http://127.0.0.1:8000/partidos/P-01/detalle
+HTTP/1.1 200 OK
+content-length: 306
+content-type: application/json
+x-request-id: 6496f7a49a894e9690c225bfba08d8be
+
+{"codigo":"P-01","equipo_local":"ARG","equipo_visitante":"BRA","fecha_hora":"2030-06-15T18:30:00","sede":"Estadio Monumental","estado":"En juego","eventos":[{"tipo":"Gol","minuto":32,"descripcion":null,"jugador_codigo":"J-ARG-01"},{"tipo":"Gol","minuto":61,"descripcion":null,"jugador_codigo":"J-BRA-04"}]}
+
+
+## IRIS · transición inválida (409)
+$ curl -s -i -X POST http://127.0.0.1:8000/partidos/P-03/estado -H Content-Type: application/json -d {"estado":"Finalizado"}
+HTTP/1.1 409 Conflict
+content-length: 157
+content-type: application/json
+x-request-id: 106222ab6e9849ee923fe1ed928a2123
+
+{"error":{"codigo":"CONFLICTO","mensaje":"El partido 'P-03' no puede pasar de 'Programado' a 'Finalizado'.","request_id":"106222ab6e9849ee923fe1ed928a2123"}}
+

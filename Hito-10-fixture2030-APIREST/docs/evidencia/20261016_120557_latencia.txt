@@ -1,0 +1,8 @@
+Entorno: Windows-11-10.0.26200-SP0 · cliente Python 3.14.6 · API y las 6 bases en Docker (1 nodo cada una)
+Método: 50 requests secuenciales por endpoint tras 5 de calentamiento; latencia medida en el cliente (httpx); datos de la siembra (P-01..P-08); un solo cliente, sin carga concurrente
+mongodb   GET /equipos/ARG             p50=    4.2 ms  p95=    6.8 ms  max=    9.3 ms  errores=0/50
+neo4j     GET /partidos/P-01           p50=   11.8 ms  p95=   14.5 ms  max=   17.2 ms  errores=0/50
+cassandra GET comentarios              p50=    5.9 ms  p95=    7.5 ms  max=   11.3 ms  errores=0/50
+redis     GET /sesiones/U001           p50=    2.9 ms  p95=    4.0 ms  max=    4.6 ms  errores=0/50
+influxdb  GET estadisticas 5min/1m     p50=   11.1 ms  p95=   12.1 ms  max=   14.5 ms  errores=0/50
+iris      GET detalle                  p50=    3.0 ms  p95=    3.8 ms  max=    4.0 ms  errores=0/50

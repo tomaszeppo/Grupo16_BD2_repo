@@ -1,0 +1,19 @@
+# Dependencia caída: Redis detenido con 'docker compose stop redis' (la API y las demás fuentes siguen arriba)
+
+$ curl -s -i -w 'HTTP %{http_code} en %{time_total}s' http://localhost:8000/sesiones/U001
+HTTP/1.1 503 Service Unavailable
+content-length: 163
+content-type: application/json
+x-request-id: cec7beeeaf714c48b312d7747a224847
+
+{"error":{"codigo":"DEPENDENCIA_NO_DISPONIBLE","mensaje":"La fuente 'redis' no está disponible en este momento.","request_id":"cec7beeeaf714c48b312d7747a224847"}}
+HTTP 503 en 4.007151s
+
+$ curl -s -i -w 'HTTP %{http_code} en %{time_total}s' http://localhost:8000/health
+HTTP/1.1 503 Service Unavailable
+content-length: 300
+content-type: application/json
+x-request-id: 039365c3a66d409dadd0a7aa3b2a0539
+
+{"estado":"degradado","fuentes":{"mongodb":{"estado":"ok","latencia_ms":5.5},"neo4j":{"estado":"ok","latencia_ms":5.6},"cassandra":{"estado":"ok","latencia_ms":4.0},"redis":{"estado":"caida","latencia_ms":3860.5},"influxdb":{"estado":"ok","latencia_ms":4.6},"iris":{"estado":"ok","latencia_ms":1.9}}}
+HTTP 503 en 3.869929s

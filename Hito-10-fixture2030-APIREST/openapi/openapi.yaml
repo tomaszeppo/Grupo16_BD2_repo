@@ -1,0 +1,1538 @@
+openapi: 3.1.0
+info:
+  title: Fixture 2030 — API integrada
+  description: API REST integrada del Fixture Mundial 2030. Cada endpoint resuelve
+    un caso de uso concreto contra la fuente NoSQL que corresponde (MongoDB, Neo4j,
+    Cassandra, Redis, InfluxDB, IRIS). No acepta consultas libres. Todos los errores
+    usan el formato {error:{codigo,mensaje,request_id}}.
+  version: 1.0.0
+servers:
+- url: http://localhost:8000
+  description: Local (notebook o contenedor, puerto 8000)
+paths:
+  /equipos/{codigo}:
+    get:
+      tags:
+      - MongoDB · Equipos y jugadores
+      summary: Obtener un equipo por código
+      description: 'Caso de uso: un hincha o la app consulta la ficha de una selección.
+        Lectura por índice único `codigo`.'
+      operationId: obtener_equipo_equipos__codigo__get
+      parameters:
+      - name: codigo
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Z]{3}$
+          description: Código FIFA de tres letras
+          examples:
+          - ARG
+          title: Codigo
+        description: Código FIFA de tres letras
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Equipo'
+        '404':
+          description: Recurso inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '422':
+          description: Parámetro, cabecera o cuerpo inválido (se rechaza antes de
+            consultar la fuente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '500':
+          description: Error interno (el detalle técnico queda solo en los logs)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '503':
+          description: Dependencia no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '504':
+          description: La dependencia no respondió dentro del timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+  /equipos/{codigo}/jugadores:
+    get:
+      tags:
+      - MongoDB · Equipos y jugadores
+      summary: Listar los jugadores de un equipo (paginado)
+      description: Orden alfabético por apellido. Equipo inexistente → 404; equipo
+        sin coincidencias → 200 con `items` vacío.
+      operationId: listar_jugadores_equipos__codigo__jugadores_get
+      parameters:
+      - name: codigo
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Z]{3}$
+          description: Código FIFA de tres letras
+          examples:
+          - ARG
+          title: Codigo
+        description: Código FIFA de tres letras
+      - name: posicion
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - Portero
+            - Defensa
+            - Centrocampista
+            - Delantero
+            type: string
+          - type: 'null'
+          description: Filtra por posición
+          title: Posicion
+        description: Filtra por posición
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Máximo de elementos por página (1–100)
+          default: 20
+          title: Limit
+        description: Máximo de elementos por página (1–100)
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          description: Cantidad de jugadores a saltear
+          default: 0
+          title: Offset
+        description: Cantidad de jugadores a saltear
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaJugadores'
+        '404':
+          description: Recurso inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '422':
+          description: Parámetro, cabecera o cuerpo inválido (se rechaza antes de
+            consultar la fuente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '500':
+          description: Error interno (el detalle técnico queda solo en los logs)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '503':
+          description: Dependencia no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '504':
+          description: La dependencia no respondió dentro del timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+  /partidos/{partido_id}:
+    get:
+      tags:
+      - Neo4j · Partidos y eventos
+      summary: Obtener un partido con equipos y estadio
+      description: Recorre `(Equipo)-[:PARTICIPA_EN]->(Partido)-[:SE_JUEGA_EN]->(Estadio)`
+        con Cypher parametrizado.
+      operationId: obtener_partido_partidos__partido_id__get
+      parameters:
+      - name: partido_id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^P-\d{2,3}$
+          description: Identificador de partido (P-01, P-02, …)
+          examples:
+          - P-01
+          title: Partido Id
+        description: Identificador de partido (P-01, P-02, …)
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartidoGrafo'
+        '404':
+          description: Recurso inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '422':
+          description: Parámetro, cabecera o cuerpo inválido (se rechaza antes de
+            consultar la fuente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '500':
+          description: Error interno (el detalle técnico queda solo en los logs)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '503':
+          description: Dependencia no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '504':
+          description: La dependencia no respondió dentro del timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+  /partidos/{partido_id}/eventos:
+    get:
+      tags:
+      - Neo4j · Partidos y eventos
+      summary: Eventos de un partido
+      description: Recorre `(Evento)-[:OCURRE_EN]->(Partido)` ordenado por minuto.
+        Partido inexistente → 404; sin eventos → 200 vacío.
+      operationId: listar_eventos_partidos__partido_id__eventos_get
+      parameters:
+      - name: partido_id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^P-\d{2,3}$
+          description: Identificador de partido (P-01, P-02, …)
+          examples:
+          - P-01
+          title: Partido Id
+        description: Identificador de partido (P-01, P-02, …)
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          description: Máximo de eventos (1–200)
+          default: 50
+          title: Limit
+        description: Máximo de eventos (1–200)
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventosPartido'
+        '404':
+          description: Recurso inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '422':
+          description: Parámetro, cabecera o cuerpo inválido (se rechaza antes de
+            consultar la fuente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '500':
+          description: Error interno (el detalle técnico queda solo en los logs)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '503':
+          description: Dependencia no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '504':
+          description: La dependencia no respondió dentro del timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+  /partidos/{partido_id}/comentarios:
+    get:
+      tags:
+      - Cassandra · Comentarios
+      summary: Leer comentarios de un partido para un país y una ventana de 30 minutos
+      description: 'Lectura por la partición completa `(partido_id, pais, ventana)`;
+        nunca recorre otras particiones.
+
+        Una partición sin comentarios es un 200 con `items` vacío (válido).'
+      operationId: listar_comentarios_partidos__partido_id__comentarios_get
+      parameters:
+      - name: partido_id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^P-\d{2,3}$
+          description: Identificador de partido (P-01, P-02, …)
+          examples:
+          - P-01
+          title: Partido Id
+        description: Identificador de partido (P-01, P-02, …)
+      - name: pais
+        in: query
+        required: true
+        schema:
+          type: string
+          pattern: ^[A-Z]{3}$
+          description: País de la audiencia (código FIFA)
+          examples:
+          - ARG
+          title: Pais
+        description: País de la audiencia (código FIFA)
+      - name: ventana
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+          description: Inicio de la ventana de 30 minutos (ISO-8601 con zona, minuto
+            :00 o :30, p.ej. 2030-06-15T18:30:00Z). Es parte de la clave de partición
+            `(partido_id, pais, ventana)`.
+          examples:
+          - '2030-06-15T18:30:00Z'
+          title: Ventana
+        description: Inicio de la ventana de 30 minutos (ISO-8601 con zona, minuto
+          :00 o :30, p.ej. 2030-06-15T18:30:00Z). Es parte de la clave de partición
+          `(partido_id, pais, ventana)`.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          description: Máximo de elementos por página (1–100)
+          default: 20
+          title: Limit
+        description: Máximo de elementos por página (1–100)
+      - name: cursor
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            maxLength: 2048
+          - type: 'null'
+          description: Cursor devuelto como `next_cursor`
+          title: Cursor
+        description: Cursor devuelto como `next_cursor`
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginaComentarios'
+        '422':
+          description: Parámetro, cabecera o cuerpo inválido (se rechaza antes de
+            consultar la fuente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '500':
+          description: Error interno (el detalle técnico queda solo en los logs)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '503':
+          description: Dependencia no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '504':
+          description: La dependencia no respondió dentro del timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+    post:
+      tags:
+      - Cassandra · Comentarios
+      summary: Registrar un comentario (idempotente por Idempotency-Key)
+      description: 'Escritura. El partido debe existir en Neo4j. `ventana` y `creado_en`
+        los fija el servidor en el primer intento.
+
+        201 = alta; 200 = reintento con la misma clave (mismo `comentario_id`); 409
+        = clave usada para otro partido o país.'
+      operationId: crear_comentario_partidos__partido_id__comentarios_post
+      parameters:
+      - name: partido_id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^P-\d{2,3}$
+          description: Identificador de partido (P-01, P-02, …)
+          examples:
+          - P-01
+          title: Partido Id
+        description: Identificador de partido (P-01, P-02, …)
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 8
+          maxLength: 64
+          pattern: ^[A-Za-z0-9_-]+$
+          description: Clave generada por el cliente; reintentar con la misma clave
+            no duplica el comentario
+          title: Idempotency-Key
+        description: Clave generada por el cliente; reintentar con la misma clave
+          no duplica el comentario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NuevoComentario'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComentarioCreado'
+        '200':
+          description: 'Repetición idempotente: devuelve el comentario ya guardado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComentarioCreado'
+        '404':
+          description: Recurso inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '409':
+          description: 'Conflicto de negocio: el estado actual no permite la operación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '422':
+          description: Parámetro, cabecera o cuerpo inválido (se rechaza antes de
+            consultar la fuente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '500':
+          description: Error interno (el detalle técnico queda solo en los logs)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '503':
+          description: Dependencia no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '504':
+          description: La dependencia no respondió dentro del timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+  /sesiones/{usuario_id}:
+    get:
+      tags:
+      - Redis · Sesiones
+      summary: Consultar la sesión vigente de un usuario
+      description: '`GET` de la clave `f2030:sesion:{usuario}`. Clave inexistente,
+        expirada o sesión CERRADA → 404 `SESION_NO_VIGENTE`.
+
+        Redis caído → 503 (nunca se confunde con sesión ausente).'
+      operationId: obtener_sesion_sesiones__usuario_id__get
+      parameters:
+      - name: usuario_id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^U\d{3,6}$
+          description: Identificador de usuario (U001, …)
+          examples:
+          - U001
+          title: Usuario Id
+        description: Identificador de usuario (U001, …)
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sesion'
+        '404':
+          description: Recurso inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '422':
+          description: Parámetro, cabecera o cuerpo inválido (se rechaza antes de
+            consultar la fuente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '500':
+          description: Error interno (el detalle técnico queda solo en los logs)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '503':
+          description: Dependencia no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '504':
+          description: La dependencia no respondió dentro del timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+    delete:
+      tags:
+      - Redis · Sesiones
+      summary: Invalidar la sesión de un usuario
+      description: '`DEL` de la clave. Idempotente: repetirlo (o invalidar una sesión
+        inexistente) devuelve 204 igual.'
+      operationId: invalidar_sesion_sesiones__usuario_id__delete
+      parameters:
+      - name: usuario_id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^U\d{3,6}$
+          description: Identificador de usuario (U001, …)
+          examples:
+          - U001
+          title: Usuario Id
+        description: Identificador de usuario (U001, …)
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Parámetro, cabecera o cuerpo inválido (se rechaza antes de
+            consultar la fuente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '500':
+          description: Error interno (el detalle técnico queda solo en los logs)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '503':
+          description: Dependencia no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '504':
+          description: La dependencia no respondió dentro del timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+  /partidos/{partido_id}/estadisticas:
+    get:
+      tags:
+      - InfluxDB · Estadísticas
+      summary: Estadísticas temporales de un partido (ventana acotada y agregación)
+      description: 'Siempre acotado por partido y por intervalo (máx. 120 min) y limitado
+        a 500 puntos (`truncado`).
+
+        Sin puntos en el intervalo → 200 con `puntos` vacío; InfluxDB caído o credencial
+        inválida → 503/504.'
+      operationId: obtener_estadisticas_partidos__partido_id__estadisticas_get
+      parameters:
+      - name: partido_id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^P-\d{2,3}$
+          description: Identificador de partido (P-01, P-02, …)
+          examples:
+          - P-01
+          title: Partido Id
+        description: Identificador de partido (P-01, P-02, …)
+      - name: desde
+        in: query
+        required: true
+        schema:
+          type: string
+          description: 'Inicio (inclusive), ISO-8601 con zona. Ej: 2030-06-15T18:30:00Z'
+          examples:
+          - '2030-06-15T18:30:00Z'
+          title: Desde
+        description: 'Inicio (inclusive), ISO-8601 con zona. Ej: 2030-06-15T18:30:00Z'
+      - name: hasta
+        in: query
+        required: true
+        schema:
+          type: string
+          description: Fin (exclusivo), ISO-8601 con zona; hasta - desde ≤ 120 min
+          examples:
+          - '2030-06-15T18:40:00Z'
+          title: Hasta
+        description: Fin (exclusivo), ISO-8601 con zona; hasta - desde ≤ 120 min
+      - name: equipo
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            pattern: ^[A-Z]{3}$
+          - type: 'null'
+          description: Filtra por equipo (tag equipo_id)
+          title: Equipo
+        description: Filtra por equipo (tag equipo_id)
+      - name: agregacion
+        in: query
+        required: false
+        schema:
+          enum:
+          - raw
+          - 1m
+          - 5m
+          type: string
+          description: raw = puntos crudos; 1m/5m = ventanas (AVG/SUM/MAX según la
+            semántica del campo)
+          default: 1m
+          title: Agregacion
+        description: raw = puntos crudos; 1m/5m = ventanas (AVG/SUM/MAX según la semántica
+          del campo)
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Estadisticas'
+        '422':
+          description: Parámetro, cabecera o cuerpo inválido (se rechaza antes de
+            consultar la fuente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '500':
+          description: Error interno (el detalle técnico queda solo en los logs)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '503':
+          description: Dependencia no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '504':
+          description: La dependencia no respondió dentro del timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+  /partidos/{partido_id}/detalle:
+    get:
+      tags:
+      - IRIS · Partido (objetos)
+      summary: Detalle del partido con sus eventos (objetos IRIS)
+      description: 'Lee `Fixture.Partido` y sus `Fixture.Evento` hijos. El id interno
+        de IRIS no se expone: la clave pública es `codigo`.'
+      operationId: detalle_partido_partidos__partido_id__detalle_get
+      parameters:
+      - name: partido_id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^P-\d{2,3}$
+          description: Identificador de partido (P-01, P-02, …)
+          examples:
+          - P-01
+          title: Partido Id
+        description: Identificador de partido (P-01, P-02, …)
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartidoIris'
+        '404':
+          description: Recurso inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '422':
+          description: Parámetro, cabecera o cuerpo inválido (se rechaza antes de
+            consultar la fuente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '500':
+          description: Error interno (el detalle técnico queda solo en los logs)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '503':
+          description: Dependencia no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '504':
+          description: La dependencia no respondió dentro del timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+  /partidos/{partido_id}/estado:
+    post:
+      tags:
+      - IRIS · Partido (objetos)
+      summary: Cambiar el estado del partido (transición validada)
+      description: 'Flujo permitido: Programado → En juego → Finalizado (regla `CambiarEstado`
+        de la clase). Transición inválida → 409.
+
+        Idempotente: pedir el estado en el que ya está devuelve 200 sin escribir.'
+      operationId: cambiar_estado_partidos__partido_id__estado_post
+      parameters:
+      - name: partido_id
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^P-\d{2,3}$
+          description: Identificador de partido (P-01, P-02, …)
+          examples:
+          - P-01
+          title: Partido Id
+        description: Identificador de partido (P-01, P-02, …)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CambioEstado'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartidoIris'
+        '404':
+          description: Recurso inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '409':
+          description: 'Conflicto de negocio: el estado actual no permite la operación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '422':
+          description: Parámetro, cabecera o cuerpo inválido (se rechaza antes de
+            consultar la fuente)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '500':
+          description: Error interno (el detalle técnico queda solo en los logs)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '503':
+          description: Dependencia no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+        '504':
+          description: La dependencia no respondió dentro del timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorRespuesta'
+  /health:
+    get:
+      tags:
+      - Sistema
+      summary: Estado de la API y de cada dependencia
+      description: Hace un `ping` acotado por timeout a cada fuente. Nunca devuelve
+        200 si alguna está caída.
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '503':
+          description: Al menos una dependencia no responde (el cuerpo indica cuál)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+components:
+  schemas:
+    CambioEstado:
+      properties:
+        estado:
+          type: string
+          enum:
+          - Programado
+          - En juego
+          - Finalizado
+          title: Estado
+      additionalProperties: false
+      type: object
+      required:
+      - estado
+      title: CambioEstado
+    ComentarioCreado:
+      properties:
+        comentario_id:
+          type: string
+          title: Comentario Id
+        usuario_id:
+          type: string
+          title: Usuario Id
+        usuario_nombre:
+          type: string
+          title: Usuario Nombre
+        contenido:
+          type: string
+          title: Contenido
+        likes:
+          type: integer
+          title: Likes
+        estado_moderacion:
+          type: string
+          title: Estado Moderacion
+        creado_en:
+          type: string
+          title: Creado En
+        partido_id:
+          type: string
+          title: Partido Id
+        pais:
+          type: string
+          title: Pais
+        ventana:
+          type: string
+          title: Ventana
+      type: object
+      required:
+      - comentario_id
+      - usuario_id
+      - usuario_nombre
+      - contenido
+      - likes
+      - estado_moderacion
+      - creado_en
+      - partido_id
+      - pais
+      - ventana
+      title: ComentarioCreado
+    ComentarioItem:
+      properties:
+        comentario_id:
+          type: string
+          title: Comentario Id
+        usuario_id:
+          type: string
+          title: Usuario Id
+        usuario_nombre:
+          type: string
+          title: Usuario Nombre
+        contenido:
+          type: string
+          title: Contenido
+        likes:
+          type: integer
+          title: Likes
+        estado_moderacion:
+          type: string
+          title: Estado Moderacion
+        creado_en:
+          type: string
+          title: Creado En
+      type: object
+      required:
+      - comentario_id
+      - usuario_id
+      - usuario_nombre
+      - contenido
+      - likes
+      - estado_moderacion
+      - creado_en
+      title: ComentarioItem
+    Equipo:
+      properties:
+        codigo:
+          type: string
+          title: Codigo
+          examples:
+          - ARG
+        nombre:
+          type: string
+          title: Nombre
+          examples:
+          - Argentina
+      type: object
+      required:
+      - codigo
+      - nombre
+      title: Equipo
+    EquipoParticipante:
+      properties:
+        codigo:
+          type: string
+          title: Codigo
+        nombre:
+          type: string
+          title: Nombre
+      type: object
+      required:
+      - codigo
+      - nombre
+      title: EquipoParticipante
+    ErrorCuerpo:
+      properties:
+        codigo:
+          type: string
+          title: Codigo
+        mensaje:
+          type: string
+          title: Mensaje
+        request_id:
+          type: string
+          title: Request Id
+        detalle:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/ErrorDetalle'
+            type: array
+          - type: 'null'
+          title: Detalle
+      type: object
+      required:
+      - codigo
+      - mensaje
+      - request_id
+      title: ErrorCuerpo
+    ErrorDetalle:
+      properties:
+        campo:
+          type: string
+          title: Campo
+        motivo:
+          type: string
+          title: Motivo
+      type: object
+      required:
+      - campo
+      - motivo
+      title: ErrorDetalle
+    ErrorRespuesta:
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorCuerpo'
+      type: object
+      required:
+      - error
+      title: ErrorRespuesta
+    EstadioOut:
+      properties:
+        id:
+          type: string
+          title: Id
+        nombre:
+          type: string
+          title: Nombre
+        ciudad:
+          type: string
+          title: Ciudad
+      type: object
+      required:
+      - id
+      - nombre
+      - ciudad
+      title: EstadioOut
+    Estadisticas:
+      properties:
+        partido_id:
+          type: string
+          title: Partido Id
+        agregacion:
+          type: string
+          enum:
+          - raw
+          - 1m
+          - 5m
+          title: Agregacion
+        desde:
+          type: string
+          title: Desde
+        hasta:
+          type: string
+          title: Hasta
+        max_puntos:
+          type: integer
+          title: Max Puntos
+        truncado:
+          type: boolean
+          title: Truncado
+          description: true si había más puntos que max_puntos; reducir la ventana
+            o agregar
+        puntos:
+          items:
+            anyOf:
+            - $ref: '#/components/schemas/PuntoAgregado'
+            - $ref: '#/components/schemas/PuntoRaw'
+          type: array
+          title: Puntos
+      type: object
+      required:
+      - partido_id
+      - agregacion
+      - desde
+      - hasta
+      - max_puntos
+      - truncado
+      - puntos
+      title: Estadisticas
+    EstadoFuente:
+      properties:
+        estado:
+          type: string
+          enum:
+          - ok
+          - caida
+          title: Estado
+        latencia_ms:
+          type: number
+          title: Latencia Ms
+      type: object
+      required:
+      - estado
+      - latencia_ms
+      title: EstadoFuente
+    EventoIris:
+      properties:
+        tipo:
+          type: string
+          title: Tipo
+        minuto:
+          type: integer
+          title: Minuto
+        descripcion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Descripcion
+        jugador_codigo:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Jugador Codigo
+      type: object
+      required:
+      - tipo
+      - minuto
+      title: EventoIris
+    EventoPartido:
+      properties:
+        id:
+          type: string
+          title: Id
+        tipo:
+          type: string
+          title: Tipo
+        minuto:
+          type: integer
+          title: Minuto
+      type: object
+      required:
+      - id
+      - tipo
+      - minuto
+      title: EventoPartido
+    EventosPartido:
+      properties:
+        partido_id:
+          type: string
+          title: Partido Id
+        limit:
+          type: integer
+          title: Limit
+        items:
+          items:
+            $ref: '#/components/schemas/EventoPartido'
+          type: array
+          title: Items
+      type: object
+      required:
+      - partido_id
+      - limit
+      - items
+      title: EventosPartido
+    Health:
+      properties:
+        estado:
+          type: string
+          enum:
+          - ok
+          - degradado
+          title: Estado
+        fuentes:
+          additionalProperties:
+            $ref: '#/components/schemas/EstadoFuente'
+          type: object
+          title: Fuentes
+      type: object
+      required:
+      - estado
+      - fuentes
+      title: Health
+    Jugador:
+      properties:
+        nombre:
+          type: string
+          title: Nombre
+        apellido:
+          type: string
+          title: Apellido
+        dorsal:
+          type: integer
+          title: Dorsal
+        posicion:
+          type: string
+          enum:
+          - Portero
+          - Defensa
+          - Centrocampista
+          - Delantero
+          title: Posicion
+        equipo:
+          type: string
+          title: Equipo
+          description: Código del equipo (referencia a equipos.codigo)
+      type: object
+      required:
+      - nombre
+      - apellido
+      - dorsal
+      - posicion
+      - equipo
+      title: Jugador
+    NuevoComentario:
+      properties:
+        pais:
+          type: string
+          pattern: ^[A-Z]{3}$
+          title: Pais
+          examples:
+          - ARG
+        usuario_id:
+          type: string
+          pattern: ^U\d{3,6}$
+          title: Usuario Id
+          examples:
+          - U001
+        usuario_nombre:
+          type: string
+          maxLength: 60
+          minLength: 1
+          title: Usuario Nombre
+          examples:
+          - Facundo
+        contenido:
+          type: string
+          maxLength: 280
+          minLength: 1
+          title: Contenido
+          examples:
+          - ¡Vamos Argentina!
+      additionalProperties: false
+      type: object
+      required:
+      - pais
+      - usuario_id
+      - usuario_nombre
+      - contenido
+      title: NuevoComentario
+    PaginaComentarios:
+      properties:
+        partido_id:
+          type: string
+          title: Partido Id
+        pais:
+          type: string
+          title: Pais
+        ventana:
+          type: string
+          title: Ventana
+        limit:
+          type: integer
+          title: Limit
+        items:
+          items:
+            $ref: '#/components/schemas/ComentarioItem'
+          type: array
+          title: Items
+          description: Más recientes primero (clustering creado_en DESC)
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+          description: Cursor opaco para pedir la página siguiente; null si no hay
+            más
+      type: object
+      required:
+      - partido_id
+      - pais
+      - ventana
+      - limit
+      - items
+      - next_cursor
+      title: PaginaComentarios
+    PaginaJugadores:
+      properties:
+        equipo:
+          type: string
+          title: Equipo
+        total:
+          type: integer
+          title: Total
+          description: Total de jugadores que cumplen el filtro
+        limit:
+          type: integer
+          title: Limit
+        offset:
+          type: integer
+          title: Offset
+        items:
+          items:
+            $ref: '#/components/schemas/Jugador'
+          type: array
+          title: Items
+      type: object
+      required:
+      - equipo
+      - total
+      - limit
+      - offset
+      - items
+      title: PaginaJugadores
+    PartidoGrafo:
+      properties:
+        id:
+          type: string
+          title: Id
+          examples:
+          - P-01
+        fecha:
+          type: string
+          title: Fecha
+        fase:
+          type: string
+          title: Fase
+        estadio:
+          anyOf:
+          - $ref: '#/components/schemas/EstadioOut'
+          - type: 'null'
+        equipos:
+          items:
+            $ref: '#/components/schemas/EquipoParticipante'
+          type: array
+          title: Equipos
+          description: Equipos que PARTICIPA_EN el partido, ordenados por código
+        resultado:
+          anyOf:
+          - $ref: '#/components/schemas/Resultado'
+          - type: 'null'
+      type: object
+      required:
+      - id
+      - fecha
+      - fase
+      - estadio
+      - equipos
+      title: PartidoGrafo
+    PartidoIris:
+      properties:
+        codigo:
+          type: string
+          title: Codigo
+          examples:
+          - P-01
+        equipo_local:
+          type: string
+          title: Equipo Local
+        equipo_visitante:
+          type: string
+          title: Equipo Visitante
+        fecha_hora:
+          type: string
+          title: Fecha Hora
+        sede:
+          type: string
+          title: Sede
+        estado:
+          type: string
+          enum:
+          - Programado
+          - En juego
+          - Finalizado
+          title: Estado
+        eventos:
+          items:
+            $ref: '#/components/schemas/EventoIris'
+          type: array
+          title: Eventos
+          description: Hijos de la relación padre-hijo Fixture.Partido → Fixture.Evento
+      type: object
+      required:
+      - codigo
+      - equipo_local
+      - equipo_visitante
+      - fecha_hora
+      - sede
+      - estado
+      - eventos
+      title: PartidoIris
+    PuntoAgregado:
+      properties:
+        ventana:
+          type: string
+          title: Ventana
+          description: Inicio del intervalo (DATE_BIN)
+        equipo_id:
+          type: string
+          title: Equipo Id
+        fuente:
+          type: string
+          title: Fuente
+        posesion_pct_prom:
+          type: number
+          title: Posesion Pct Prom
+        pases_completados:
+          type: integer
+          title: Pases Completados
+          description: SUM del intervalo
+        tiros:
+          type: integer
+          title: Tiros
+          description: SUM del intervalo
+        recuperaciones:
+          type: integer
+          title: Recuperaciones
+          description: SUM del intervalo
+        velocidad_kmh_prom:
+          type: number
+          title: Velocidad Kmh Prom
+        velocidad_kmh_max:
+          type: number
+          title: Velocidad Kmh Max
+      type: object
+      required:
+      - ventana
+      - equipo_id
+      - fuente
+      - posesion_pct_prom
+      - pases_completados
+      - tiros
+      - recuperaciones
+      - velocidad_kmh_prom
+      - velocidad_kmh_max
+      title: PuntoAgregado
+    PuntoRaw:
+      properties:
+        time:
+          type: string
+          title: Time
+        equipo_id:
+          type: string
+          title: Equipo Id
+        fuente:
+          type: string
+          title: Fuente
+        posesion_pct:
+          type: number
+          title: Posesion Pct
+        pases_completados:
+          type: integer
+          title: Pases Completados
+        tiros:
+          type: integer
+          title: Tiros
+        recuperaciones:
+          type: integer
+          title: Recuperaciones
+        velocidad_kmh:
+          type: number
+          title: Velocidad Kmh
+      type: object
+      required:
+      - time
+      - equipo_id
+      - fuente
+      - posesion_pct
+      - pases_completados
+      - tiros
+      - recuperaciones
+      - velocidad_kmh
+      title: PuntoRaw
+    Resultado:
+      properties:
+        ganador:
+          type: string
+          title: Ganador
+        perdedor:
+          type: string
+          title: Perdedor
+        goles_ganador:
+          type: integer
+          title: Goles Ganador
+        goles_perdedor:
+          type: integer
+          title: Goles Perdedor
+        origen:
+          type: string
+          title: Origen
+          description: 'SIMULADO: marcadores de demostración, no oficiales'
+      type: object
+      required:
+      - ganador
+      - perdedor
+      - goles_ganador
+      - goles_perdedor
+      - origen
+      title: Resultado
+    Sesion:
+      properties:
+        usuario_id:
+          type: string
+          title: Usuario Id
+        session_id:
+          type: string
+          title: Session Id
+        rol:
+          type: string
+          title: Rol
+        estado_acceso:
+          type: string
+          title: Estado Acceso
+          examples:
+          - ACTIVA
+        creado_en:
+          type: string
+          title: Creado En
+        ultimo_acceso:
+          type: string
+          title: Ultimo Acceso
+        acciones:
+          type: integer
+          title: Acciones
+        ttl_segundos:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Ttl Segundos
+          description: Segundos restantes antes de que expire por inactividad
+      type: object
+      required:
+      - usuario_id
+      - session_id
+      - rol
+      - estado_acceso
+      - creado_en
+      - ultimo_acceso
+      - acciones
+      - ttl_segundos
+      title: Sesion
+tags:
+- name: MongoDB · Equipos y jugadores
+  description: Información documental.
+- name: Neo4j · Partidos y eventos
+  description: Relaciones partido–equipo–estadio–evento.
+- name: Cassandra · Comentarios
+  description: Lectura por partición y alta idempotente.
+- name: Redis · Sesiones
+  description: Estado temporal con TTL.
+- name: InfluxDB · Estadísticas
+  description: Series temporales acotadas por ventana.
+- name: IRIS · Partido (objetos)
+  description: Entidad compleja y transición de estado validada.
+- name: Sistema
+  description: Salud de la API y de sus dependencias.

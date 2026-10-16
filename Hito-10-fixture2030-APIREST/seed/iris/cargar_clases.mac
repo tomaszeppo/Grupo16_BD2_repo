@@ -1,0 +1,14 @@
+; Carga y compila las clases del Hito 9 montadas en /clases (sin la demo).
+; Sentencias de una sola línea: el terminal de IRIS ejecuta la entrada línea por línea.
+Set err = ""
+Set sc = $System.OBJ.Load("/clases/Fixture.Persona.cls","k",.err)
+Set sc = $System.OBJ.Load("/clases/Fixture.Jugador.cls","k",.err)
+Set sc = $System.OBJ.Load("/clases/Fixture.Arbitro.cls","k",.err)
+Set sc = $System.OBJ.Load("/clases/Fixture.Tecnico.cls","k",.err)
+Set sc = $System.OBJ.Load("/clases/Fixture.Partido.cls","k",.err)
+Set sc = $System.OBJ.Load("/clases/Fixture.Evento.cls","k",.err)
+Set sc = $System.OBJ.Compile("Fixture.*","ck",.err)
+If $System.Status.IsError(sc) Write "COMPILACION CON ERRORES:",!
+If $System.Status.IsError(sc) Do $System.Status.DisplayError(sc)
+If '$System.Status.IsError(sc) Write "COMPILACION OK: Fixture.*",!
+Halt

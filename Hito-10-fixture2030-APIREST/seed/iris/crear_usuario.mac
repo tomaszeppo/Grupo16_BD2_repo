@@ -1,0 +1,8 @@
+; Crea el usuario de la API con las credenciales del entorno del contenedor (IRIS_USERNAME / IRIS_PASSWORD).
+; Sentencias de una sola línea: el terminal de IRIS ejecuta la entrada línea por línea.
+Set user = $System.Util.GetEnviron("IRIS_USERNAME")
+Set pw = $System.Util.GetEnviron("IRIS_PASSWORD")
+Do ##class(Security.Users).Delete(user)
+Set sc = ##class(Security.Users).Create(user,"%All",pw,"Fixture API","USER","",,0,1)
+Write "Usuario ",user," creado ok=",$System.Status.IsOK(sc),!
+Halt
