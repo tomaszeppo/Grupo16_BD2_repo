@@ -35,3 +35,14 @@ def get_cassandra() -> CassandraAdapter:
 
 def get_comentarios_service() -> ComentariosService:
     return ComentariosService(get_cassandra(), get_neo4j())
+from app.adapters.redis import RedisAdapter  # noqa: E402
+from app.services.sesiones import SesionesService  # noqa: E402
+
+
+@lru_cache
+def get_redis() -> RedisAdapter:
+    return RedisAdapter(get_settings())
+
+
+def get_sesiones_service() -> SesionesService:
+    return SesionesService(get_redis())
