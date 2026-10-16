@@ -46,3 +46,14 @@ def get_redis() -> RedisAdapter:
 
 def get_sesiones_service() -> SesionesService:
     return SesionesService(get_redis())
+from app.adapters.influx import InfluxAdapter  # noqa: E402
+from app.services.estadisticas import EstadisticasService  # noqa: E402
+
+
+@lru_cache
+def get_influx() -> InfluxAdapter:
+    return InfluxAdapter(get_settings())
+
+
+def get_estadisticas_service() -> EstadisticasService:
+    return EstadisticasService(get_influx(), get_settings())
