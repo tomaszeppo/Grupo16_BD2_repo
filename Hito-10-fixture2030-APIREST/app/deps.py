@@ -57,3 +57,14 @@ def get_influx() -> InfluxAdapter:
 
 def get_estadisticas_service() -> EstadisticasService:
     return EstadisticasService(get_influx(), get_settings())
+from app.adapters.iris import IrisAdapter  # noqa: E402
+from app.services.partidos_iris import PartidosIrisService  # noqa: E402
+
+
+@lru_cache
+def get_iris() -> IrisAdapter:
+    return IrisAdapter(get_settings())
+
+
+def get_partidos_iris_service() -> PartidosIrisService:
+    return PartidosIrisService(get_iris())
