@@ -13,3 +13,14 @@ def get_mongo() -> MongoAdapter:
 
 def get_equipos_service() -> EquiposService:
     return EquiposService(get_mongo())
+from app.adapters.neo4j import Neo4jAdapter  # noqa: E402
+from app.services.partidos import PartidosService  # noqa: E402
+
+
+@lru_cache
+def get_neo4j() -> Neo4jAdapter:
+    return Neo4jAdapter(get_settings())
+
+
+def get_partidos_service() -> PartidosService:
+    return PartidosService(get_neo4j())
