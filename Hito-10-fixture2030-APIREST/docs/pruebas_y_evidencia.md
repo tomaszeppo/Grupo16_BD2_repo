@@ -4,12 +4,12 @@
 
 | Nivel | Qué hace | Dónde corre | Comando |
 |---|---|---|---|
-| Unitarias (117) | Rutas y servicios con adaptadores falsos: válido, inválido, inexistente, vacío, sesión expirada, dependencia caída, paginación, escritura repetida, contrato OpenAPI y colección Postman | Notebook (solo `requirements.txt`) | `scripts/ejecutar_pruebas.sh unit` |
+| Unitarias (118) | Rutas y servicios con adaptadores falsos: válido, inválido, inexistente, vacío, sesión expirada, dependencia caída, paginación, escritura repetida, contrato OpenAPI y colección Postman | Notebook (solo `requirements.txt`) | `scripts/ejecutar_pruebas.sh unit` |
 | Dependencia inaccesible (6) | Cada adaptador real contra un host inaccesible: error controlado, acotado en tiempo y sin filtrar hosts | Contenedor `api` (necesita los drivers) | `scripts/ejecutar_pruebas.sh drivers` |
 | Integración (18) | Black-box contra la API y las seis bases reales | Notebook, contra la API en `:8000` | `scripts/ejecutar_pruebas.sh integration` |
 | Postman / cURL | Mismos escenarios, reproducibles a mano | Postman o `postman/ejemplos_curl.sh` | ver README |
 
-Resultado de la última ejecución (stack real levantado con `scripts/levantar_servicios.sh`): unitarias 117/117, dependencia inaccesible 6/6, integración 18/18.
+Resultado de la última ejecución (stack real levantado con `scripts/levantar_servicios.sh`): unitarias 118/118, dependencia inaccesible 6/6, integración 18/18.
 
 ## Cobertura de §5.12 de la consigna
 

@@ -3,7 +3,7 @@
 API REST (FastAPI) que expone los seis módulos NoSQL del Fixture 2030 —MongoDB, Neo4j, Cassandra, Redis, InfluxDB e IRIS— mediante adaptadores separados. Cada endpoint resuelve un caso de uso concreto contra la fuente que corresponde; no hay consultas libres ni endpoints genéricos.
 
 - Contrato: [openapi/openapi.yaml](openapi/openapi.yaml) (generado desde el código) · Swagger UI en `http://localhost:8000/docs`.
-- Pruebas: 117 unitarias, 6 de dependencia inaccesible y 18 de integración contra las bases reales (ver [tests/README.md](tests/README.md)).
+- Pruebas: 118 unitarias, 6 de dependencia inaccesible y 18 de integración contra las bases reales (ver [tests/README.md](tests/README.md)).
 - Colección Postman: [postman/fixture2030_collection.json](postman/fixture2030_collection.json) · ejemplos cURL: [postman/ejemplos_curl.sh](postman/ejemplos_curl.sh).
 
 ## Requisitos

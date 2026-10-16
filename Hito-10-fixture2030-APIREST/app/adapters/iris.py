@@ -1,3 +1,5 @@
+import threading
+
 from app.adapters.base import operacion
 from app.config.settings import Settings
 from app.errors import ApiError, Conflicto, DependenciaNoDisponible, DependenciaTimeout, NoEncontrado
@@ -18,6 +20,7 @@ class IrisAdapter:
     def __init__(self, settings: Settings):
         self._s = settings
         self._conexion = None
+        self._lock = threading.RLock()  # una sola conexión compartida entre hilos: se serializa su uso
 
     def _traducir(self, exc: Exception) -> ApiError | None:
         self._conexion = None  # fuerza reconexión en el próximo intento
@@ -38,7 +41,7 @@ class IrisAdapter:
         return self._conexion
 
     def obtener_partido(self, codigo: str) -> dict | None:
-        with operacion(FUENTE, "obtener_partido", self._traducir):
+        with self._lock, operacion(FUENTE, "obtener_partido", self._traducir):
             cur = self._conn().cursor()
             cur.execute(SQL_PARTIDO, [codigo])
             fila = cur.fetchone()
@@ -56,7 +59,7 @@ class IrisAdapter:
             }
 
     def cambiar_estado(self, codigo: str, nuevo: str) -> None:
-        with operacion(FUENTE, "cambiar_estado", self._traducir):
+        with self._lock, operacion(FUENTE, "cambiar_estado", self._traducir):
             import iris
 
             cur = self._conn().cursor()
@@ -73,7 +76,7 @@ class IrisAdapter:
                 raise ApiError("No se pudo guardar el cambio de estado.")
 
     def ping(self) -> None:
-        with operacion(FUENTE, "ping", self._traducir):
+        with self._lock, operacion(FUENTE, "ping", self._traducir):
             cur = self._conn().cursor()
             cur.execute("SELECT 1")
             cur.fetchone()

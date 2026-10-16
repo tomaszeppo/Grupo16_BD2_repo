@@ -51,3 +51,31 @@ def test_obtener_partido_copia_la_fila_antes_de_consultar_los_eventos():
     assert partido["codigo"] == "P-01" and partido["estado"] == "En juego"
     assert partido["fecha_hora"] == "2030-06-15T18:30:00"
     assert partido["eventos"] == [{"tipo": "Gol", "minuto": 32, "descripcion": None, "jugador_codigo": "J-ARG-01"}]
+
+
+def test_las_operaciones_sobre_la_conexion_compartida_no_se_solapan():
+    """Una sola conexión IRIS se comparte entre los hilos de la API: el adaptador debe serializar su uso."""
+    import threading
+    import time
+
+    class CursorLento(CursorFalso):
+        enuso = 0
+        maximo = 0
+
+        def execute(self, sql, params):
+            CursorLento.enuso += 1
+            CursorLento.maximo = max(CursorLento.maximo, CursorLento.enuso)
+            time.sleep(0.05)
+            super().execute(sql, params)
+            CursorLento.enuso -= 1
+
+    class ConexionLenta(ConexionFalsa):
+        def __init__(self):
+            self._cursor = CursorLento()
+
+    adaptador = IrisAdapter(Settings(_env_file=None))
+    adaptador._conexion = ConexionLenta()
+    hilos = [threading.Thread(target=adaptador.obtener_partido, args=("P-01",)) for _ in range(4)]
+    [h.start() for h in hilos]
+    [h.join() for h in hilos]
+    assert CursorLento.maximo == 1
