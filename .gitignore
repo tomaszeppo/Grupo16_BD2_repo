@@ -6,3 +6,6 @@
 __pycache__/
 *.pyc
 .venv/
+
+# Datos locales de Cassandra (Hito 6): no subir dumps
+Hito-6-fixture2030-cassandra/data/
