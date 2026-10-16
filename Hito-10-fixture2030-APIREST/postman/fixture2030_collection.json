@@ -1,0 +1,1433 @@
+{
+  "info": {
+    "name": "Fixture 2030 — API integrada",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Casos felices y escenarios de error de los seis módulos. Requiere la API levantada (README)."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "idem_key",
+      "value": "demo-postman-0001"
+    }
+  ],
+  "item": [
+    {
+      "name": "Sistema",
+      "item": [
+        {
+          "name": "GET /health (200)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "MongoDB",
+      "item": [
+        {
+          "name": "Equipo existente (200)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/equipos/ARG",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "equipos",
+                "ARG"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Equipo inexistente (404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/equipos/ZZZ",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "equipos",
+                "ZZZ"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Código inválido (422)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/equipos/arg",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "equipos",
+                "arg"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Jugadores paginados (200)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/equipos/ARG/jugadores",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "equipos",
+                "ARG",
+                "jugadores"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "2"
+                },
+                {
+                  "key": "offset",
+                  "value": "1"
+                }
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Jugadores filtro Delantero (200)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/equipos/ARG/jugadores",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "equipos",
+                "ARG",
+                "jugadores"
+              ],
+              "query": [
+                {
+                  "key": "posicion",
+                  "value": "Delantero"
+                }
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "limit fuera de rango (422)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/equipos/ARG/jugadores",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "equipos",
+                "ARG",
+                "jugadores"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "101"
+                }
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Neo4j",
+      "item": [
+        {
+          "name": "Partido existente (200)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Partido inexistente (404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-99",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-99"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ID inválido (422)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/p-01",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "p-01"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eventos del partido (200)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/eventos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "eventos"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Partido sin eventos (200 vacío)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-03/eventos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-03",
+                "eventos"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Eventos de partido inexistente (404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-99/eventos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-99",
+                "eventos"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cassandra",
+      "item": [
+        {
+          "name": "Comentarios ARG ventana 18:30 (200)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/comentarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "comentarios"
+              ],
+              "query": [
+                {
+                  "key": "pais",
+                  "value": "ARG"
+                },
+                {
+                  "key": "ventana",
+                  "value": "2030-06-15T18:30:00Z"
+                },
+                {
+                  "key": "limit",
+                  "value": "2"
+                }
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Partición vacía (200 vacío)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/comentarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "comentarios"
+              ],
+              "query": [
+                {
+                  "key": "pais",
+                  "value": "BRA"
+                },
+                {
+                  "key": "ventana",
+                  "value": "2030-06-15T18:30:00Z"
+                }
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sin ventana (422)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/comentarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "comentarios"
+              ],
+              "query": [
+                {
+                  "key": "pais",
+                  "value": "ARG"
+                }
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ventana no alineada (422)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/comentarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "comentarios"
+              ],
+              "query": [
+                {
+                  "key": "pais",
+                  "value": "ARG"
+                },
+                {
+                  "key": "ventana",
+                  "value": "2030-06-15T18:45:00Z"
+                }
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Crear comentario (201)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/comentarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "comentarios"
+              ],
+              "query": []
+            },
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idem_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"pais\": \"ARG\", \"usuario_id\": \"U001\", \"usuario_nombre\": \"Facundo\", \"contenido\": \"¡Vamos Argentina!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Repetir con la misma clave (200)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/comentarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "comentarios"
+              ],
+              "query": []
+            },
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idem_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"pais\": \"ARG\", \"usuario_id\": \"U001\", \"usuario_nombre\": \"Facundo\", \"contenido\": \"¡Vamos Argentina!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Misma clave, otro partido (409)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-02/comentarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-02",
+                "comentarios"
+              ],
+              "query": []
+            },
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idem_key}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"pais\": \"ARG\", \"usuario_id\": \"U001\", \"usuario_nombre\": \"Facundo\", \"contenido\": \"¡Vamos Argentina!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', function () { pm.response.to.have.status(409); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sin Idempotency-Key (422)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/comentarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "comentarios"
+              ],
+              "query": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"pais\": \"ARG\", \"usuario_id\": \"U001\", \"usuario_nombre\": \"Facundo\", \"contenido\": \"¡Vamos Argentina!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Partido inexistente (404)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-99/comentarios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-99",
+                "comentarios"
+              ],
+              "query": []
+            },
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idem_key}}-x"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"pais\": \"ARG\", \"usuario_id\": \"U001\", \"usuario_nombre\": \"Facundo\", \"contenido\": \"¡Vamos Argentina!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Redis",
+      "item": [
+        {
+          "name": "Sesión vigente (200)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sesiones/U001",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sesiones",
+                "U001"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sesión cerrada (404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sesiones/U002",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sesiones",
+                "U002"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sesión inexistente/expirada (404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sesiones/U999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sesiones",
+                "U999"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalidar sesión (204)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/sesiones/U003",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sesiones",
+                "U003"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 204', function () { pm.response.to.have.status(204); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalidar de nuevo, idempotente (204)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/sesiones/U003",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sesiones",
+                "U003"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 204', function () { pm.response.to.have.status(204); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Usuario inválido (422)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sesiones/u1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sesiones",
+                "u1"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "InfluxDB",
+      "item": [
+        {
+          "name": "Agregado 1m (200)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/estadisticas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "estadisticas"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2030-06-15T18:30:00Z"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2030-06-15T18:35:00Z"
+                },
+                {
+                  "key": "agregacion",
+                  "value": "1m"
+                }
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Raw truncado (200)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/estadisticas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "estadisticas"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2030-06-15T18:30:00Z"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2030-06-15T18:40:00Z"
+                },
+                {
+                  "key": "agregacion",
+                  "value": "raw"
+                }
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sin datos (200 vacío)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-05/estadisticas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-05",
+                "estadisticas"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2030-06-15T18:30:00Z"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2030-06-15T18:35:00Z"
+                }
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Fechas invertidas (422)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/estadisticas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "estadisticas"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2030-06-15T18:35:00Z"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2030-06-15T18:30:00Z"
+                }
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ventana demasiado ancha (422)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/estadisticas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "estadisticas"
+              ],
+              "query": [
+                {
+                  "key": "desde",
+                  "value": "2030-06-15T18:30:00Z"
+                },
+                {
+                  "key": "hasta",
+                  "value": "2030-06-15T22:30:00Z"
+                }
+              ]
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "IRIS",
+      "item": [
+        {
+          "name": "Detalle del partido (200)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/detalle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "detalle"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle inexistente (404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-99/detalle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-99",
+                "detalle"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transición válida (200)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-08/estado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-08",
+                "estado"
+              ],
+              "query": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estado\": \"En juego\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transición inválida (409)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-03/estado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-03",
+                "estado"
+              ],
+              "query": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estado\": \"Finalizado\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', function () { pm.response.to.have.status(409); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Estado fuera del dominio (422)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/estado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "estado"
+              ],
+              "query": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estado\": \"Suspendido\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
