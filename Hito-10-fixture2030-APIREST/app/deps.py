@@ -24,3 +24,14 @@ def get_neo4j() -> Neo4jAdapter:
 
 def get_partidos_service() -> PartidosService:
     return PartidosService(get_neo4j())
+from app.adapters.cassandra import CassandraAdapter  # noqa: E402
+from app.services.comentarios import ComentariosService  # noqa: E402
+
+
+@lru_cache
+def get_cassandra() -> CassandraAdapter:
+    return CassandraAdapter(get_settings())
+
+
+def get_comentarios_service() -> ComentariosService:
+    return ComentariosService(get_cassandra(), get_neo4j())

@@ -32,8 +32,9 @@ def create_app() -> FastAPI:
     app.middleware("http")(request_id_middleware)
     registrar_manejadores(app)
 
-    from app.routes import equipos, partidos_grafo
+    from app.routes import comentarios, equipos, partidos_grafo
 
     app.include_router(equipos.router)
     app.include_router(partidos_grafo.router)
+    app.include_router(comentarios.router)
     return app
