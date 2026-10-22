@@ -1,0 +1,15 @@
+HITO 11 — PRUEBAS DRIVER/PROTOCOLO Y LECTURAS MÍNIMAS
+timestamp_utc=2026-10-22T19:33:48Z
+sistema=Darwin 25.5.0 arm64
+git_commit=e5f3949
+Las salidas contienen status, duración y tipo de excepción solamente; no muestran mensajes con posibles secretos.
+origen=api-container (se usan los drivers y variables efectivos del servicio API)
+[OK] dependencia=mongodb driver=pymongo ping=OK lectura=OK operacion="database/colección equipos/documento codigo=ARG" resultado=database=presente coleccion_equipos=presente documento_ARG=presente duracion_ms=93.4
+[OK] dependencia=neo4j driver=neo4j ping=OK lectura=OK operacion="lectura parametrizada de partido P-01" resultado=lectura_ejecutada=si resultado=presente duracion_ms=646.4
+[OK] dependencia=cassandra driver=cassandra ping=OK lectura=OK operacion="SELECT limitado por partición P-01/ARG/18:30" resultado=filas=2 duracion_ms=305.6
+[OK] dependencia=redis driver=redis ping=OK lectura=OK operacion="PING + lectura U001 + EXISTS/TTL de la clave de demostración" resultado=clave=presente sesion_vigente=si ttl_raw=433 interpretacion_ttl=segundos_restantes duracion_ms=62.2
+[OK] dependencia=influxdb driver=httpx ping=OK lectura=OK operacion="consulta temporal P-01, 1 minuto, máximo 5 puntos" resultado=puntos=2 duracion_ms=284.2
+[OK] dependencia=iris driver=iris ping=OK lectura=OK operacion="lectura parametrizada Fixture.Partido P-01" resultado=lectura_ejecutada=si resultado=presente duracion_ms=263.5
+[OK] dependencia=influxdb prueba=HTTP_health path=/health status=200 duracion_ms=2.8
+[OK] dependencia=influxdb prueba=consulta_temporal status=200 autenticacion=aceptada contexto_db=fixture2030_metrics tabla=estadisticas_partido ventana_minutos=1 limite=5 filas=5 duracion_ms=13.0 conclusion=consulta_aceptada; cero_filas_es_valido
+RESUMEN total=8 fail=0 skip=0 ok=8

@@ -1,0 +1,47 @@
+configuracion=.env local presente (solo se leen claves de conexión permitidas; valores omitidos)
+HITO 11 — PRUEBA TCP
+config_MONGO_HOST=CONFIGURADA (valor omitido)
+config_MONGO_DB=CONFIGURADA (valor omitido)
+config_NEO4J_URI=CONFIGURADA (valor omitido)
+config_NEO4J_DB=CONFIGURADA (valor omitido)
+config_CASSANDRA_HOST=CONFIGURADA (valor omitido)
+config_CASSANDRA_KEYSPACE=CONFIGURADA (valor omitido)
+config_REDIS_HOST=CONFIGURADA (valor omitido)
+config_INFLUX_URL=CONFIGURADA (valor omitido)
+config_INFLUX_DB=CONFIGURADA (valor omitido)
+config_IRIS_HOST=CONFIGURADA (valor omitido)
+config_IRIS_NAMESPACE=CONFIGURADA (valor omitido)
+config_MONGO_PASSWORD=CONFIGURADA (valor omitido)
+config_NEO4J_PASSWORD=CONFIGURADA (valor omitido)
+config_REDIS_PASSWORD=CONFIGURADA (valor omitido)
+config_INFLUX_TOKEN=CONFIGURADA (valor omitido)
+config_IRIS_PASSWORD=CONFIGURADA (valor omitido)
+timestamp_utc=2026-10-22T19:33:46Z
+sistema=Darwin 25.5.0 arm64
+git_commit=e5f3949
+proyecto=Fixture2030-Hito10+11
+timeout_segundos=2
+origen_solicitado=auto
+Nota: TCP OK solo confirma un listener; no autentica ni ejecuta consultas.
+--- Origen: notebook (misma red que API local) ---
+[OK] origen=notebook dependencia=mongodb host_resuelto=SI direcciones=127.0.0.1,::1 puerto=27017 tcp=CONNECTED duracion_ms=209.2 conclusion=listener_accesible
+[OK] origen=notebook dependencia=neo4j-bolt host_resuelto=SI direcciones=127.0.0.1,::1 puerto=7687 tcp=CONNECTED duracion_ms=1.8 conclusion=listener_accesible
+[OK] origen=notebook dependencia=cassandra-cql host_resuelto=SI direcciones=127.0.0.1,::1 puerto=9042 tcp=CONNECTED duracion_ms=0.5 conclusion=listener_accesible
+[OK] origen=notebook dependencia=redis-resp host_resuelto=SI direcciones=127.0.0.1,::1 puerto=6379 tcp=CONNECTED duracion_ms=0.4 conclusion=listener_accesible
+[OK] origen=notebook dependencia=influx-http-listener host_resuelto=SI direcciones=127.0.0.1,::1 puerto=8181 tcp=CONNECTED duracion_ms=0.4 conclusion=listener_accesible
+[OK] origen=notebook dependencia=iris-superserver host_resuelto=SI direcciones=127.0.0.1,::1 puerto=1972 tcp=CONNECTED duracion_ms=0.4 conclusion=listener_accesible
+[OK] origen=notebook dependencia=neo4j-browser-http protocolo=HTTP path=/ host=localhost puerto=7474 http_status=200 duracion_ms=128.0 conclusion=servidor_http_responde_no_valida_login
+[OK] origen=notebook dependencia=iris-portal-http protocolo=HTTP path=/ host=localhost puerto=52773 http_status=404 duracion_ms=93.3 conclusion=servidor_http_responde_no_valida_login
+[OK] origen=notebook dependencia=influxdb-health-http protocolo=HTTP path=/health host=localhost puerto=8181 http_status=401 duracion_ms=25.3 conclusion=endpoint_alcanzable_autenticacion_requerida; se valida_con_token_en_clientes
+RESUMEN origen=notebook total=9 fail=0
+--- Origen: contenedor api (red interna Compose, puerto interno) ---
+[OK] origen=api-container dependencia=mongodb host_resuelto=SI host=mongodb puerto=27017 tcp=CONNECTED duracion_ms=7.2 conclusion=listener_accesible
+[OK] origen=api-container dependencia=neo4j-bolt host_resuelto=SI host=neo4j puerto=7687 tcp=CONNECTED duracion_ms=1.7 conclusion=listener_accesible
+[OK] origen=api-container dependencia=cassandra-cql host_resuelto=SI host=cassandra puerto=9042 tcp=CONNECTED duracion_ms=2.1 conclusion=listener_accesible
+[OK] origen=api-container dependencia=redis-resp host_resuelto=SI host=redis puerto=6379 tcp=CONNECTED duracion_ms=6.4 conclusion=listener_accesible
+[OK] origen=api-container dependencia=influx-http-listener host_resuelto=SI host=influxdb puerto=8181 tcp=CONNECTED duracion_ms=0.8 conclusion=listener_accesible
+[OK] origen=api-container dependencia=iris-superserver host_resuelto=SI host=iris puerto=1972 tcp=CONNECTED duracion_ms=0.4 conclusion=listener_accesible
+[OK] origen=api-container dependencia=neo4j-browser-http protocolo=HTTP path=/ host=neo4j puerto=7474 http_status=200 duracion_ms=49.5 conclusion=servidor_http_responde_no_valida_login
+[OK] origen=api-container dependencia=iris-portal-http protocolo=HTTP path=/ host=iris puerto=52773 http_status=404 duracion_ms=14.8 conclusion=servidor_http_responde_no_valida_login
+[OK] origen=api-container dependencia=influxdb-health-http protocolo=HTTP path=/health host=influxdb puerto=8181 http_status=401 duracion_ms=13.9 conclusion=endpoint_alcanzable_autenticacion_requerida; se valida_con_token_en_clientes
+RESUMEN origen=api-container total=9 fail=0

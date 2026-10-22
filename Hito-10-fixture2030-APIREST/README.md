@@ -70,3 +70,7 @@ docs/       documentación y evidencia/
 - La colección Postman usa `idem_key` fijo: la primera corrida de "Crear comentario" da 201 y las siguientes 200; cambiar la variable entre corridas completas.
 - Si Docker avisa `additional privileges requested: pass "--allow=fs.read=Dockerfile"` al construir la imagen, ejecutar antes `export BUILDX_BAKE_ENTITLEMENTS_FS=0`.
 - Todos los datos son sintéticos. Los marcadores de los partidos son simulados (`origen: SIMULADO`).
+
+## Hito 11 — Evaluación de conectividad
+
+La carpeta [`fixture2030-hito-11-conectividad/`](fixture2030-hito-11-conectividad/README.md) agrega el procedimiento reproducible para verificar resolución, TCP, drivers, rutas de la API, health/degradación y falla reversible de Redis. Ejecutar `bash fixture2030-hito-11-conectividad/scripts/evaluar_conectividad.sh todo` luego de iniciar las bases y la API.

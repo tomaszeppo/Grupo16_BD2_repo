@@ -1,0 +1,11 @@
+# Seguridad: no versionar configuración de ejecución ni secretos.
+.env
+.env.local
+.env.*.local
+*.secret
+*.token
+*.log
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/

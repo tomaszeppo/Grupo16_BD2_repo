@@ -1,0 +1,84 @@
+HITO 11 — PRUEBAS DE API
+timestamp_utc=2026-10-22T19:33:53Z
+sistema=Darwin 25.5.0 arm64
+git_commit=e5f3949
+base_url_configurada=SI (valor omitido para evitar filtrar una URI sensible)
+métodos=GET solamente en este modo; no modifica el dominio.
+[OK] caso="Health profundo de seis fuentes" method=GET path=/health status=200 esperado=200 politica=health duracion_s=0.354029 request_id=hito11-1792697633-1 correlacion=OK resumen="health=ok dependencias=mongodb:ok,neo4j:ok,cassandra:ok,redis:ok,influxdb:ok,iris:ok"
+[OK] caso="MongoDB equipo conocido" method=GET path=/equipos/ARG status=200 esperado=200 politica=exact duracion_s=0.027985 request_id=hito11-1792697634-2 correlacion=OK resumen="recurso=presente"
+[OK] caso="MongoDB jugadores paginados" method=GET path=/equipos/ARG/jugadores?limit=2&offset=0 status=200 esperado=200 politica=exact duracion_s=0.019644 request_id=hito11-1792697634-3 correlacion=OK resumen="items=2"
+[OK] caso="Neo4j partido" method=GET path=/partidos/P-01 status=200 esperado=200 politica=exact duracion_s=0.120775 request_id=hito11-1792697634-4 correlacion=OK resumen="json=valido"
+[OK] caso="Neo4j eventos limitados" method=GET path=/partidos/P-01/eventos?limit=5 status=200 esperado=200 politica=exact duracion_s=0.034705 request_id=hito11-1792697635-5 correlacion=OK resumen="items=3"
+[OK] caso="Cassandra comentarios por partición completa" method=GET path=/partidos/P-01/comentarios?pais=ARG&ventana=2030-06-15T18:30:00Z&limit=2 status=200 esperado=200 politica=exact duracion_s=0.043546 request_id=hito11-1792697635-6 correlacion=OK resumen="items=2"
+[OK] caso="Redis clave ausente: operación válida y diagnóstico 404" method=GET path=/sesiones/U999 status=404 esperado=404 politica=exact duracion_s=0.014446 request_id=hito11-1792697635-7 correlacion=OK resumen="error=SESION_NO_VIGENTE"
+[OK] caso="InfluxDB consulta temporal acotada" method=GET path=/partidos/P-01/estadisticas?desde=2030-06-15T18:30:00Z&hasta=2030-06-15T18:31:00Z&agregacion=1m&equipo=ARG status=200 esperado=200 politica=exact duracion_s=0.058339 request_id=hito11-1792697635-8 correlacion=OK resumen="puntos=2 truncado=False"
+[OK] caso="IRIS detalle de partido" method=GET path=/partidos/P-01/detalle status=200 esperado=200 politica=exact duracion_s=0.019353 request_id=hito11-1792697636-9 correlacion=OK resumen="estado=En juego"
+[OK] caso="Recurso Mongo inexistente" method=GET path=/equipos/ZZZ status=404 esperado=404 politica=exact duracion_s=0.007725 request_id=hito11-1792697636-10 correlacion=OK resumen="error=NO_ENCONTRADO"
+[OK] caso="Validación de código de equipo" method=GET path=/equipos/arg status=422 esperado=422 politica=exact duracion_s=0.015551 request_id=hito11-1792697636-11 correlacion=OK resumen="error=VALIDACION"
+[OK] caso="Partido inexistente en grafo" method=GET path=/partidos/P-99 status=404 esperado=404 politica=exact duracion_s=0.512632 request_id=hito11-1792697636-12 correlacion=OK resumen="error=NO_ENCONTRADO"
+[OK] caso="Partido existente sin eventos: vacío válido" method=GET path=/partidos/P-03/eventos status=200 esperado=200 politica=exact duracion_s=0.020247 request_id=hito11-1792697637-13 correlacion=OK resumen="items=0"
+[OK] caso="Ventana Influx sin puntos: vacío válido" method=GET path=/partidos/P-05/estadisticas?desde=2030-06-15T18:30:00Z&hasta=2030-06-15T18:35:00Z&agregacion=1m status=200 esperado=200 politica=exact duracion_s=0.046569 request_id=hito11-1792697637-14 correlacion=OK resumen="puntos=0 truncado=False"
+[OK] caso="Sesión U001 (puede haber expirado naturalmente)" method=GET path=/sesiones/U001 status=200 esperado=200 o 404 politica=either200404 duracion_s=0.006860 request_id=hito11-1792697637-15 correlacion=OK resumen="json=valido"
+--- Logs correlacionados por request ID (si API corre en Compose) ---
+api-1  | 2026-10-22 19:33:54,072 INFO fixture2030 request metodo=GET ruta=/health status=200 duracion_ms=282.7 request_id=hito11-1792697633-1
+api-1  | 2026-10-22 19:33:54,364 INFO fixture2030 dependencia=mongodb operacion=obtener_equipo resultado=ok causa=- duracion_ms=10.2 request_id=hito11-1792697634-2
+api-1  | 2026-10-22 19:33:54,365 INFO fixture2030 request metodo=GET ruta=/equipos/ARG status=200 duracion_ms=19.2 request_id=hito11-1792697634-2
+api-1  | 2026-10-22 19:33:54,658 INFO fixture2030 dependencia=mongodb operacion=obtener_equipo resultado=ok causa=- duracion_ms=1.2 request_id=hito11-1792697634-3
+api-1  | 2026-10-22 19:33:54,661 INFO fixture2030 dependencia=mongodb operacion=contar_jugadores resultado=ok causa=- duracion_ms=2.7 request_id=hito11-1792697634-3
+api-1  | 2026-10-22 19:33:54,662 INFO fixture2030 dependencia=mongodb operacion=listar_jugadores resultado=ok causa=- duracion_ms=1.1 request_id=hito11-1792697634-3
+api-1  | 2026-10-22 19:33:54,663 INFO fixture2030 request metodo=GET ruta=/equipos/ARG/jugadores status=200 duracion_ms=9.6 request_id=hito11-1792697634-3
+api-1  | 2026-10-22 19:33:55,170 INFO fixture2030 dependencia=neo4j operacion=obtener_partido resultado=ok causa=- duracion_ms=100.3 request_id=hito11-1792697634-4
+api-1  | 2026-10-22 19:33:55,176 INFO fixture2030 request metodo=GET ruta=/partidos/P-01 status=200 duracion_ms=107.0 request_id=hito11-1792697634-4
+api-1  | 2026-10-22 19:33:55,424 INFO fixture2030 dependencia=neo4j operacion=listar_eventos resultado=ok causa=- duracion_ms=20.3 request_id=hito11-1792697635-5
+api-1  | 2026-10-22 19:33:55,425 INFO fixture2030 request metodo=GET ruta=/partidos/P-01/eventos status=200 duracion_ms=25.9 request_id=hito11-1792697635-5
+api-1  | 2026-10-22 19:33:55,608 INFO fixture2030 dependencia=cassandra operacion=listar_comentarios resultado=ok causa=- duracion_ms=33.7 request_id=hito11-1792697635-6
+api-1  | 2026-10-22 19:33:55,609 INFO fixture2030 request metodo=GET ruta=/partidos/P-01/comentarios status=200 duracion_ms=36.8 request_id=hito11-1792697635-6
+api-1  | 2026-10-22 19:33:55,703 INFO fixture2030 dependencia=redis operacion=obtener_sesion resultado=ok causa=- duracion_ms=7.5 request_id=hito11-1792697635-7
+api-1  | 2026-10-22 19:33:55,705 INFO fixture2030 request metodo=GET ruta=/sesiones/U999 status=404 duracion_ms=10.2 request_id=hito11-1792697635-7
+api-1  | 2026-10-22 19:33:55,837 INFO fixture2030 dependencia=influxdb operacion=estadisticas_1m resultado=ok causa=- duracion_ms=50.6 request_id=hito11-1792697635-8
+api-1  | 2026-10-22 19:33:55,839 INFO fixture2030 request metodo=GET ruta=/partidos/P-01/estadisticas status=200 duracion_ms=55.6 request_id=hito11-1792697635-8
+api-1  | 2026-10-22 19:33:56,127 INFO fixture2030 dependencia=iris operacion=obtener_partido resultado=ok causa=- duracion_ms=6.8 request_id=hito11-1792697636-9
+api-1  | 2026-10-22 19:33:56,129 INFO fixture2030 request metodo=GET ruta=/partidos/P-01/detalle status=200 duracion_ms=11.6 request_id=hito11-1792697636-9
+api-1  | 2026-10-22 19:33:56,217 INFO fixture2030 dependencia=mongodb operacion=obtener_equipo resultado=ok causa=- duracion_ms=3.7 request_id=hito11-1792697636-10
+api-1  | 2026-10-22 19:33:56,217 INFO fixture2030 request metodo=GET ruta=/equipos/ZZZ status=404 duracion_ms=4.7 request_id=hito11-1792697636-10
+api-1  | 2026-10-22 19:33:56,327 INFO fixture2030 request metodo=GET ruta=/equipos/arg status=422 duracion_ms=3.8 request_id=hito11-1792697636-11
+api-1  | 2026-10-22 19:33:56,902 INFO fixture2030 dependencia=neo4j operacion=obtener_partido resultado=ok causa=- duracion_ms=505.3 request_id=hito11-1792697636-12
+api-1  | 2026-10-22 19:33:56,903 INFO fixture2030 request metodo=GET ruta=/partidos/P-99 status=404 duracion_ms=507.6 request_id=hito11-1792697636-12
+api-1  | 2026-10-22 19:33:57,049 INFO fixture2030 dependencia=neo4j operacion=listar_eventos resultado=ok causa=- duracion_ms=11.7 request_id=hito11-1792697637-13
+api-1  | 2026-10-22 19:33:57,050 INFO fixture2030 request metodo=GET ruta=/partidos/P-03/eventos status=200 duracion_ms=14.7 request_id=hito11-1792697637-13
+api-1  | 2026-10-22 19:33:57,160 INFO fixture2030 dependencia=influxdb operacion=estadisticas_1m resultado=ok causa=- duracion_ms=40.7 request_id=hito11-1792697637-14
+api-1  | 2026-10-22 19:33:57,161 INFO fixture2030 request metodo=GET ruta=/partidos/P-05/estadisticas status=200 duracion_ms=43.1 request_id=hito11-1792697637-14
+api-1  | 2026-10-22 19:33:57,222 INFO fixture2030 dependencia=redis operacion=obtener_sesion resultado=ok causa=- duracion_ms=1.4 request_id=hito11-1792697637-15
+api-1  | 2026-10-22 19:33:57,223 INFO fixture2030 request metodo=GET ruta=/sesiones/U001 status=200 duracion_ms=3.2 request_id=hito11-1792697637-15
+RESUMEN total=15 fail=0
+Interpretación general: 404/422 esperados son casos de contrato aprobados; Redis U999 404 prueba clave ausente, no caída. Si /health devuelve 503, revisar el cuerpo de la respuesta y los logs para identificar la dependencia afectada.
+HITO 11 — FALLA CONTROLADA Y RECUPERACIÓN REDIS
+timestamp_utc=2026-10-22T19:39:38Z
+sistema=Darwin 25.5.0 arm64
+git_commit=e5f3949
+Operación reversible: docker compose stop/start redis; no se eliminan bases ni volúmenes.
+ Container fixture2030-api-redis-1 Stopping 
+ Container fixture2030-api-redis-1 Stopped 
+[OK] Redis detenido temporalmente (sin eliminar el volumen).
+cuerpo_resumido=DEPENDENCIA_NO_DISPONIBLE
+[OK] Durante caída: GET /sesiones/U001 HTTP 503 error=DEPENDENCIA_NO_DISPONIBLE duracion_s=0.369693 request_id=hito11-fallo-redis-1792697982 correlacion=OK.
+RECUPERACIÓN: levantando Redis sin tocar volúmenes
+ Container fixture2030-api-redis-1 Starting 
+ Container fixture2030-api-redis-1 Started 
+[OK] Redis volvió a responder PONG.
+[OK] Después de recuperar: GET /health HTTP 200 duracion_s=0.306016 request_id=hito11-redis-recuperado-1792697983 correlacion=OK.
+HITO 11 — FALLA CONTROLADA Y RECUPERACIÓN REDIS
+timestamp_utc=2026-10-22T19:48:46Z
+sistema=Darwin 25.5.0 arm64
+git_commit=e5f3949
+Operación reversible: docker compose stop/start redis; no se eliminan bases ni volúmenes.
+ Container fixture2030-api-redis-1 Stopping 
+ Container fixture2030-api-redis-1 Stopped 
+[OK] Redis detenido temporalmente (sin eliminar el volumen).
+cuerpo_resumido=DEPENDENCIA_NO_DISPONIBLE
+[OK] Durante caída: GET /sesiones/U001 HTTP 503 error=DEPENDENCIA_NO_DISPONIBLE duracion_s=0.260502 request_id=hito11-fallo-redis-1792698529 correlacion=OK.
+RECUPERACIÓN: levantando Redis sin tocar volúmenes
+ Container fixture2030-api-redis-1 Starting 
+ Container fixture2030-api-redis-1 Started 
+[OK] Redis volvió a responder PONG.
+[OK] Después de recuperar: GET /health HTTP 200 duracion_s=0.151616 request_id=hito11-redis-recuperado-1792698530 correlacion=OK.
