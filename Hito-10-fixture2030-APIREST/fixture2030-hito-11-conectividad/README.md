@@ -79,6 +79,10 @@ El Hito 10 ya contiene evidencia histórica real, fechada el 16/10/2026, de `/he
 
 El resultado 401 de InfluxDB corresponde únicamente a la prueba HTTP sin token. El health check autenticado y la consulta temporal fueron aceptados en la prueba de clientes. Estas verificaciones no miden capacidad de carga masiva.
 
+## Correcciones
+
+La devolución del profesor y lo que falta completar están en [docs/correcciones.md](docs/correcciones.md).
+
 ## GitHub
 
 Agregar esta carpeta al repositorio existente del equipo y registrar la evolución con un commit:

@@ -51,6 +51,7 @@ API REST (FastAPI) que expone los seis módulos NoSQL del Fixture 2030 —MongoD
 | [docs/conectividad_y_configuracion.md](docs/conectividad_y_configuracion.md) | Variables, hosts y puertos (notebook vs. Docker), timeouts |
 | [docs/pruebas_y_evidencia.md](docs/pruebas_y_evidencia.md) | Pruebas, evidencia, seguridad, rendimiento y coherencia con el TPO |
 | [docs/cambios_en_las_bases.md](docs/cambios_en_las_bases.md) | Qué se agregó o cambió en cada base respecto de los hitos anteriores |
+| [docs/correcciones.md](docs/correcciones.md) | Devolución del profesor y puntos a tener en cuenta |
 
 ## Estructura
 
