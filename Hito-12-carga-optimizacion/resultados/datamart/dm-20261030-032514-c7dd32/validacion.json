@@ -1,0 +1,30 @@
+{
+  "inicio_extraccion_utc": "2026-10-30T06:25:15.623730+00:00",
+  "fuente": "Cassandra fixture2030.comentarios_por_partido",
+  "keyspace": "fixture2030",
+  "partido": "H12-manual-B-20261030-025822-9dff16",
+  "registro_sha256": "df5076a596be4a64774286fbc7e83042ede222013f7ef05d29b4b60650022216",
+  "script_sha256": "c84145b58548d0c0143fd5a8f461f081139c2e2041d9397da37a5b849662b625",
+  "modo": "Solo SELECT en fuente; nueva proyeccion local; sin datos individuales de usuarios",
+  "supuestos": "Corrida de laboratorio cerrada, sin escrituras concurrentes; no es snapshot distribuido",
+  "estado": "VALIDADO",
+  "fin_extraccion_utc": "2026-10-30T06:25:16.897056+00:00",
+  "filas_fuente": 50000,
+  "filas_proyeccion": 1,
+  "conteos_por_bucket": {
+    "0": 3847,
+    "1": 3847,
+    "2": 3846,
+    "3": 3846,
+    "4": 3846,
+    "5": 3846,
+    "6": 3846,
+    "7": 3846,
+    "8": 3846,
+    "9": 3846,
+    "10": 3846,
+    "11": 3846,
+    "12": 3846
+  },
+  "sqlite_sha256": "44a715a339ebdf6b48380dda7183e9736ef662c6694a6893f92d5fc96b2102e7"
+}

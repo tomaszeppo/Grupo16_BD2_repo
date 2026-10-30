@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+# Los originales locales se conservan. Se versiona su copia gzip verificada.
+resultados/**/*.operaciones.p*.jsonl

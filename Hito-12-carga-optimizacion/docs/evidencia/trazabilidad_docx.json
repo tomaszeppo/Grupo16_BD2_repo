@@ -1,0 +1,69 @@
+{
+  "documento": "Evidencia Hito 12.docx",
+  "sha256": "2c6c553c12ccec6ec68ec7185950eac7b4a5227266078a373308c99afe706956",
+  "imagenes": [
+    {
+      "bloque_docx": 28,
+      "archivo": "captura_docx_01.png",
+      "sha256": "ae5c9dd1d60af77676206f66aa6a84774077c2bde930e9f1fa42d0aafb67f0cf"
+    },
+    {
+      "bloque_docx": 29,
+      "archivo": "captura_docx_02.png",
+      "sha256": "9a7fbdc13b7f78f645f36c6b6672f60ad04895be010be998490aeea4b50383cb"
+    },
+    {
+      "bloque_docx": 42,
+      "archivo": "captura_docx_03.png",
+      "sha256": "2de3c4eab7d74e97a014f96871f420f7c84301f46b81fd38c821ac10a6c4aea4"
+    },
+    {
+      "bloque_docx": 43,
+      "archivo": "captura_docx_04.png",
+      "sha256": "7c30f2389ec108cb21b8905bf5ee2a80eb12913031aa293d632650e2a3da4cfe"
+    },
+    {
+      "bloque_docx": 45,
+      "archivo": "captura_docx_05.png",
+      "sha256": "4f21bda094e782f4fe4c9007b0c6fd29de9b08199bbb102a63177a5142335762"
+    },
+    {
+      "bloque_docx": 68,
+      "archivo": "captura_docx_06.png",
+      "sha256": "14964095efd558cbe5a38523ee4b7ac2c9933b2919b3dacc90c572e9df0f8802"
+    },
+    {
+      "bloque_docx": 69,
+      "archivo": "captura_docx_07.png",
+      "sha256": "0eb45eb3117e2d173d8561bb50e85301ad6e00eaed3797dbb8c012bc65bff001"
+    },
+    {
+      "bloque_docx": 107,
+      "archivo": "captura_docx_08.png",
+      "sha256": "3e272f54ef056ae1c5676c171151ebbf1433b8f1fbfe79dacaeaf04f68b0060d"
+    }
+  ],
+  "secciones": {
+    "flujo_y_escenario_de_carga.md": [
+      3,
+      39
+    ],
+    "linea_base.md": [
+      40,
+      48
+    ],
+    "hipotesis_y_optimizacion.md": [
+      50,
+      79
+    ],
+    "comparacion_relacional.md": [
+      81,
+      84
+    ],
+    "integracion_data_mart.md": [
+      87,
+      107
+    ]
+  },
+  "original_preservado": true
+}

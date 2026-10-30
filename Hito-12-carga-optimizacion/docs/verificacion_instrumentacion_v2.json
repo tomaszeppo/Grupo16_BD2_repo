@@ -1,0 +1,14 @@
+{
+  "version": "2.0-instrumentado",
+  "validacion": "7 verificaciones unitarias aisladas con futuros falsos, mas lectura del driver instalado y parseo Python 3.12",
+  "prueba_cassandra_ejecutada": false,
+  "inserciones_ejecutadas_por_esta_actualizacion": 0,
+  "version_anterior_conservada": "docs/versiones/pre_instrumentacion",
+  "archivos": {
+    "carga/prueba_rendimiento.py": "1f079cf0dd0772adce7605744c60348382493811438ae47485e78ba3e33ea3ca",
+    "carga/metricas_operaciones.py": "562a4831b62f5a325c28efff665f61230f4f21c01800c6169ab4751668c8b4b4",
+    "carga/verificar_escrituras.py": "69d89f195d3ab382e033a238bd39223946519df34ef5960149c6b2b79624d7e4",
+    "scripts/registrar_base.py": "aadaf444c40ac0da24de2359fa11644f5a781d296366ea02e9f0e14461436585"
+  },
+  "pendiente": "Ejecucion conjunta real y captura de recursos, luego verificacion de persistencia"
+}

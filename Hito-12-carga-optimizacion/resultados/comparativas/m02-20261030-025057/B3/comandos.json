@@ -1,0 +1,32 @@
+{
+  "benchmark": [
+    "docker",
+    "run",
+    "--pull=never",
+    "--name",
+    "h12-m02-b3-20261030-025057",
+    "--network",
+    "fixture2030-cassandra_default",
+    "--mount",
+    "type=bind,source=C:\\Users\\Juani\\Documents\\ChatGPT\\DB 2\\Grupo16_BD2_repo\\Hito-12-carga-optimizacion,target=/h12",
+    "--workdir",
+    "/h12",
+    "--entrypoint",
+    "python",
+    "sha256:1ce4be69b147fab61c55c3431fdf13bbd8edd06a51932b0c7a5360b8ea4861e3",
+    "versiones/v2.2_candidata_paralelo/carga/prueba_rendimiento.py",
+    "--perfil",
+    "B",
+    "--host",
+    "fixture2030-cassandra",
+    "--puerto",
+    "9042",
+    "--keyspace",
+    "fixture2030",
+    "--partido-prueba",
+    "H12-m02-B3-20261030-025057",
+    "--salida",
+    "/h12/resultados/comparativas/m02-20261030-025057/B3/escrituras.jsonl",
+    "--confirmar-escrituras"
+  ]
+}

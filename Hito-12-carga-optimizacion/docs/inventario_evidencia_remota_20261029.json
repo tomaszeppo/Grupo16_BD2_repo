@@ -1,0 +1,441 @@
+[
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-10-fixture2030-APIREST/docs/evidencia/20261016_120555_endpoints.txt",
+    "bytes": 10398,
+    "sha256": "dfea526ad3413541811cfb2f09ec851b203b2e75ed45827a883388d3481e282c"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-10-fixture2030-APIREST/docs/evidencia/20261016_120557_dependencia_caida.txt",
+    "bytes": 1061,
+    "sha256": "ac946948864896bcd31bd516aa7cd6c3f1526958b356f94275aac8d708bed9eb"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-10-fixture2030-APIREST/docs/evidencia/20261016_120557_latencia.txt",
+    "bytes": 893,
+    "sha256": "b4803d31cc17d00a58443214a76f2ee7e904981db5e9367a3e16db01774c3fb8"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-10-fixture2030-APIREST/docs/evidencia/20261016_120557_logs_api.txt",
+    "bytes": 3890,
+    "sha256": "9582f2cbfd4f43d62315047935d1e09cf331f1ce879134a6d4053cffba4d3e46"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-10-fixture2030-APIREST/docs/evidencia/20261016_135303_newman.txt",
+    "bytes": 9879,
+    "sha256": "3ca15959d3220a6c721f7a4ad9337ee5cd20ce97b8c11b9ae371666cb78e9c5f"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-10-fixture2030-APIREST/fixture2030-hito-11-conectividad/docs/evidencia/Screenshots Hito 11.pdf",
+    "bytes": 2869288,
+    "sha256": "702043ed0a4031efd617bd236600265f4f625b8f7622b86c5fc77669ab931bb8",
+    "paginas": 6,
+    "caracteres_texto_por_pagina": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-10-fixture2030-APIREST/fixture2030-hito-11-conectividad/docs/evidencia/capturas_redactadas/.gitkeep",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-10-fixture2030-APIREST/fixture2030-hito-11-conectividad/docs/evidencia/resultados_api.txt",
+    "bytes": 10570,
+    "sha256": "30689f462e5a826dd7601f6de84448f503ff734199804a8c069f9b71fb7ad44c"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-10-fixture2030-APIREST/fixture2030-hito-11-conectividad/docs/evidencia/resultados_clientes.txt",
+    "bytes": 1822,
+    "sha256": "7d963294cf90661654113635d2726c82e8b14a9434b365d6e3d2a1ae5c6d5d72"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-10-fixture2030-APIREST/fixture2030-hito-11-conectividad/docs/evidencia/resultados_tcp.txt",
+    "bytes": 4408,
+    "sha256": "b2fbc5330a1b742a87fb6ebb6f74aafc535c857fc21fe903c7809381300dd0ec"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-4-fixture2030-mongodb/documentacion/Pruebas.pdf",
+    "bytes": 2313411,
+    "sha256": "99b9cf516592a0484f9a445c04d5012c99dd3fb55642db961edc316422a4ff4a",
+    "paginas": 5,
+    "caracteres_texto_por_pagina": [
+      96,
+      42,
+      329,
+      987,
+      82
+    ]
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-5-fixture2030-neo4j/docs/evidencia/Capturas Hito 5.pdf",
+    "bytes": 2400499,
+    "sha256": "1635a311a917031b6c09cd127d0e49c5989e57bc8b90335e06d1384547c9ab8c",
+    "paginas": 7,
+    "caracteres_texto_por_pagina": [
+      66,
+      85,
+      0,
+      20,
+      74,
+      152,
+      55
+    ]
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-6-fixture2030-cassandra/EVIDENCIA.pdf",
+    "bytes": 182975,
+    "sha256": "d85eff0d5cdcee602c450df9e9c889b5b4021c6149fa80abe0f5585bf6648fd2",
+    "paginas": 3,
+    "caracteres_texto_por_pagina": [
+      176,
+      82,
+      36
+    ]
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-7-fixture2030-redis/docs/evidencia/Evidencia - Screenshots.pdf",
+    "bytes": 2953203,
+    "sha256": "5bfb3a082b6680f4582173b89359da653d7d0200328d0ccc71d276ac6a3be41f",
+    "paginas": 8,
+    "caracteres_texto_por_pagina": [
+      54,
+      90,
+      18,
+      65,
+      0,
+      0,
+      54,
+      0
+    ]
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-7-fixture2030-redis/docs/evidencia/README.md",
+    "bytes": 898,
+    "sha256": "f5634c495b45b3e4dc1d25f7905e28e6563388feac34e3b11f03c16f439413ee"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-8-fixture2030-influxdb/docs/evidencia/README.md",
+    "bytes": 297,
+    "sha256": "efabc812476c268075a5c7b388bc87dbf7bf4c3e6ca8b748750d5838114fe3b4"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-8-fixture2030-influxdb/docs/evidencia/evidencias-influxdb.pdf",
+    "bytes": 4478983,
+    "sha256": "71c1250f1be5af2786f7bf9fe55d5a8f1ed5d879ac5a37121f7546d1ce067dcb",
+    "paginas": 9,
+    "caracteres_texto_por_pagina": [
+      141,
+      37,
+      47,
+      22,
+      13,
+      61,
+      25,
+      61,
+      18
+    ]
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-9-fixture2030-iris-objetos/docs/evidencia/demo_20261009_172348.txt",
+    "bytes": 1456,
+    "sha256": "493fa2e33da224679034dc6de26aa72c88b318c49ed9666b38933c196e305256"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-9-fixture2030-iris-objetos/docs/evidencia/evidencia-iris.pdf",
+    "bytes": 2983997,
+    "sha256": "fd041af47996ad19b65320693396a4e302a4ef53d1bf1213e7f28035e73217fa",
+    "paginas": 8,
+    "caracteres_texto_por_pagina": [
+      38,
+      0,
+      57,
+      0,
+      37,
+      0,
+      0,
+      41
+    ]
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-9-fixture2030-iris-objetos/docs/evidencia/rf5_required.txt",
+    "bytes": 695,
+    "sha256": "8c3531a43ff2dca48b2b42fd22f7fd385a021abe3719a27e3a44b4449d35a002"
+  },
+  {
+    "rama": "origin/main",
+    "ruta": "Hito-9-fixture2030-iris-objetos/docs/evidencia/rf6_rf7_arbol.txt",
+    "bytes": 963,
+    "sha256": "ebae84ccc6a462d3a35d2ad6d2129ec1dd8d63af2930da59fba918deccc70053"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-4-fixture2030-mongodb/docs/evidencia/01_arranque_y_carga_inicial.txt",
+    "bytes": 849,
+    "sha256": "e29e5f763d26cc68134d8c9c79ed84b34885edd1f2053a6e33ddf0c4d460f7f1"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-4-fixture2030-mongodb/docs/evidencia/02_recarga_segunda_ejecucion.txt",
+    "bytes": 330,
+    "sha256": "bff498b204efd8ad77d009402d693f90a4e7bc328a46e6e426824b8922fd5029"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-4-fixture2030-mongodb/docs/evidencia/03_consultas_y_agregaciones.txt",
+    "bytes": 7027,
+    "sha256": "7f1c53dcee2127438d62b3c799e213264a278613573320072498160bb8b767a5"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-4-fixture2030-mongodb/docs/evidencia/04_explain_collscan_vs_ixscan.txt",
+    "bytes": 838,
+    "sha256": "227d2f1010c8f93a00347bdff7baf491203ccbf8e495331aeb2cc646e1bed109"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-4-fixture2030-mongodb/docs/evidencia/05_inserciones_y_actualizaciones.txt",
+    "bytes": 751,
+    "sha256": "633a4013f86cd147efbc917e29f4f9b94a88cd2b0247529aa53531d114382675"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-4-fixture2030-mongodb/docs/evidencia/06_idempotencia_y_unicidad.txt",
+    "bytes": 974,
+    "sha256": "b1366653ec145824cdc9bd9713431c9ccf09546a255a7cf026474fd8592645aa"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-5-fixture2030-neo4j/docs/evidencia/01_estructura_constraints_indices.txt",
+    "bytes": 1927,
+    "sha256": "da43a894aa002deb78adb9b9e8efcc548cee9faaa67bb98cb4e47a08ad558fd4"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-5-fixture2030-neo4j/docs/evidencia/02_carga_primera_vez.txt",
+    "bytes": 285,
+    "sha256": "b3986fd544b86f036332876f34d652e74e3989c7cadf88c264089829003ae089"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-5-fixture2030-neo4j/docs/evidencia/03_carga_segunda_vez_idempotencia.txt",
+    "bytes": 306,
+    "sha256": "a8761e8ffbe261feee986844af707a12d814869489fc79dc411aec84b67421a9"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-5-fixture2030-neo4j/docs/evidencia/04_crud.txt",
+    "bytes": 637,
+    "sha256": "63c6d2d8838a8297d7838ff721793c2c6b61d8f50720d982c903ab0339081647"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-5-fixture2030-neo4j/docs/evidencia/05_recarga_no_pisa_crud.txt",
+    "bytes": 415,
+    "sha256": "348a7ac9fdc1c0a157929fdc81baf386e36fcf14a21e0e05c64e3d390facd58e"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-5-fixture2030-neo4j/docs/evidencia/06_consultas_grafo.txt",
+    "bytes": 1251,
+    "sha256": "46d5a963b3e8b66469b1714a81953fbce992edd7be336f28f8620dd2d48cca5d"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-5-fixture2030-neo4j/docs/evidencia/CAPTURAS_PENDIENTES.md",
+    "bytes": 924,
+    "sha256": "69736ab5cd4c88eae0d429e4e4204b921a510ec4e03dc4f17c84e09d9cc69914"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-6-fixture2030-cassandra/docs/evidencia/01_ambiente_y_version.txt",
+    "bytes": 607,
+    "sha256": "01cf4b9d1bd653d4e45d0fb8dc4e74f74cc3f99d0beffa73e5e664405b169827"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-6-fixture2030-cassandra/docs/evidencia/02_esquema.txt",
+    "bytes": 3631,
+    "sha256": "491e34dd7b5f45ebae21a934e77176c8c0428de19738fbbeb1a44b58dafa9176"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-6-fixture2030-cassandra/docs/evidencia/03_carga_muestra_idempotencia.txt",
+    "bytes": 1580,
+    "sha256": "6411f4113afaec918bac294e65b833d67f7295b8f20c5e2e9777bd2a2d063996"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-6-fixture2030-cassandra/docs/evidencia/04_consultas.txt",
+    "bytes": 4181,
+    "sha256": "a1cb8e98403eb8c271398484331c81402d155d74ac2515c13bdbf509a0226d1f"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-6-fixture2030-cassandra/docs/evidencia/05_crud.txt",
+    "bytes": 5558,
+    "sha256": "f7c1ea1c325b1b1aacd424609c36a24281a8f0fb045cddaa73d7a008bf274824"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-6-fixture2030-cassandra/docs/evidencia/06_generacion.txt",
+    "bytes": 626,
+    "sha256": "e8870ba7897ab73c1788144364f5118916259a5ce49bb50e292f9e6f84b3c83c"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-6-fixture2030-cassandra/docs/evidencia/06b_reproducibilidad_generador.txt",
+    "bytes": 868,
+    "sha256": "22d5121327ec89ef57504c8df0f49d978a4add48cdf1de7bd675d6681782578b"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-6-fixture2030-cassandra/docs/evidencia/07_carga_copy_primera_vez.txt",
+    "bytes": 204826,
+    "sha256": "27ad931c9847255c6d9c098009667779e304758557cadf68ac62a669e4c98b84"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-7-fixture2030-redis/docs/evidencia/01_arranque.txt",
+    "bytes": 1242,
+    "sha256": "dc7754acceeceba50b21eccb029b3b474aa80e31d3334974f5a2a173115774ee"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-7-fixture2030-redis/docs/evidencia/02_carga_muestra_repetida.txt",
+    "bytes": 932,
+    "sha256": "ebecc39bfcf6cfa01b87cc3d44007ae2b03d6f4a3a733c5991f8dbb30fcae9af"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-7-fixture2030-redis/docs/evidencia/03_sesiones.txt",
+    "bytes": 568,
+    "sha256": "55eaf4b0b81e2b979aa08bb7560857978a79889965c7fcc741ee9ea09f95a16e"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-7-fixture2030-redis/docs/evidencia/04_cache.txt",
+    "bytes": 719,
+    "sha256": "1e1686ef7b6f429ff140f88d9b4796e2a79eb5f04833ac388a5c1db8d2126fd9"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-7-fixture2030-redis/docs/evidencia/05_concurrencia_comandos.txt",
+    "bytes": 482,
+    "sha256": "a8d4fca4eb200bb58b9466a368e97ed2b84b0752666465b86b38191e263a6f3b"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-7-fixture2030-redis/docs/evidencia/06_metricas.txt",
+    "bytes": 2499,
+    "sha256": "1155b521471093cc2ede4a8b85ff90a7444a16fdd39535d96e8afab3bc771eb5"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-7-fixture2030-redis/docs/evidencia/07_prueba_concurrencia.txt",
+    "bytes": 642,
+    "sha256": "2a1a1353d001bb2817fb38a8e924b31256cd08c69cfb13d318a643b2d87401a0"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-7-fixture2030-redis/docs/evidencia/08_hit_rate.txt",
+    "bytes": 584,
+    "sha256": "912a54710af948f97954ff4531afe14f6d61b667811e2748a37d2989e8d334f2"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-7-fixture2030-redis/docs/evidencia/09_rendimiento.txt",
+    "bytes": 741,
+    "sha256": "2a1384acf44b5de517866fd33037a74b6228f5b04c93d697182b1a296e7e03f6"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-7-fixture2030-redis/docs/evidencia/10_limpieza.txt",
+    "bytes": 193,
+    "sha256": "7de7eb14d13f309c370665f19f219bc6b2b9468f66f52e105630a3dbfef3f85b"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-8-fixture2030-influxdb/docs/evidencia/README.md",
+    "bytes": 297,
+    "sha256": "efabc812476c268075a5c7b388bc87dbf7bf4c3e6ca8b748750d5838114fe3b4"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-8-fixture2030-influxdb/docs/evidencia/evidencias-influxdb.pdf",
+    "bytes": 4478983,
+    "sha256": "71c1250f1be5af2786f7bf9fe55d5a8f1ed5d879ac5a37121f7546d1ce067dcb",
+    "paginas": 9,
+    "caracteres_texto_por_pagina": [
+      141,
+      37,
+      47,
+      22,
+      13,
+      61,
+      25,
+      61,
+      18
+    ]
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-9-fixture2030-iris/docs/evidencia/cascada_borrado.txt",
+    "bytes": 246,
+    "sha256": "83f511eebecf259ca05a9ad25ee92878e6248b46a0aee3c50c52b1e554076eb1"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-9-fixture2030-iris/docs/evidencia/compilacion.txt",
+    "bytes": 1393,
+    "sha256": "9a9f321f5b0d39734afaf791e675cb3cfc77997d640c152c5707c5cd41257d7d"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-9-fixture2030-iris/docs/evidencia/consultas_sql.txt",
+    "bytes": 807,
+    "sha256": "55ad294453d7661c864ae45bd34b70792e99a0f7a4df342968373d899dd46c8d"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "Hito-9-fixture2030-iris/docs/evidencia/demos_objetos.txt",
+    "bytes": 748,
+    "sha256": "50a52b3a519cf26b56979006f5cf59ab95ff5b5f027b11d7f10488b0d67827a1"
+  },
+  {
+    "rama": "origin/correcciones",
+    "ruta": "descartado/Hito-6-fixture2030-cassandra/EVIDENCIA.pdf",
+    "bytes": 182975,
+    "sha256": "d85eff0d5cdcee602c450df9e9c889b5b4021c6149fa80abe0f5585bf6648fd2",
+    "paginas": 3,
+    "caracteres_texto_por_pagina": [
+      176,
+      82,
+      36
+    ]
+  }
+]

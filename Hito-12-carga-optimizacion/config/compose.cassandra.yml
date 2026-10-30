@@ -1,0 +1,19 @@
+services:
+  cassandra:
+    image: cassandra:5.0
+    container_name: fixture2030-cassandra
+    volumes:
+      - h12_cassandra:/var/lib/cassandra
+    networks:
+      - laboratorio
+    healthcheck:
+      test: ["CMD", "cqlsh", "-e", "SELECT release_version FROM system.local;"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+volumes:
+  h12_cassandra:
+networks:
+  laboratorio:
+    name: fixture2030-cassandra_default

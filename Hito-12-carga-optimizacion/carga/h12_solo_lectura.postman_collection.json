@@ -1,0 +1,186 @@
+{
+  "info": {
+    "name": "H12 - Inspección de laboratorio, solo GET",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Preparada, no ejecutada. Perfil H10 P-NN. No sustituye un generador de carga ni la integración final de H5."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    }
+  ],
+  "item": [
+    {
+      "name": "GET /health",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Request ID presente\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /partidos/P-01",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/partidos/P-01"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Request ID presente\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /partidos/P-02",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/partidos/P-02"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Request ID presente\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /partidos/P-03",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/partidos/P-03"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Request ID presente\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /partidos/P-04",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/partidos/P-04"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Request ID presente\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /partidos/P-05",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/partidos/P-05"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Request ID presente\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /partidos/P-06",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/partidos/P-06"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Request ID presente\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /partidos/P-07",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/partidos/P-07"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Request ID presente\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "GET /partidos/P-08",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/partidos/P-08"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Request ID presente\", () => pm.expect(pm.response.headers.get(\"X-Request-ID\")).to.be.a(\"string\"));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

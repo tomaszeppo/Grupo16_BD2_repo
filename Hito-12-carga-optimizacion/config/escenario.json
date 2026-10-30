@@ -1,0 +1,115 @@
+{
+  "estado": "PROPUESTA_NO_EJECUTADA",
+  "origen": "arquitectura-hito-12.html; parámetros propuestos por el equipo",
+  "operacion": "GET /partidos/{id}",
+  "herramienta_propuesta": "Locust",
+  "semilla": 16,
+  "perfiles": {
+    "laboratorio_h10": {
+      "ids": [
+        "P-01",
+        "P-02",
+        "P-03",
+        "P-04",
+        "P-05",
+        "P-06",
+        "P-07",
+        "P-08"
+      ],
+      "popular": "P-01",
+      "uso": "exploración; no reemplaza integración final de los módulos"
+    },
+    "h12_reutilizacion_h5_main": {
+      "ids": [
+        "P001",
+        "P002",
+        "P003",
+        "P004",
+        "P005",
+        "P006",
+        "P007",
+        "P008",
+        "P009",
+        "P010",
+        "P011",
+        "P012",
+        "P013",
+        "P014",
+        "P015",
+        "P016",
+        "P017",
+        "P018",
+        "P019",
+        "P020",
+        "P021",
+        "P022",
+        "P023",
+        "P024",
+        "P025",
+        "P026",
+        "P027",
+        "P028",
+        "P029",
+        "P030",
+        "P031",
+        "P032"
+      ],
+      "popular": "P001",
+      "habilitado": false,
+      "bloqueo": "Elegir modelo/destino y adaptar regex/adaptador; los datos solo están en archivos"
+    }
+  },
+  "distribucion": {
+    "popular": 0.8,
+    "otros_excluyendo_popular": 0.2
+  },
+  "usuarios": [
+    5,
+    15,
+    30
+  ],
+  "rampa_segundos": 30,
+  "calentamiento_segundos": 30,
+  "medicion_segundos": 120,
+  "repeticiones_por_nivel_y_version": 3,
+  "versiones": [
+    "base",
+    "optimizado"
+  ],
+  "total_corridas_planeadas": 18,
+  "cache_propuesta": {
+    "autoridad": "Neo4j",
+    "ttl_segundos": 15,
+    "namespace": "f2030:h12:cache:partido:v1:",
+    "implementada": false
+  },
+  "cortes_propuestos_no_automatizados": {
+    "errores_porcentaje_mayor_que": 5,
+    "errores_ventana_segundos": 30,
+    "memoria_host_porcentaje_mayor_que": 85,
+    "memoria_sostenida_segundos": 30,
+    "intervencion_manual": true
+  },
+  "metricas": [
+    "requests_totales",
+    "responses_validas",
+    "errores_por_tipo",
+    "rps",
+    "p50_ms",
+    "p95_ms",
+    "p99_ms",
+    "api_duracion",
+    "adaptador_duracion",
+    "neo4j_consultas",
+    "redis_hits_misses_evictions_memoria",
+    "cpu_memoria_red_disco_host_contenedores_cliente",
+    "integridad_respuestas"
+  ],
+  "condiciones": [
+    "Mismo dataset por hash y configuración entre versiones",
+    "No incluir rampa/calentamiento en percentiles medidos",
+    "Registrar commit, diff local, imágenes/digests y límites reales",
+    "Identificar contenedores ajenos que compiten por recursos",
+    "No iniciar carga hasta revisar la línea base y criterios de corte"
+  ]
+}

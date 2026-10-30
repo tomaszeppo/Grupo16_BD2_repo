@@ -1,0 +1,3 @@
+# Conservar bytes de fuentes, snapshots y evidencia identificados por SHA-256.
+# Evita que autocrlf cambie los hashes al clonar o publicar desde Windows.
+* -text

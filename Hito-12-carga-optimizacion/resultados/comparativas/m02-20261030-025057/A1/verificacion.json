@@ -1,0 +1,93 @@
+{
+  "fecha_utc": "2026-10-30T05:51:21.859609+00:00",
+  "modo": "solo_lectura",
+  "partido_prueba": "H12-m02-A1-20261030-025057",
+  "keyspace": "fixture2030",
+  "esperados": 50000,
+  "guardados": 50000,
+  "coincide": true,
+  "particiones": [
+    {
+      "bucket": 0,
+      "esperados": 3847,
+      "guardados": 3847,
+      "coincide": true
+    },
+    {
+      "bucket": 1,
+      "esperados": 3847,
+      "guardados": 3847,
+      "coincide": true
+    },
+    {
+      "bucket": 2,
+      "esperados": 3846,
+      "guardados": 3846,
+      "coincide": true
+    },
+    {
+      "bucket": 3,
+      "esperados": 3846,
+      "guardados": 3846,
+      "coincide": true
+    },
+    {
+      "bucket": 4,
+      "esperados": 3846,
+      "guardados": 3846,
+      "coincide": true
+    },
+    {
+      "bucket": 5,
+      "esperados": 3846,
+      "guardados": 3846,
+      "coincide": true
+    },
+    {
+      "bucket": 6,
+      "esperados": 3846,
+      "guardados": 3846,
+      "coincide": true
+    },
+    {
+      "bucket": 7,
+      "esperados": 3846,
+      "guardados": 3846,
+      "coincide": true
+    },
+    {
+      "bucket": 8,
+      "esperados": 3846,
+      "guardados": 3846,
+      "coincide": true
+    },
+    {
+      "bucket": 9,
+      "esperados": 3846,
+      "guardados": 3846,
+      "coincide": true
+    },
+    {
+      "bucket": 10,
+      "esperados": 3846,
+      "guardados": 3846,
+      "coincide": true
+    },
+    {
+      "bucket": 11,
+      "esperados": 3846,
+      "guardados": 3846,
+      "coincide": true
+    },
+    {
+      "bucket": 12,
+      "esperados": 3846,
+      "guardados": 3846,
+      "coincide": true
+    }
+  ],
+  "confirmadas_cliente": 50000,
+  "sin_confirmacion_cliente": 0,
+  "resultado_cliente_disponible": true,
+  "criterio_completo_cumplido": true
+}

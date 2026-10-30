@@ -1,0 +1,80 @@
+{
+  "version_experimento": "v2.2_candidata_paralelo",
+  "estado": "IMPLEMENTADA_NO_MEDIDA",
+  "instrumentacion": "2.0-instrumentado",
+  "hipotesis_previa_sha256": "f811c6ef8cd0d24f3a8666b84a0891e7a16b8163e80f4543e6d33b7b62be81c8",
+  "referencia": "../v2.0_base",
+  "manifiesto_base_sha256": "c21e6f8f37c675611efda52cf20a859707eebb0869aeadedf8351c34846e381d",
+  "ambiente_referencia": {
+    "imagen_cliente": "sha256:1ce4be69b147fab61c55c3431fdf13bbd8edd06a51932b0c7a5360b8ea4861e3",
+    "driver": {
+      "version": "3.30.1",
+      "protocolo": 5,
+      "consistencia": 10,
+      "retry_policy": "RetryPolicy",
+      "timeout_s": 10,
+      "paginador": "execute_concurrent_with_args",
+      "raise_on_first_error": false
+    }
+  },
+  "carga_real_ejecutada": false,
+  "pruebas_offline_aprobadas": 9,
+  "archivos": [
+    {
+      "ruta": "carga/metricas_operaciones.py",
+      "sha256": "562a4831b62f5a325c28efff665f61230f4f21c01800c6169ab4751668c8b4b4"
+    },
+    {
+      "ruta": "carga/perfil_paralelo.py",
+      "sha256": "387fb2d1a3a4c4f1d7cb079e6c56504b483b8bd03aa639501145cdfbe343368a"
+    },
+    {
+      "ruta": "carga/prueba_rendimiento.py",
+      "sha256": "03c2fe2c542631629f7f2e676a305475bd35ca15f124d2c1d01ce4a011842972"
+    },
+    {
+      "ruta": "carga/requirements.txt",
+      "sha256": "44d78f420c0f9f84be26642aaf2947eaf0073d994f8fdcff870992f3cb9b8161"
+    },
+    {
+      "ruta": "carga/verificar_escrituras.py",
+      "sha256": "69d89f195d3ab382e033a238bd39223946519df34ef5960149c6b2b79624d7e4"
+    },
+    {
+      "ruta": "config/escenario_escritura_simple.json",
+      "sha256": "766c9c75eed132d05ad5988ab5b5c7387a4258fe0d9819c1d9080be9a5e0b18f"
+    },
+    {
+      "ruta": "docs/diff_M02.patch",
+      "sha256": "646985fdd148e5975069f15b5c99e9d50314bd15a0caeb425a7e718e38fa842e"
+    },
+    {
+      "ruta": "docs/preparacion_M02.py.txt",
+      "sha256": "6c5ab70c37bb79586b60b7af8c29b68e9948a85f43bb068883143866b38c72b4"
+    },
+    {
+      "ruta": "docs/registro_modificacion_M02.json",
+      "sha256": "8f7d05a6cd7cbb6e41ff28893e9b388d9d1535823dd5ecc2124237fea5763058"
+    },
+    {
+      "ruta": "docs/registro_modificacion_M02.md",
+      "sha256": "a72e56995e9ccb468c2d16e30d5d6a51ce997e6ac9401736944edd56bc840ab9"
+    },
+    {
+      "ruta": "README.md",
+      "sha256": "5e640f739151b93ef4364630194cad43060c6a2e1fb485b96b9b35f38676d1cd"
+    },
+    {
+      "ruta": "scripts/esquema_comentarios_h6.cql",
+      "sha256": "d0385701f27fe5077d090fb8f3b2b043fb249720a8c4ec5f69fb759f2d0450c8"
+    },
+    {
+      "ruta": "scripts/registrar_base.py",
+      "sha256": "3f067ebde2622a4fe16026243f588af29bd72b3d0afc4a3b742c72e369eca602"
+    },
+    {
+      "ruta": "tests/test_paralelismo.py",
+      "sha256": "fe3c3291d457bd6adf3c50ed43638b988290cff652902425d3c018bc08a738cf"
+    }
+  ]
+}

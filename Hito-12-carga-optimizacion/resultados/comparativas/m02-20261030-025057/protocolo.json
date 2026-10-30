@@ -1,0 +1,28 @@
+{
+  "fecha_utc": "2026-10-30T05:50:57.157910+00:00",
+  "version": "v2.2_candidata_paralelo",
+  "orden": [
+    "A1",
+    "B1",
+    "B2",
+    "A2",
+    "A3",
+    "B3"
+  ],
+  "filas_por_corrida": 50000,
+  "escrituras_planeadas": 300000,
+  "imagen_cliente": "sha256:1ce4be69b147fab61c55c3431fdf13bbd8edd06a51932b0c7a5360b8ea4861e3",
+  "concurrencia_total": 100,
+  "hipotesis_previa_sha256": "f811c6ef8cd0d24f3a8666b84a0891e7a16b8163e80f4543e6d33b7b62be81c8",
+  "manifiesto_version_sha256": "4dab2ef50ef53f98f1e6e28cb83c383c97c13431515433f9a40ee04cfcf610f8",
+  "ejecutor_sha256": "2eeeab1ff4988199fa591594bcabf4649ee80c210190da6a22faf07bfdcef677",
+  "criterios": {
+    "throughput_mediano_mejora_min_pct": 10,
+    "p99_mediano_regresion_max_pct": 5,
+    "parejas_mejor_throughput_min": 2,
+    "cero_errores_y_persistencia_completa": true
+  },
+  "conservacion": "Sin borrado de datos, contenedores ni resultados",
+  "pausa_entre_corridas_s": 10,
+  "calentamiento_separado": false
+}

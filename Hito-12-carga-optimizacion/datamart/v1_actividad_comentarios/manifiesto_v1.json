@@ -1,0 +1,36 @@
+{
+  "version": "v1_actividad_comentarios",
+  "estado": "PROPUESTA_Y_DEMO_PREPARADAS_NO_EXTRAIDAS",
+  "pruebas_offline_aprobadas": 4,
+  "carga_o_extraccion_real_ejecutada_por_asistente": false,
+  "archivos": [
+    {
+      "ruta_desde_h12": "datamart/v1_actividad_comentarios/consultar_proyeccion.py",
+      "sha256": "da438e5dbfc67cadff435754d3d24fde89c4d01fcdb891a707553c5d3c0be760"
+    },
+    {
+      "ruta_desde_h12": "datamart/v1_actividad_comentarios/proyectar_comentarios.py",
+      "sha256": "c84145b58548d0c0143fd5a8f461f081139c2e2041d9397da37a5b849662b625"
+    },
+    {
+      "ruta_desde_h12": "datamart/v1_actividad_comentarios/test_proyeccion.py",
+      "sha256": "a0c2f7ea9390d2599c23037b4ff2b7e7c0fd1e41040ecd7a6ae20cbeb2c6ad0e"
+    },
+    {
+      "ruta_desde_h12": "datamart/v1_actividad_comentarios/consultas.sql",
+      "sha256": "65644f7c4474f72c85f076c5d5acbe7f69085e3615a6e69ab96c51c56a81dbb5"
+    },
+    {
+      "ruta_desde_h12": "datamart/v1_actividad_comentarios/README.md",
+      "sha256": "c7b2722352d05a132b19a67b7edbba9ae05047b361e2c64145bccd7f685bd841"
+    },
+    {
+      "ruta_desde_h12": "docs/integracion_data_mart.md",
+      "sha256": "9db31b4728af25b90962619f7c093c8701df57e081fe021ff12d9ce7633c772f"
+    },
+    {
+      "ruta_desde_h12": "scripts/demostrar_data_mart.ps1",
+      "sha256": "8a38379e7057894d4e01d81d14575ed77710fd1c2608bdded4acfd759b8da2a5"
+    }
+  ]
+}

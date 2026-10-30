@@ -1,0 +1,51 @@
+[
+  {
+    "rama": "origin/correcciones",
+    "commit": "27f28e164c988706d260b42990abdb370c1525d9",
+    "ruta_original": "Hito-6-fixture2030-cassandra/scripts/generar_carga_masiva.py",
+    "destino_h12": "scripts/generar_carga_masiva.py",
+    "sha256_original": "8788d507973ff220cd5836491ec8fa5ae462fa8c3fe0aa530d55159d3920507d",
+    "sha256_copia_adaptada": "eface2919d1f8368e813bedaf692d696a9624b66fe3f24eebcfa7da1911da842",
+    "adaptaciones": [
+      "Salida nueva sin sobrescritura",
+      "Manifiesto y hashes",
+      "Sin comandos automaticos de importacion"
+    ],
+    "ejecutado_en_preparacion": false
+  },
+  {
+    "rama": "origin/correcciones",
+    "commit": "27f28e164c988706d260b42990abdb370c1525d9",
+    "ruta_original": "Hito-6-fixture2030-cassandra/scripts/prueba_rendimiento.py",
+    "destino_h12": "carga/prueba_rendimiento.py",
+    "sha256_original": "405b3a5bfe4f749a8e3359f0aaaee9508936651f822e32ab41f20d038ca4ee8a",
+    "sha256_copia_adaptada": "1f079cf0dd0772adce7605744c60348382493811438ae47485e78ba3e33ea3ca",
+    "adaptaciones": [
+      "Retirada limpieza automatica",
+      "Confirmacion explicita de escritura",
+      "Preflight de particiones H12",
+      "Salida JSONL nueva y conservacion de datos",
+      "Latencias por callback y muestras individuales",
+      "Errores por tipo sin fail-fast",
+      "Serie por segundo y dos ventanas de throughput",
+      "Versiones y politica del driver observadas",
+      "Confirmadas, inconclusas y no intentadas separadas"
+    ],
+    "ejecutado_en_preparacion": false,
+    "version_adaptacion": "2.0-instrumentado"
+  },
+  {
+    "rama": "origin/main",
+    "commit": "f0b228ea6f747fd81b5dc89b30604a0f5ae6319a",
+    "ruta_original": "Hito-10-fixture2030-APIREST/scripts/medir_latencia.py",
+    "destino_h12": "carga/medir_latencia.py",
+    "sha256_original": "959bfe46941cdec35ae484e14d46744bd27869f5ae7652413eb0eaae2c94fc80",
+    "sha256_copia_adaptada": "624d74ed5814fefa8512529d2b63c268b5c98c2c7d918e97d0f6127c9a9fc9e1",
+    "adaptaciones": [
+      "Enfoque GET comentarios",
+      "Parametros CLI sin destino personal fijo",
+      "Muestras y percentiles en JSON nuevo"
+    ],
+    "ejecutado_en_preparacion": false
+  }
+]

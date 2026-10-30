@@ -1,0 +1,18 @@
+{
+  "modulo": "H6 Cassandra, tabla comentarios_por_partido",
+  "host_docker": "fixture2030-cassandra",
+  "puerto_interno": 9042,
+  "keyspace": "fixture2030",
+  "red": "fixture2030-cassandra_default",
+  "filas": 50000,
+  "buckets": 13,
+  "usuarios": 5000,
+  "semilla": 2030,
+  "A": {"procesos": 1, "concurrencia_por_proceso": 100},
+  "B": {"procesos": 2, "concurrencia_por_proceso": 50},
+  "timeout_segundos": 10,
+  "rampa_segundos": 0,
+  "calentamiento_separado": false,
+  "conservacion": "Sin borrado ni reutilizacion de particiones o archivos",
+  "nota": "Ejemplo sin secretos. El perfil ejecutable y los hashes se conservan en versiones/v2.2_candidata_paralelo."
+}

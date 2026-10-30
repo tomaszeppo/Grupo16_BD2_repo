@@ -1,0 +1,45 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261030025852
+Username: DESKTOP-7C11R1M\Juani
+RunAs User: DESKTOP-7C11R1M\Juani
+Configuration Name: 
+Machine: DESKTOP-7C11R1M (Microsoft Windows NT 10.0.26100.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 17304
+PSVersion: 5.1.26100.9711
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9711
+BuildVersion: 10.0.26100.9711
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started, output file is C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\resultados\optimizado\manual-B-20261030-025822-9dff16\consola_carga.txt
+Corrida: manual-B-20261030-025822-9dff16 | Perfil B | Filas: 50000 | Procesos: 2 | Concurrencia total: 100
+sha256:1ce4be69b147fab61c55c3431fdf13bbd8edd06a51932b0c7a5360b8ea4861e3
+Entorno guardado en C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\resultados\optimizado\manual-B-20261030-025822-9dff16\entorno.json
+Experimento v2.2_candidata_paralelo; medidor 2.0-instrumentado
+Insertando 50000 filas con concurrencia 50 por proceso y 2 proceso(s)...
+
+=== Resultado ===
+Fecha de ejecucion (UTC): 2026-10-30T05:59:02.087969+00:00
+Filas exitosas: 50000 / 50000 (fallidas: 0)
+Intentadas: 50000 | Con resultado: 50000 | Inconclusas: 0
+No intentadas: 0; errores de fase: 0
+Tiempo de carga: 6.136s | Cliente total: 7.011s
+Tasa obtenida: 8149 escrituras/seg
+Concurrencia por proceso: 50 | procesos: 2
+Pico observado por proceso: [50, 50]
+Python: 3.12.16 - SO: Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.41
+Latencias Todas (ms): min=1.251 | promedio=12.178 | p50=7.957 | p95=15.991 | p99=112.338 | max=1049.573
+Latencias Confirmadas (ms): min=1.251 | promedio=12.178 | p50=7.957 | p95=15.991 | p99=112.338 | max=1049.573
+Tasa de error: 0.000% | Tipos: {}
+Una operacion sin confirmacion puede haber persistido: verificar conteos despues.
+Datos conservados en H12-manual-B-20261030-025822-9dff16; evidencia en el archivo indicado por --salida.
+Saca una captura del resumen. Luego ejecuta 03_VERIFICAR.
+**********************
+Windows PowerShell transcript end
+End time: 20261030025902
+**********************

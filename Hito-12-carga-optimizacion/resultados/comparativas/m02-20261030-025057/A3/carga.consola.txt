@@ -1,0 +1,18 @@
+Experimento v2.2_candidata_paralelo; medidor 2.0-instrumentado
+Insertando 50000 filas con concurrencia 100 por proceso y 1 proceso(s)...
+
+=== Resultado ===
+Fecha de ejecucion (UTC): 2026-10-30T05:53:02.973681+00:00
+Filas exitosas: 50000 / 50000 (fallidas: 0)
+Intentadas: 50000 | Con resultado: 50000 | Inconclusas: 0
+No intentadas: 0; errores de fase: 0
+Tiempo de carga: 7.297s | Cliente total: 8.385s
+Tasa obtenida: 6852 escrituras/seg
+Concurrencia por proceso: 100 | procesos: 1
+Pico observado por proceso: [100]
+Python: 3.12.16 - SO: Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.41
+Latencias Todas (ms): min=3.063 | promedio=14.491 | p50=10.604 | p95=17.300 | p99=158.093 | max=386.607
+Latencias Confirmadas (ms): min=3.063 | promedio=14.491 | p50=10.604 | p95=17.300 | p99=158.093 | max=386.607
+Tasa de error: 0.000% | Tipos: {}
+Una operacion sin confirmacion puede haber persistido: verificar conteos despues.
+Datos conservados en H12-m02-A3-20261030-025057; evidencia en el archivo indicado por --salida.

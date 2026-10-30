@@ -1,0 +1,84 @@
+{
+  "version_experimento": "v2.1_candidata_c50",
+  "estado": "IMPLEMENTADA_NO_MEDIDA",
+  "instrumentacion": "2.0-instrumentado",
+  "referencia": "../v2.0_base",
+  "manifiesto_base_sha256": "c21e6f8f37c675611efda52cf20a859707eebb0869aeadedf8351c34846e381d",
+  "hipotesis_previa": "../../docs/hipotesis_previa_optimizacion.md",
+  "protocolo_previo_sha256": "f16d746859efaebd1e534548c85017f718cc8a3e8f5c5ef76ea43d87e19d1bac",
+  "archivos_funcionales_diferentes": [
+    "carga/prueba_rendimiento.py",
+    "config/escenario_escritura_simple.json"
+  ],
+  "ambiente_referencia": {
+    "imagen_cliente": "sha256:1ce4be69b147fab61c55c3431fdf13bbd8edd06a51932b0c7a5360b8ea4861e3",
+    "imagen_cassandra": "sha256:da9dad3aaf67c4e5126c6aafa769460d75f27c1716951c48896ff5c4e97d2af3",
+    "driver": {
+      "version": "3.30.1",
+      "protocolo": 5,
+      "consistencia": 10,
+      "retry_policy": "RetryPolicy",
+      "timeout_s": 10,
+      "paginador": "execute_concurrent_with_args",
+      "raise_on_first_error": false
+    }
+  },
+  "prueba_carga_ejecutada": false,
+  "verificaciones_aisladas_aprobadas": 6,
+  "resultado_rendimiento_candidata": null,
+  "decision_final": "Pendiente",
+  "archivos": [
+    {
+      "ruta": "carga/metricas_operaciones.py",
+      "sha256": "562a4831b62f5a325c28efff665f61230f4f21c01800c6169ab4751668c8b4b4"
+    },
+    {
+      "ruta": "carga/prueba_rendimiento.py",
+      "sha256": "7c464ba74a08c396d7ffa69c5e034ed1e843ecd53145a6010a602d72be601d57"
+    },
+    {
+      "ruta": "carga/requirements.txt",
+      "sha256": "44d78f420c0f9f84be26642aaf2947eaf0073d994f8fdcff870992f3cb9b8161"
+    },
+    {
+      "ruta": "carga/verificar_escrituras.py",
+      "sha256": "69d89f195d3ab382e033a238bd39223946519df34ef5960149c6b2b79624d7e4"
+    },
+    {
+      "ruta": "config/escenario_escritura_simple.json",
+      "sha256": "0cacb3ef7115ba344d921fdfc93eab171ed6462145459892f9cc6be99bc4a619"
+    },
+    {
+      "ruta": "docs/diff_M01.patch",
+      "sha256": "c50d55cac1a594219e19255ec4867eddc2ab61a85d46eaccc9c0a967de001b72"
+    },
+    {
+      "ruta": "docs/protocolo_previo_RF7.json",
+      "sha256": "f16d746859efaebd1e534548c85017f718cc8a3e8f5c5ef76ea43d87e19d1bac"
+    },
+    {
+      "ruta": "docs/registro_modificacion_M01.json",
+      "sha256": "cce97a37146d4e5ca775e907592a245ef66df62eec51353b724ec5371c673713"
+    },
+    {
+      "ruta": "docs/registro_modificacion_M01.md",
+      "sha256": "6d7fb0ba9e09d056fa32c2147576bbe9fea02972e805f3dbf9d521af977aa13b"
+    },
+    {
+      "ruta": "README.md",
+      "sha256": "f546791dcc540d084fe566c54585fa69b1cffb2cf787784678a1a1ecd46b32f0"
+    },
+    {
+      "ruta": "scripts/esquema_comentarios_h6.cql",
+      "sha256": "d0385701f27fe5077d090fb8f3b2b043fb249720a8c4ec5f69fb759f2d0450c8"
+    },
+    {
+      "ruta": "scripts/registrar_base.py",
+      "sha256": "aadaf444c40ac0da24de2359fa11644f5a781d296366ea02e9f0e14461436585"
+    },
+    {
+      "ruta": "tests/test_candidata_aislada.py",
+      "sha256": "15d0eeade42fded8881098f0b2479270d5ed0b7d3d43d5e5adcee3cfd857a31d"
+    }
+  ]
+}

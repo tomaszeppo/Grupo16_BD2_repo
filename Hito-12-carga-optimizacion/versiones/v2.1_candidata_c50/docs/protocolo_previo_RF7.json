@@ -1,0 +1,69 @@
+{
+  "estado": "HIPOTESIS_Y_PROTOCOLO_PROPUESTOS_NO_EJECUTADOS",
+  "requisitos": [
+    "RF7",
+    "5.5 Optimizacion"
+  ],
+  "hipotesis": "La concurrencia 100 de un cliente de un proceso puede contribuir a presion y cola de latencias. Reducir a 50 podria mejorar p99 sin perder mas del 5% de throughput",
+  "base_exploratoria": "base-20261030-002022",
+  "version_benchmark_comun": "2.0-instrumentado",
+  "parametros_comunes": {
+    "rows": 50000,
+    "procesos": 1,
+    "semilla": 2030,
+    "usuarios": 5000,
+    "particiones": 13,
+    "rampa_segundos": 0,
+    "calentamiento_separado": false,
+    "timeout_s": 10,
+    "instrumentacion_y_monitor": "Identicos en todas las corridas"
+  },
+  "A": {
+    "concurrencia_por_proceso": 100
+  },
+  "B": {
+    "concurrencia_por_proceso": 50
+  },
+  "unica_variable_experimental": "Concurrencia por proceso",
+  "repeticiones_propuestas_por_condicion": 3,
+  "orden_propuesto": [
+    "A1",
+    "B1",
+    "B2",
+    "A2",
+    "A3",
+    "B3"
+  ],
+  "escrituras_nuevas_planeadas": 300000,
+  "criterios_propuestos_no_impuestos_por_profesor": {
+    "integridad_y_cero_errores": true,
+    "reduccion_minima_mediana_p99_porcentaje": 20,
+    "throughput_mediano_B_minimo_relativo_A": 0.95,
+    "parejas_con_p99_menor_en_B_minimo": 2
+  },
+  "conservar": "Datos, imagenes, codigo, limites, esquema, driver, retry policy y metrica de tiempo",
+  "cambia_solo_identificador_necesario": "ID H12 exclusivo, de igual longitud, para no sobrescribir datos de otra corrida",
+  "riesgos": [
+    "Perdida de throughput",
+    "Variacion temporal y del entorno",
+    "Crecimiento de tabla y archivos por conservar datos",
+    "Pocas muestras en corridas cortas",
+    "No distingue por si solo cliente de servidor"
+  ],
+  "archivos_control": [
+    "docs/RF7_analisis_y_prueba.md",
+    "config/prueba_RF7_concurrencia.json"
+  ],
+  "cambio_aplicado": false,
+  "carga_ejecutada_por_este_protocolo": false,
+  "resultado_B": null,
+  "decision_final": "Pendiente; no hay mejora demostrada",
+  "documento_evaluacion": "docs/hipotesis_previa_optimizacion.md",
+  "regla_versionado": "Toda modificacion futura se realiza en una version nueva; no sobrescribir historico",
+  "versiones_experimento": {
+    "A": "versiones/v2.0_base/",
+    "B_propuesta": "versiones/v2.1_candidata_c50/",
+    "B_creada": false
+  },
+  "manifiesto_referencia": "versiones/v2.0_base/manifiesto_version.json"
+}

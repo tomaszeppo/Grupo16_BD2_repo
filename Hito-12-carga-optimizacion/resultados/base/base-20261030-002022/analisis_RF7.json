@@ -1,0 +1,139 @@
+{
+  "requisito": "RF7",
+  "fecha_analisis": "2026-10-30",
+  "corrida": "base-20261030-002022",
+  "archivos_fuente_sha256": {
+    "entorno_instrumentado.json": "1b03bb0b27dfcd5b51b07fcb240e5109ffe798bed5814df5d795bc0f9dba688d",
+    "escrituras.jsonl": "c5a262f0696846158c5a875d54e8a0f79746e11c50e57426bffacdd714355b91",
+    "escrituras.operaciones.p00.jsonl": "08c5f1fe78904dcbc58ff06617c94f56e708fc5b42b5db5d725040b06c9dac07",
+    "recursos.jsonl": "357beee4e4113dfd52fc1864029435d92dfbf48a1550627e5713bdf296b9750b",
+    "verificacion.json": "4cf45795966aaa0ca87d8ab624c6a5c32b21e0afc26d968ab2fd1ed3f165b7a8"
+  },
+  "benchmark_sha256": "1f079cf0dd0772adce7605744c60348382493811438ae47485e78ba3e33ea3ca",
+  "mediciones_base": {
+    "exitosas": 50000,
+    "fallidas": 0,
+    "segundos_carga": 7.985478869,
+    "escrituras_por_segundo": 6261.365263153138,
+    "latencia_confirmadas_ms": {
+      "n": 50000,
+      "min": 3.042199,
+      "promedio": 15.869563204659999,
+      "p50": 11.042243,
+      "p95": 18.159006,
+      "p99": 172.385016,
+      "max": 438.622782
+    }
+  },
+  "persistencia_cumplida": true,
+  "operaciones_mayor_100ms": 900,
+  "porcentaje_mayor_100ms": 1.8,
+  "intervalos_por_fase_carga": [
+    {
+      "segundo": 0,
+      "confirmadas": 5596,
+      "mayor_100ms": 100,
+      "p99_ms": 139.002956,
+      "max_ms": 172.385016
+    },
+    {
+      "segundo": 1,
+      "confirmadas": 6799,
+      "mayor_100ms": 100,
+      "p99_ms": 104.41724,
+      "max_ms": 112.885999
+    },
+    {
+      "segundo": 2,
+      "confirmadas": 5889,
+      "mayor_100ms": 200,
+      "p99_ms": 165.78799,
+      "max_ms": 172.081479
+    },
+    {
+      "segundo": 3,
+      "confirmadas": 7050,
+      "mayor_100ms": 100,
+      "p99_ms": 214.298495,
+      "max_ms": 222.869071
+    },
+    {
+      "segundo": 4,
+      "confirmadas": 6313,
+      "mayor_100ms": 100,
+      "p99_ms": 259.222404,
+      "max_ms": 267.413926
+    },
+    {
+      "segundo": 5,
+      "confirmadas": 6936,
+      "mayor_100ms": 100,
+      "p99_ms": 282.709351,
+      "max_ms": 289.52972
+    },
+    {
+      "segundo": 6,
+      "confirmadas": 6535,
+      "mayor_100ms": 100,
+      "p99_ms": 338.620503,
+      "max_ms": 344.157694
+    },
+    {
+      "segundo": 7,
+      "confirmadas": 4882,
+      "mayor_100ms": 100,
+      "p99_ms": 434.965337,
+      "max_ms": 438.622782
+    }
+  ],
+  "muestras_recursos_utiles": [
+    {
+      "inicio": "2026-10-30T04:35:15.119684+00:00",
+      "fin": "2026-10-30T04:35:16.633538+00:00",
+      "cpu_host_pct": 32.60658914728682,
+      "cpu_cliente_pct_docker": 80.33,
+      "ram_cliente": "76.6MiB / 7.287GiB",
+      "cpu_cassandra_pct_docker": 398.28,
+      "ram_cassandra": "4.497GiB / 7.287GiB"
+    },
+    {
+      "inicio": "2026-10-30T04:35:17.119780+00:00",
+      "fin": "2026-10-30T04:35:18.645792+00:00",
+      "cpu_host_pct": 36.77325581395349,
+      "cpu_cliente_pct_docker": 91.77,
+      "ram_cliente": "143.8MiB / 7.287GiB",
+      "cpu_cassandra_pct_docker": 346.78,
+      "ram_cassandra": "4.513GiB / 7.287GiB"
+    },
+    {
+      "inicio": "2026-10-30T04:35:19.119976+00:00",
+      "fin": "2026-10-30T04:35:20.655058+00:00",
+      "cpu_host_pct": 36.42578125,
+      "cpu_cliente_pct_docker": 98.68,
+      "ram_cliente": "221.4MiB / 7.287GiB",
+      "cpu_cassandra_pct_docker": 261.36,
+      "ram_cassandra": "4.515GiB / 7.287GiB"
+    },
+    {
+      "inicio": "2026-10-30T04:35:21.120457+00:00",
+      "fin": "2026-10-30T04:35:22.691291+00:00",
+      "cpu_host_pct": 32.01335877862596,
+      "cpu_cliente_pct_docker": 98.07,
+      "ram_cliente": "299.9MiB / 7.287GiB",
+      "cpu_cassandra_pct_docker": 183.73,
+      "ram_cassandra": "4.51GiB / 7.287GiB"
+    }
+  ],
+  "muestras_excluidas": [
+    {
+      "inicio": "2026-10-30T04:35:23.120647+00:00",
+      "fin": "2026-10-30T04:35:29.463793+00:00",
+      "motivo": "Cliente sin procesos/recursos durante salida; ventana no representa actividad sostenida"
+    }
+  ],
+  "criterio_muestra_util": "Cliente running con PIDs > 0; ventanas observadas se superponen con la carga",
+  "limitacion_posible": "Cliente de un proceso con 100 operaciones en curso puede contribuir a la cola de latencias",
+  "hipotesis_confirmada": false,
+  "prueba_propuesta": "Comparar concurrencia 100 vs 50, un proceso y 50000 filas, mismas condiciones, con repeticiones",
+  "estado": "ANALISIS_OBSERVACIONAL_Y_PRUEBA_PROPUESTA; no hay medicion del perfil B"
+}

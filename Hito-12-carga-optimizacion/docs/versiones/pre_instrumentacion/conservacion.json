@@ -1,0 +1,17 @@
+[
+  {
+    "original": "carga/prueba_rendimiento.py",
+    "copia": "prueba_rendimiento_v1.py.txt",
+    "sha256": "a368781ec47e020a660ae4df0ff34bbce0015987fedc113158218bd5c82869ee"
+  },
+  {
+    "original": "config/escenario_escritura_simple.json",
+    "copia": "escenario_escritura_simple_v1.json",
+    "sha256": "5cae4b2e1be656dbb80b5e3a92ab506d6b434bf032f7b74c13cddf60bbdbcf51"
+  },
+  {
+    "original": "docs/procedencia_scripts_carga.json",
+    "copia": "procedencia_scripts_carga_v1.json",
+    "sha256": "27add1eee40fbd89016b7a74e42da44af13b9bd260ed57dcfbc11c43a3d07291"
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "estado": "PREPARACION_VALIDADA_NO_INSERTADA",
+  "datos_reproducibles_byte_a_byte": true,
+  "archivos_lote_incluyendo_manifiesto": 12,
+  "rechazo_salida_existente_sin_sobrescribir": true,
+  "validaciones": "JSON, hashes, UUID, referencias, ventanas, conteos y estructura HTML",
+  "postman_solo_lectura_requests": 9,
+  "archivos_previos_versionados_modificados": 0,
+  "archivos_previos_versionados_faltantes": 0,
+  "bases_modificadas_en_esta_preparacion": false,
+  "carga_concurrente_ejecutada": false,
+  "cache_implementada": false,
+  "paso_h12": "1 de 6 en curso"
+}

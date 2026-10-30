@@ -1,0 +1,42 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261030025909
+Username: DESKTOP-7C11R1M\Juani
+RunAs User: DESKTOP-7C11R1M\Juani
+Configuration Name: 
+Machine: DESKTOP-7C11R1M (Microsoft Windows NT 10.0.26100.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 17304
+PSVersion: 5.1.26100.9711
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9711
+BuildVersion: 10.0.26100.9711
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started, output file is C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\resultados\optimizado\manual-B-20261030-025822-9dff16\consola_verificacion.txt
+Verificacion de solo lectura: H12-manual-B-20261030-025822-9dff16
+Bucket | Esperados | Guardados | Coincide
+     0 |      3847 |      3847 | SI
+     1 |      3847 |      3847 | SI
+     2 |      3846 |      3846 | SI
+     3 |      3846 |      3846 | SI
+     4 |      3846 |      3846 | SI
+     5 |      3846 |      3846 | SI
+     6 |      3846 |      3846 | SI
+     7 |      3846 |      3846 | SI
+     8 |      3846 |      3846 | SI
+     9 |      3846 |      3846 | SI
+    10 |      3846 |      3846 | SI
+    11 |      3846 |      3846 | SI
+    12 |      3846 |      3846 | SI
+Total esperado: 50000 | Total guardado: 50000
+RESULTADO: COINCIDE
+Criterio completo (confirmaciones y persistencia): CUMPLIDO
+Saca una captura de los conteos. Evidencia: C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\resultados\optimizado\manual-B-20261030-025822-9dff16
+**********************
+Windows PowerShell transcript end
+End time: 20261030025910
+**********************

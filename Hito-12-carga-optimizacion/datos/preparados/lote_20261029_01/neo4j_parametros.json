@@ -1,0 +1,312 @@
+{
+  "partidos": [
+    {
+      "id": "P001",
+      "equipoLocal": "ARG",
+      "equipoVisitante": "BRA",
+      "estadio": "EST001",
+      "fecha": "2030-06-15",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P002",
+      "equipoLocal": "ESP",
+      "equipoVisitante": "FRA",
+      "estadio": "EST002",
+      "fecha": "2030-06-15",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P003",
+      "equipoLocal": "GER",
+      "equipoVisitante": "ENG",
+      "estadio": "EST003",
+      "fecha": "2030-06-15",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P004",
+      "equipoLocal": "ITA",
+      "equipoVisitante": "POR",
+      "estadio": "EST004",
+      "fecha": "2030-06-15",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P005",
+      "equipoLocal": "NED",
+      "equipoVisitante": "BEL",
+      "estadio": "EST005",
+      "fecha": "2030-06-16",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P006",
+      "equipoLocal": "CRO",
+      "equipoVisitante": "URU",
+      "estadio": "EST006",
+      "fecha": "2030-06-16",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P007",
+      "equipoLocal": "MEX",
+      "equipoVisitante": "USA",
+      "estadio": "EST007",
+      "fecha": "2030-06-16",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P008",
+      "equipoLocal": "CAN",
+      "equipoVisitante": "JPN",
+      "estadio": "EST008",
+      "fecha": "2030-06-16",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P009",
+      "equipoLocal": "KOR",
+      "equipoVisitante": "AUS",
+      "estadio": "EST009",
+      "fecha": "2030-06-17",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P010",
+      "equipoLocal": "MAR",
+      "equipoVisitante": "SEN",
+      "estadio": "EST010",
+      "fecha": "2030-06-17",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P011",
+      "equipoLocal": "GHA",
+      "equipoVisitante": "NGA",
+      "estadio": "EST001",
+      "fecha": "2030-06-17",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P012",
+      "equipoLocal": "CMR",
+      "equipoVisitante": "TUN",
+      "estadio": "EST002",
+      "fecha": "2030-06-17",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P013",
+      "equipoLocal": "EGY",
+      "equipoVisitante": "ALG",
+      "estadio": "EST003",
+      "fecha": "2030-06-18",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P014",
+      "equipoLocal": "COL",
+      "equipoVisitante": "CHI",
+      "estadio": "EST004",
+      "fecha": "2030-06-18",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P015",
+      "equipoLocal": "PER",
+      "equipoVisitante": "ECU",
+      "estadio": "EST005",
+      "fecha": "2030-06-18",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P016",
+      "equipoLocal": "PAR",
+      "equipoVisitante": "VEN",
+      "estadio": "EST006",
+      "fecha": "2030-06-18",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P017",
+      "equipoLocal": "SUI",
+      "equipoVisitante": "AUT",
+      "estadio": "EST007",
+      "fecha": "2030-06-19",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P018",
+      "equipoLocal": "POL",
+      "equipoVisitante": "SWE",
+      "estadio": "EST008",
+      "fecha": "2030-06-19",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P019",
+      "equipoLocal": "DEN",
+      "equipoVisitante": "NOR",
+      "estadio": "EST009",
+      "fecha": "2030-06-19",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P020",
+      "equipoLocal": "SRB",
+      "equipoVisitante": "WAL",
+      "estadio": "EST010",
+      "fecha": "2030-06-19",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P021",
+      "equipoLocal": "SCO",
+      "equipoVisitante": "IRL",
+      "estadio": "EST001",
+      "fecha": "2030-06-20",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P022",
+      "equipoLocal": "UKR",
+      "equipoVisitante": "RUS",
+      "estadio": "EST002",
+      "fecha": "2030-06-20",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P023",
+      "equipoLocal": "TUR",
+      "equipoVisitante": "GRE",
+      "estadio": "EST003",
+      "fecha": "2030-06-20",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P024",
+      "equipoLocal": "ROU",
+      "equipoVisitante": "CZE",
+      "estadio": "EST004",
+      "fecha": "2030-06-20",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P025",
+      "equipoLocal": "HUN",
+      "equipoVisitante": "ISL",
+      "estadio": "EST005",
+      "fecha": "2030-06-21",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P026",
+      "equipoLocal": "CRC",
+      "equipoVisitante": "PAN",
+      "estadio": "EST006",
+      "fecha": "2030-06-21",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P027",
+      "equipoLocal": "JAM",
+      "equipoVisitante": "HON",
+      "estadio": "EST007",
+      "fecha": "2030-06-21",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P028",
+      "equipoLocal": "KSA",
+      "equipoVisitante": "IRN",
+      "estadio": "EST008",
+      "fecha": "2030-06-21",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P029",
+      "equipoLocal": "QAT",
+      "equipoVisitante": "UAE",
+      "estadio": "EST009",
+      "fecha": "2030-06-22",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P030",
+      "equipoLocal": "IRQ",
+      "equipoVisitante": "CHN",
+      "estadio": "EST010",
+      "fecha": "2030-06-22",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P031",
+      "equipoLocal": "NZL",
+      "equipoVisitante": "RSA",
+      "estadio": "EST001",
+      "fecha": "2030-06-22",
+      "fase": "Fase de grupos"
+    },
+    {
+      "id": "P032",
+      "equipoLocal": "CIV",
+      "equipoVisitante": "COD",
+      "estadio": "EST002",
+      "fecha": "2030-06-22",
+      "fase": "Fase de grupos"
+    }
+  ],
+  "estadios": [
+    {
+      "id": "EST001",
+      "nombre": "Estadio Monumental",
+      "ciudad": "Buenos Aires"
+    },
+    {
+      "id": "EST002",
+      "nombre": "Maracaná",
+      "ciudad": "Río de Janeiro"
+    },
+    {
+      "id": "EST003",
+      "nombre": "Camp Nou",
+      "ciudad": "Barcelona"
+    },
+    {
+      "id": "EST004",
+      "nombre": "Wembley",
+      "ciudad": "Londres"
+    },
+    {
+      "id": "EST005",
+      "nombre": "Stade de France",
+      "ciudad": "París"
+    },
+    {
+      "id": "EST006",
+      "nombre": "Allianz Arena",
+      "ciudad": "Múnich"
+    },
+    {
+      "id": "EST007",
+      "nombre": "Azteca",
+      "ciudad": "Ciudad de México"
+    },
+    {
+      "id": "EST008",
+      "nombre": "Lusail Stadium",
+      "ciudad": "Lusail"
+    },
+    {
+      "id": "EST009",
+      "nombre": "Saitama Stadium",
+      "ciudad": "Saitama"
+    },
+    {
+      "id": "EST010",
+      "nombre": "BC Place",
+      "ciudad": "Vancouver"
+    }
+  ]
+}

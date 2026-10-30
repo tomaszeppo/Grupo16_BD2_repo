@@ -1,0 +1,10 @@
+Monitoreo de solo lectura activo. Ahora iniciar benchmark en la otra consola.
+Se detiene al terminar el contenedor cliente o con Ctrl+C; no detiene Cassandra ni la carga.
+2026-10-30T05:52:23.915664+00:00 | cliente=no_creado | CPU host=None | fixture2030-cassandra: CPU=39.70% RAM=4.503GiB / 7.287GiB RED=46.7MB / 8.1MB DISCO=965MB / 277MB
+2026-10-30T05:52:25.916173+00:00 | cliente=running | CPU host=41.8 | fixture2030-cassandra: CPU=153.63% RAM=4.504GiB / 7.287GiB RED=50MB / 8.59MB DISCO=965MB / 278MB | h12-m02-a2-20261030-025057: CPU=102.34% RAM=129.7MiB / 7.287GiB RED=748kB / 3.33MB DISCO=24.7MB / 0B
+2026-10-30T05:52:27.916571+00:00 | cliente=running | CPU host=30.3343949044586 | fixture2030-cassandra: CPU=128.24% RAM=4.496GiB / 7.287GiB RED=53.4MB / 9.12MB DISCO=968MB / 283MB | h12-m02-a2-20261030-025057: CPU=100.91% RAM=208.2MiB / 7.287GiB RED=1.28MB / 6.85MB DISCO=29.1MB / 770kB
+2026-10-30T05:52:29.917283+00:00 | cliente=running | CPU host=27.232142857142858 | fixture2030-cassandra: CPU=139.33% RAM=4.507GiB / 7.287GiB RED=56.4MB / 9.55MB DISCO=972MB / 285MB | h12-m02-a2-20261030-025057: CPU=100.53% RAM=277.2MiB / 7.287GiB RED=1.7MB / 9.73MB DISCO=29.1MB / 770kB
+2026-10-30T05:52:31.917379+00:00 | cliente=running | CPU host=31.336805555555557 | fixture2030-cassandra: CPU=0.87% RAM=4.495GiB / 7.287GiB RED=58.4MB / 9.86MB DISCO=973MB / 289MB | h12-m02-a2-20261030-025057: CPU=52.06% RAM=341.7MiB / 7.287GiB RED=2.01MB / 11.7MB DISCO=35.1MB / 770kB
+2026-10-30T05:52:33.927576+00:00 | cliente=running | CPU host=28.447395301327887 | fixture2030-cassandra: CPU=0.93% RAM=4.493GiB / 7.287GiB RED=58.4MB / 9.86MB DISCO=973MB / 289MB | h12-m02-a2-20261030-025057: CPU=0.00% RAM=0B / 0B RED=0B / 0B DISCO=0B / 0B
+2026-10-30T05:52:35.927725+00:00 | cliente=exited | CPU host=8.556149732620321 | fixture2030-cassandra: CPU=1.21% RAM=4.493GiB / 7.287GiB RED=58.4MB / 9.86MB DISCO=973MB / 289MB
+Recursos conservados en C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\resultados\comparativas\m02-20261030-025057\A2\recursos.jsonl

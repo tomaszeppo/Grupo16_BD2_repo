@@ -1,0 +1,39 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261030032514
+Username: DESKTOP-7C11R1M\Juani
+RunAs User: DESKTOP-7C11R1M\Juani
+Configuration Name: 
+Machine: DESKTOP-7C11R1M (Microsoft Windows NT 10.0.26100.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 27844
+PSVersion: 5.1.26100.9711
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9711
+BuildVersion: 10.0.26100.9711
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started, output file is resultados/datamart/dm-20261030-032514-c7dd32.consola.txt
+Esta demostracion SOLO LEE Cassandra y crea una proyeccion SQLite local nueva.
+No ejecutarla junto con pruebas de carga. No se insertan comentarios ni se cambia el esquema.
+Proyeccion VALIDADA. Filas fuente: 50000 | Filas analiticas: 1
+Partido | Minuto UTC | Comentarios | Usuarios activos | Visibles | Otros estados | Likes
+H12-manual-B-20261030-025822-9dff16 | 2030-06-08T18:00:00+00:00 | 50000 | 5000 | 50000 | 0 | 249661
+Conteos por bucket coinciden. Evidencia: /h12/resultados/datamart/dm-20261030-032514-c7dd32
+
+CONSULTA SQL SOBRE LA PROYECCION VALIDADA
+Traceback (most recent call last):
+  File "C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\datamart\v1_actividad_comentarios\consultar_proyeccion.py", line 29, in <module>
+    if __name__=='__main__':main()
+                            ~~~~^^
+  File "C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\datamart\v1_actividad_comentarios\consultar_proyeccion.py", line 23, in main
+    print(' | '.join(c[0] for c in cursor.description))
+                                   ^^^^^^^^^^^^^^^^^^
+TypeError: 'NoneType' object is not iterable
+**********************
+Windows PowerShell transcript end
+End time: 20261030032517
+**********************

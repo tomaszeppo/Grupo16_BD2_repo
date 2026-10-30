@@ -1,0 +1,263 @@
+--- v2.0_base/carga/prueba_rendimiento.py
++++ v2.2_candidata_paralelo/carga/prueba_rendimiento.py
+@@ -12,11 +12,12 @@
+ import json
+ import multiprocessing
+ import platform
+-import random
+ import re
+ import time
+ import uuid
+ from pathlib import Path
++
++from perfil_paralelo import parametros, validar_perfil, inicializar_worker, esperar_inicio, abortar_inicio
+ 
+ from metricas_operaciones import SesionMedida, detalle_error, resumir
+ 
+@@ -28,6 +29,7 @@
+ 
+ PARTIDO_PRUEBA = "P-PRUEBA"
+ VERSION_BENCHMARK = '2.0-instrumentado'
++VERSION_EXPERIMENTO = 'v2.2_candidata_paralelo'
+ BUCKETS_PRUEBA = 13
+ BASE = datetime.datetime(2030, 6, 8, 18, 0, 0)
+ ORIGEN_UUID1 = datetime.datetime(1582, 10, 15)
+@@ -61,12 +63,13 @@
+             'consistencia':profile.consistency_level,'retry_policy':type(profile.retry_policy).__name__,
+             'timeout_s':10,'paginador':'execute_concurrent_with_args','raise_on_first_error':False}
+         insert=session.prepare(INSERT_CQL)
+-        azar=random.Random(2030+indice);params=[]
+-        for i in range(desde,hasta):
+-            momento=BASE+datetime.timedelta(milliseconds=i)
+-            params.append((partido,i%BUCKETS_PRUEBA,timeuuid(momento,i),f'user-{i%5000:06d}',
+-                           'Comentario de prueba de rendimiento',momento,'visible',azar.randint(0,10)))
++        params=parametros(desde,hasta,partido,BASE,timeuuid)
++        # Datos y prepare fuera de la fase medida. Cada proceso tiene su propia sesion.
++        resultado['desde']=desde;resultado['hasta']=hasta
++        resultado['datos_sha256_sin_partido']=hashlib.sha256(
++            json.dumps([fila[1:] for fila in params],default=str,separators=(',',':')).encode()).hexdigest()
+         medida=SesionMedida(session,indice,desde)
++        esperar_inicio()
+         inicio=time.perf_counter_ns()
+         resultados=execute_concurrent_with_args(medida,insert,params,concurrency=concurrencia,
+                                                 raise_on_first_error=False)
+@@ -75,6 +78,7 @@
+         resultado['errores_planificador']=sum(not ok for ok,_ in resultados)
+     except Exception as exc:
+         resultado['error_fase']=detalle_error(exc)
++        abortar_inicio()
+     finally:
+         if inicio is not None and fin is None:fin=time.perf_counter_ns()
+         if cluster is not None:
+@@ -93,7 +97,8 @@
+     return resultado
+ 
+ 
+-def correr_prueba(rows, concurrencia, host, puerto, procesos, keyspace, partido, salida):
++def correr_prueba(rows, concurrencia, host, puerto, procesos, keyspace, partido, salida, perfil='B'):
++    validar_perfil(perfil,rows,concurrencia,procesos)
+     if Cluster is None:
+         raise RuntimeError("Falta el driver: pip install cassandra-driver")
+ 
+@@ -107,12 +112,14 @@
+     with Path(salida).open('x', encoding='utf-8') as archivo:
+         configuracion = dict(rows=rows, concurrencia_por_proceso=concurrencia, procesos=procesos,
+                              keyspace=keyspace, partido_prueba=partido, host=host, puerto=puerto,
++                             perfil=perfil,concurrencia_total=concurrencia*procesos,semilla_por_indice_global=True,
+                              rampa_s=0,sostenimiento='Hasta agotar el lote; disminuye al drenar los ultimos pendientes',
+                              semilla_base=2030,usuarios=5000,buckets=13,timeout_operacion_s=10)
+-        scripts=[Path(__file__),Path(__file__).with_name('metricas_operaciones.py')]
++        scripts=[Path(__file__),Path(__file__).with_name('metricas_operaciones.py'),Path(__file__).with_name('perfil_paralelo.py'),
++                 Path(__file__).resolve().parents[1]/'config/escenario_escritura_simple.json']
+         huellas={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in scripts}
+         archivo.write(json.dumps({'evento':'inicio','fecha_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+-            'version_benchmark':VERSION_BENCHMARK,'configuracion':configuracion,'codigo_sha256':huellas})+'\n'); archivo.flush()
++            'version_benchmark':VERSION_BENCHMARK,'version_experimento':VERSION_EXPERIMENTO,'configuracion':configuracion,'codigo_sha256':huellas})+'\n'); archivo.flush()
+         rutas=[Path(salida).with_name(Path(salida).stem+f'.operaciones.p{i:02d}.jsonl') for i in range(procesos)]
+         for ruta in rutas:
+             with ruta.open('x',encoding='utf-8'):pass
+@@ -153,13 +160,15 @@
+         hasta = rows if p == procesos - 1 else desde + tramo
+         tareas.append((p, desde, hasta, concurrencia, host, puerto, keyspace, partido,str(rutas[p])))
+ 
+-    print(f"Benchmark {VERSION_BENCHMARK}")
++    print(f"Experimento {VERSION_EXPERIMENTO}; medidor {VERSION_BENCHMARK}")
+     print(f"Insertando {rows} filas con concurrencia {concurrencia} por proceso y {procesos} proceso(s)...")
+     inicio = time.perf_counter()
+     if procesos == 1:
+         salidas = [trabajo(tareas[0])]
+     else:
+-        with multiprocessing.Pool(procesos) as pool:
++        contexto=multiprocessing.get_context('spawn')
++        barrera=contexto.Barrier(procesos)
++        with contexto.Pool(procesos,initializer=inicializar_worker,initargs=(barrera,)) as pool:
+             salidas = pool.map(trabajo, tareas)
+     elapsed = time.perf_counter() - inicio
+     muestras=[]
+@@ -171,7 +180,7 @@
+                     iniciadas=sum(s['iniciadas'] for s in salidas))
+     errores_fase=[s['error_fase'] for s in salidas if s['error_fase']]
+     resumen.update(fecha_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+-        python=platform.python_version(),sistema=platform.platform(),version_benchmark=VERSION_BENCHMARK,
++        python=platform.python_version(),sistema=platform.platform(),version_benchmark=VERSION_BENCHMARK,version_experimento=VERSION_EXPERIMENTO,
+         datos_conservados=True,procesos=salidas,errores_fase=errores_fase)
+     exitosas=resumen['exitosas'];fallidas=resumen['fallidas'];tasa=resumen['escrituras_por_segundo']
+ 
+@@ -199,12 +208,13 @@
+ 
+ if __name__ == "__main__":
+     parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument("--perfil", choices=("A","B"), default="B", help="A: 1x100; B: 2x50; ambos 50.000 filas")
+     parser.add_argument("--rows", type=int, default=50_000,
+                          help="Cantidad de filas a insertar en la prueba (default: 50.000)")
+-    parser.add_argument("--concurrencia", type=int, default=100,
+-                         help="Escrituras concurrentes en simultaneo por proceso (default: 100)")
+-    parser.add_argument("--procesos", type=int, default=1,
+-                         help="Procesos en paralelo, cada uno con su conexion (default: 1)")
++    parser.add_argument("--concurrencia", type=int, default=None,
++                         help="Escrituras concurrentes en simultaneo por proceso (segun perfil)")
++    parser.add_argument("--procesos", type=int, default=None,
++                         help="Procesos en paralelo, cada uno con su conexion (segun perfil)")
+     parser.add_argument("--host", required=True)
+     parser.add_argument("--puerto", type=int, required=True)
+     parser.add_argument("--keyspace", required=True)
+@@ -212,8 +222,10 @@
+     parser.add_argument("--salida", type=Path, required=True, help="JSONL nuevo; carpeta existente")
+     parser.add_argument("--confirmar-escrituras", action="store_true")
+     args = parser.parse_args()
++    if args.concurrencia is None:args.concurrencia=100 if args.perfil=="A" else 50
++    if args.procesos is None:args.procesos=1 if args.perfil=="A" else 2
+     if not args.confirmar_escrituras:
+         parser.error('Esta prueba inserta y conserva datos. Revisar destino y usar --confirmar-escrituras.')
+     resultado = correr_prueba(args.rows, args.concurrencia, args.host, args.puerto, args.procesos,
+-                             args.keyspace, args.partido_prueba, args.salida)
++                             args.keyspace, args.partido_prueba, args.salida, args.perfil)
+     raise SystemExit(1 if resultado['fallidas'] or resultado['no_intentadas'] or resultado['sin_resultado'] or resultado['errores_fase'] else 0)
+--- v2.0_base/carga/perfil_paralelo.py
++++ v2.2_candidata_paralelo/carga/perfil_paralelo.py
+@@ -0,0 +1,41 @@
++"""Preparacion determinista y coordinacion; no conecta ni escribe en Cassandra."""
++import datetime
++import random
++
++_barrera = None
++PERFILES = {'A': (50000, 100, 1), 'B': (50000, 50, 2)}
++
++
++def validar_perfil(perfil, filas, concurrencia, procesos):
++    if perfil not in PERFILES or (filas, concurrencia, procesos) != PERFILES[perfil]:
++        raise ValueError('Perfil invalido: A=50000/100/1; B=50000/50/2. Validacion previa a conectar.')
++
++
++def parametros(desde, hasta, partido, base, crear_uuid):
++    """Misma secuencia que la base 1x100, independiente del reparto entre procesos."""
++    if desde < 0 or hasta < desde:
++        raise ValueError('Rango invalido')
++    azar = random.Random(2030)
++    for _ in range(desde):
++        azar.randint(0, 10)
++    filas = []
++    for i in range(desde, hasta):
++        momento = base + datetime.timedelta(milliseconds=i)
++        filas.append((partido, i % 13, crear_uuid(momento, i), f'user-{i % 5000:06d}',
++                      'Comentario de prueba de rendimiento', momento, 'visible', azar.randint(0, 10)))
++    return filas
++
++
++def inicializar_worker(barrera):
++    global _barrera
++    _barrera = barrera
++
++
++def esperar_inicio():
++    if _barrera is not None:
++        _barrera.wait(timeout=60)
++
++
++def abortar_inicio():
++    if _barrera is not None:
++        _barrera.abort()
+--- v2.0_base/config/escenario_escritura_simple.json
++++ v2.2_candidata_paralelo/config/escenario_escritura_simple.json
+@@ -1,5 +1,5 @@
+ {
+-  "estado": "DEFINIDO_NO_EJECUTADO",
++  "estado": "IMPLEMENTADO_SIN_CARGA_REAL",
+   "flujo": "Insercion de comentarios sinteticos en el modulo Cassandra del Fixture 2030",
+   "consumidor": "Cliente de benchmark que representa escrituras de comentarios",
+   "modulo": "Hito 6, esquema de origin/correcciones@27f28e1",
+@@ -7,8 +7,8 @@
+   "usa_api_http": false,
+   "usa_csv_generador_masivo": false,
+   "filas_por_corrida": 50000,
+-  "concurrencia_por_proceso": 100,
+-  "procesos": 1,
++  "concurrencia_por_proceso": 50,
++  "procesos": 2,
+   "particiones_por_corrida": 13,
+   "universo_usuarios_sinteticos": 5000,
+   "rampa_segundos": 0,
+@@ -40,7 +40,7 @@
+     "Los errores pueden persistir; conteos y confirmaciones se contrastan por separado"
+   ],
+   "version_benchmark": "2.0-instrumentado",
+-  "sostenimiento": "Hasta 100 operaciones logicas en curso mientras haya pendientes; disminuye al drenar el lote",
++  "sostenimiento": "Hasta 100 operaciones globales mientras ambos trabajadores tengan pendientes; desciende al drenar",
+   "latencia_operacion": {
+     "inicio": "Inmediatamente antes de Session.execute_async",
+     "fin": "Callback de confirmacion/error o excepcion sincrona",
+@@ -80,5 +80,23 @@
+     "no_medidos": "Latencia fisica del disco, conexiones totales del servidor y numero de reintentos fisicos",
+     "requisito": "Monitor iniciado antes del benchmark; guardar serie, cobertura y huecos"
+   },
+-  "estabilidad": "Serie de resultados por segundo, errores y recursos; observaciones manuales con evidencia, sin declaracion automatica"
++  "estabilidad": "Serie de resultados por segundo, errores y recursos; observaciones manuales con evidencia, sin declaracion automatica",
++  "version_experimento": "v2.2_candidata_paralelo",
++  "perfil_por_defecto": "B",
++  "perfiles": {
++    "A": {
++      "filas": 50000,
++      "procesos": 1,
++      "concurrencia_por_proceso": 100
++    },
++    "B": {
++      "filas": 50000,
++      "procesos": 2,
++      "concurrencia_por_proceso": 50
++    }
++  },
++  "concurrencia_total": 100,
++  "semilla": "2030; secuencia global identica a la base de un proceso",
++  "inicio": "Barrera de trabajadores despues de conectar, preparar y generar; espera maxima 60 s",
++  "comparacion": "A y B deben medirse con este mismo codigo; la base historica es contexto"
+ }
+--- v2.0_base/scripts/registrar_base.py
++++ v2.2_candidata_paralelo/scripts/registrar_base.py
+@@ -68,7 +68,7 @@
+     with args.salida.open('x',encoding='utf-8') as f:
+         archivos={}
+         for relativo in ['carga/prueba_rendimiento.py','carga/metricas_operaciones.py',
+-                         'carga/verificar_escrituras.py','config/escenario_escritura_simple.json',
++                         'carga/verificar_escrituras.py','carga/perfil_paralelo.py','config/escenario_escritura_simple.json',
+                          'scripts/esquema_comentarios_h6.cql','scripts/registrar_base.py']:
+             p=ROOT/relativo;archivos[relativo]=hashlib.sha256(p.read_bytes()).hexdigest()
+         head=comando(['git','-C',str(ROOT),'rev-parse','HEAD'])
+@@ -83,6 +83,10 @@
+         esquema=comando(['docker','exec',args.cassandra,'cqlsh','-e',
+             'SHOW VERSION; DESCRIBE TABLE fixture2030.comentarios_por_partido;'])
+         configuracion=json.loads((ROOT/'config/escenario_escritura_simple.json').read_text(encoding='utf-8'))
++        seleccionado=args.perfil
++        configuracion.update(configuracion['perfiles'][seleccionado])
++        configuracion['concurrencia_por_proceso']=configuracion['perfiles'][seleccionado]['concurrencia_por_proceso']
++        configuracion['perfil_seleccionado']=seleccionado
+         dato={'fecha_utc':utc(),'modo':'solo_lectura','commit':head,'estado_git':status,
+             'codigo_sha256':archivos,'escenario':configuracion,
+             'api':'No interviene: el benchmark usa directamente el modulo Cassandra',
+@@ -133,6 +137,7 @@
+ if __name__=='__main__':
+     ap=argparse.ArgumentParser(description=__doc__)
+     ap.add_argument('modo',choices=['entorno','recursos'])
++    ap.add_argument('--perfil',choices=['A','B'],default='B')
+     ap.add_argument('--salida',type=Path,required=True,help='Archivo NUEVO; carpeta existente')
+     ap.add_argument('--cassandra',default='fixture2030-cassandra')
+     ap.add_argument('--cliente',required=True)

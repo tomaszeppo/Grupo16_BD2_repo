@@ -1,0 +1,243 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261030002023
+Username: DESKTOP-7C11R1M\Juani
+RunAs User: DESKTOP-7C11R1M\Juani
+Configuration Name: 
+Machine: DESKTOP-7C11R1M (Microsoft Windows NT 10.0.26100.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 17304
+PSVersion: 5.1.26100.9711
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9711
+BuildVersion: 10.0.26100.9711
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started, output file is C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\resultados\base\base-20261030-002022\consola.txt
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion>     Write-Output "Corrida: $corrida"
+Corrida: base-20261030-002022
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion>     Write-Output "Partido de prueba: $partido"
+Partido de prueba: H12-base-20261030-002022
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion>     Write-Output "Guardar evidencia en: $salida"
+Guardar evidencia en: C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\resultados\base\base-20261030-002022
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion> docker image inspect fixture2030-api-api --format '{{.Id}}'
+docker exec fixture2030-cassandra cqlsh -e "SHOW VERSION;"
+docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}'
+Get-FileHash .\carga\prueba_rendimiento.py -Algorithm SHA256
+git -C .. status --short
+git -C .. rev-parse HEAD
+Get-Date
+sha256:1ce4be69b147fab61c55c3431fdf13bbd8edd06a51932b0c7a5360b8ea4861e3
+[cqlsh 6.2.0 | Cassandra 5.0.9 | CQL spec 3.4.7 | Native protocol v5]
+NAMES                         IMAGE                                   STATUS
+fixture2030-api-api-1         fixture2030-api-api                     Up 5 hours
+fixture2030-api-iris-1        intersystems/iris-community:latest-cd   Up 5 hours (healthy)
+fixture2030-api-neo4j-1       neo4j:5                                 Up 5 hours (healthy)
+fixture2030-api-cassandra-1   cassandra:4.1                           Up 5 hours (healthy)
+fixture2030-api-influxdb-1    influxdb:3-core                         Up 5 hours
+fixture2030-api-redis-1       redis:7                                 Up 5 hours (healthy)
+fixture2030-api-mongodb-1     mongo:7.0                               Up 5 hours (healthy)
+fixture2030-cassandra         cassandra:5.0                           Up 5 hours
+fixture2030-neo4j             neo4j:latest                            Up 5 hours
+
+Algorithm       Hash                                                                   Path
+---------       ----                                                                   ----
+SHA256          A368781EC47E020A660AE4DF0FF34BBCE0015987FEDC113158218BD5C82869EE       C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\carga\prueba_rendimiento.py
+?? Hito-12-carga-optimizacion/
+f0b228ea6f747fd81b5dc89b30604a0f5ae6319a
+
+DisplayHint : DateTime
+Date        : 10/30/2026 12:00:00 AM
+Day         : 30
+DayOfWeek   : Friday
+DayOfYear   : 303
+Hour        : 0
+Kind        : Local
+Millisecond : 512
+Minute      : 21
+Month       : 10
+Second      : 4
+Ticks       : 639289164645122063
+TimeOfDay   : 00:21:04.5122063
+Year        : 2026
+DateTime    : Friday, October 30, 2026 12:21:04 AM
+
+
+
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion> Get-Content -Raw .\scripts\esquema_comentarios_h6.cql | docker exec -i fixture2030-cassandra cqlsh
+
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion> docker exec fixture2030-cassandra cqlsh -e "DESCRIBE TABLE fixture2030.comentarios_por_partido;"
+
+CREATE TABLE fixture2030.comentarios_por_partido (
+    partido_codigo text,
+    bucket int,
+    comentario_id timeuuid,
+    contenido text,
+    creado_en timestamp,
+    estado_moderacion text,
+    likes int,
+    usuario_id text,
+    PRIMARY KEY ((partido_codigo, bucket), comentario_id)
+) WITH CLUSTERING ORDER BY (comentario_id DESC)
+    AND additional_write_policy = '99p'
+    AND allow_auto_snapshot = true
+    AND bloom_filter_fp_chance = 0.01
+    AND caching = {'keys': 'ALL', 'rows_per_partition': 'NONE'}
+    AND cdc = false
+    AND comment = ''
+    AND compaction = {'class': 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy', 'max_threshold': '32', 'min_threshold': '4'}
+    AND compression = {'chunk_length_in_kb': '16', 'class': 'org.apache.cassandra.io.compress.LZ4Compressor'}
+    AND memtable = 'default'
+    AND crc_check_chance = 1.0
+    AND default_time_to_live = 0
+    AND extensions = {}
+    AND gc_grace_seconds = 864000
+    AND incremental_backups = true
+    AND max_index_interval = 2048
+    AND memtable_flush_period_in_ms = 0
+    AND min_index_interval = 128
+    AND read_repair = 'BLOCKING'
+    AND speculative_retry = '99p';
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion> $escenario | Select-Object flujo, filas_por_corrida, concurrencia_por_proceso, procesos, rampa_segundos, duracion, criterio_exito | Format-List
+
+$escenario = Get-Content .\config\escenario_escritura_simple.json -Raw | ConvertFrom-Json
+
+Write-Output "Partido de prueba: $partido"
+Write-Output "Corrida: $corrida"
+Partido de prueba: H12-base-20261030-002022
+Corrida: base-20261030-002022
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion> Get-Content .\config\escenario_escritura_simple.json -Raw | ConvertFrom-Json | Select-Object flujo, filas_por_corrida, concurrencia_por_proceso, procesos, rampa_segundos, duracion, criterio_exito | Format-List
+
+
+flujo                    : Insercion de comentarios sinteticos en el modulo Cassandra del Fixture 2030
+filas_por_corrida        : 50000
+concurrencia_por_proceso : 100
+procesos                 : 1
+rampa_segundos           : 0
+duracion                 : Hasta completar los 50000 intentos o terminar por error/interrupcion
+criterio_exito           : 50000 escrituras exitosas, cero fallidas, conteos por particion iguales a lo esperado
+
+
+
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion> Get-Content .\config\escenario_escritura_simple.json
+docker info --format 'CPU disponibles={{.NCPU}} RAM disponible bytes={{.MemTotal}}'
+docker image inspect fixture2030-api-api --format '{{.Id}}'
+docker inspect fixture2030-cassandra --format 'Imagen={{.Config.Image}} ID={{.Image}} MemoriaLimite={{.HostConfig.Memory}} NanoCPUs={{.HostConfig.NanoCpus}}'
+docker exec fixture2030-cassandra cqlsh -e "SHOW VERSION;"
+Get-FileHash .\carga\prueba_rendimiento.py -Algorithm SHA256
+git -C .. status --short
+git -C .. rev-parse HEAD
+{
+  "estado": "DEFINIDO_NO_EJECUTADO",
+  "flujo": "Insercion de comentarios sinteticos en el modulo Cassandra del Fixture 2030",
+  "consumidor": "Cliente de benchmark que representa escrituras de comentarios",
+  "modulo": "Hito 6, esquema de origin/correcciones@27f28e1",
+  "operacion": "INSERT en comentarios_por_partido mediante el driver Cassandra",
+  "usa_api_http": false,
+  "usa_csv_generador_masivo": false,
+  "filas_por_corrida": 50000,
+  "concurrencia_por_proceso": 100,
+  "procesos": 1,
+  "particiones_por_corrida": 13,
+  "universo_usuarios_sinteticos": 5000,
+  "rampa_segundos": 0,
+  "calentamiento_separado": false,
+  "frecuencia": "Sin tasa fija; cliente concurrente; medir escrituras exitosas por segundo",
+  "duracion": "Hasta completar los 50000 intentos o terminar por error/interrupcion",
+  "metrica_tiempo": "Tiempo de pared de ejecutar: incluye preparacion de parametros y conexiones; excluye preflight de particiones",
+  "criterio_exito": "50000 escrituras exitosas, cero fallidas, conteos por particion iguales a lo esperado",
+  "errores": ["Conexion o esquema incorrecto", "Timeout o rechazo de escritura", "Escrituras fallidas", "Diferencias entre conteos esperados y persistidos", "Interrupcion"],
+  "conservacion": "Partido H12 exclusivo y salidas nuevas por corrida; sin eliminacion ni limpieza",
+  "limites": [
+    "Benchmark de una tabla, no del recorrido API/Neo4j ni de escritura duplicada entre tablas",
+    "El ID H12 identifica una corrida de laboratorio y no requiere alta de partido en Neo4j",
+    "Los 13 buckets se asignan ciclicamente para la prueba; no simulan ventanas temporales reales de un partido",
+    "La carga y concurrencia provienen del benchmark existente; no son limites impuestos por el profesor",
+    "Preparar antes el esquema sin insertar comentarios; mediciones y capturas pendientes de ejecucion conjunta",
+    "Repeticiones y comparacion de una mejora se documentaran luego; una corrida no completa el Hito 12"
+  ]
+}
+CPU disponibles=16 RAM disponible bytes=7824109568
+sha256:1ce4be69b147fab61c55c3431fdf13bbd8edd06a51932b0c7a5360b8ea4861e3
+Imagen=cassandra:5.0 ID=sha256:da9dad3aaf67c4e5126c6aafa769460d75f27c1716951c48896ff5c4e97d2af3 MemoriaLimite=0 NanoCPUs=0
+[cqlsh 6.2.0 | Cassandra 5.0.9 | CQL spec 3.4.7 | Native protocol v5]
+
+Algorithm       Hash                                                                   Path
+---------       ----                                                                   ----
+SHA256          A368781EC47E020A660AE4DF0FF34BBCE0015987FEDC113158218BD5C82869EE       C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\carga\prueba_rendimiento.py
+?? Hito-12-carga-optimizacion/
+f0b228ea6f747fd81b5dc89b30604a0f5ae6319a
+
+
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion> python .\scripts\registrar_base.py entorno --cliente $cliente --salida (Join-Path $salida 'entorno_instrumentado.json')
+Entorno guardado en C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\resultados\base\base-20261030-002022\entorno_instrumentado.json
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion> docker run --pull=never --name $cliente --network fixture2030-cassandra_default --mount "type=bind,source=$($PWD.Path),target=/h12" --workdir /h12 --entrypoint python fixture2030-api-api carga/prueba_rendimiento.py --host fixture2030-cassandra --puerto 9042 --keyspace fixture2030 --rows 50000 --concurrencia 100 --procesos 1 --partido-prueba $partido --salida "/h12/resultados/base/$corrida/escrituras.jsonl" --confirmar-escrituras
+Benchmark 2.0-instrumentado
+Insertando 50000 filas con concurrencia 100 por proceso y 1 proceso(s)...
+
+=== Resultado ===
+Fecha de ejecucion (UTC): 2026-10-30T04:35:26.308276+00:00
+Filas exitosas: 50000 / 50000 (fallidas: 0)
+Intentadas: 50000 | Con resultado: 50000 | Inconclusas: 0
+No intentadas: 0; errores de fase: 0
+Tiempo de carga: 7.985s | Cliente total: 9.079s
+Tasa obtenida: 6261 escrituras/seg
+Concurrencia por proceso: 100 | procesos: 1
+Pico observado por proceso: [100]
+Python: 3.12.16 - SO: Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.41
+Latencias Todas (ms): min=3.042 | promedio=15.870 | p50=11.042 | p95=18.159 | p99=172.385 | max=438.623
+Latencias Confirmadas (ms): min=3.042 | promedio=15.870 | p50=11.042 | p95=18.159 | p99=172.385 | max=438.623
+Tasa de error: 0.000% | Tipos: {}
+Una operacion sin confirmacion puede haber persistido: verificar conteos despues.
+Datos conservados en H12-base-20261030-002022; evidencia en el archivo indicado por --salida.
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion> docker run --pull=never --name "$cliente-verificacion" --network fixture2030-cassandra_default --mount "type=bind,source=$($PWD.Path),target=/h12" --workdir /h12 --entrypoint python fixture2030-api-api carga/verificar_escrituras.py --registro "/h12/resultados/base/$corrida/escrituras.jsonl" --salida "/h12/resultados/base/$corrida/verificacion.json"
+Verificacion de solo lectura: H12-base-20261030-002022
+Bucket | Esperados | Guardados | Coincide
+     0 |      3847 |      3847 | SI
+     1 |      3847 |      3847 | SI
+     2 |      3846 |      3846 | SI
+     3 |      3846 |      3846 | SI
+     4 |      3846 |      3846 | SI
+     5 |      3846 |      3846 | SI
+     6 |      3846 |      3846 | SI
+     7 |      3846 |      3846 | SI
+     8 |      3846 |      3846 | SI
+     9 |      3846 |      3846 | SI
+    10 |      3846 |      3846 | SI
+    11 |      3846 |      3846 | SI
+    12 |      3846 |      3846 | SI
+Total esperado: 50000 | Total guardado: 50000
+RESULTADO: COINCIDE
+Criterio completo (confirmaciones y persistencia): CUMPLIDO
+PS C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion> python "$version/scripts/registrar_base.py" entorno --perfil $perfil --cliente $cliente --salida (Join-Path $salida 'entorno.json')
+
+Write-Output "Perfil: $perfil | Corrida: $corrida | Partido: $partido"
+
+Start-Transcript -Path (Join-Path $salida 'consola.txt') -NoClobber
+
+$imagenCliente = (Get-Content "$version/manifiesto_version.json" -Raw | ConvertFrom-Json).ambiente_referencia.imagen_cliente
+
+Copy-Item "$version/config/escenario_escritura_simple.json" (Join-Path $salida 'escenario.json')
+
+New-Item -ItemType Directory -Path (Join-Path $salida 'capturas') -ErrorAction Stop
+New-Item -ItemType Directory -Path $salida -ErrorAction Stop
+
+$salida = Join-Path $PWD.Path $relativa
+$relativa = "resultados/optimizado/$corrida"
+$version = 'versiones/v2.2_candidata_paralelo'
+$cliente = "h12-$corrida"
+$partido = "H12-$corrida"
+$corrida = "manual-$perfil-$marca"
+$marca = Get-Date -Format 'yyyyMMdd-HHmmss'
+$perfil = 'A'
+
+Set-Location -LiteralPath 'C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion'
+C:\Users\Juani\AppData\Local\Programs\Python\Python314\python.exe: can't open file 'C:\\scripts\\registrar_base.py': [Errno 2] No such file or directory
+Perfil:  | Corrida: base-20261030-002022 | Partido: H12-base-20261030-002022
+**********************
+Windows PowerShell transcript end
+End time: 20261030025458
+**********************

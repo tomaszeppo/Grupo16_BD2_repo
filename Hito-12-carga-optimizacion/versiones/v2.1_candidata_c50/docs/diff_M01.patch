@@ -1,0 +1,109 @@
+--- v2.0_base/carga/prueba_rendimiento.py
++++ v2.1_candidata_c50/carga/prueba_rendimiento.py
+@@ -28,6 +28,8 @@
+ 
+ PARTIDO_PRUEBA = "P-PRUEBA"
+ VERSION_BENCHMARK = '2.0-instrumentado'
++VERSION_EXPERIMENTO = 'v2.1_candidata_c50'
++PERFIL = Path(__file__).resolve().parents[1] / 'config/escenario_escritura_simple.json'
+ BUCKETS_PRUEBA = 13
+ BASE = datetime.datetime(2030, 6, 8, 18, 0, 0)
+ ORIGEN_UUID1 = datetime.datetime(1582, 10, 15)
+@@ -93,7 +95,20 @@
+     return resultado
+ 
+ 
++def validar_perfil(rows, concurrencia, procesos):
++    """Evita cambiar el experimento por un comando heredado. No conecta a bases."""
++    perfil=json.loads(PERFIL.read_text(encoding='utf-8'))
++    esperado=(50000,50,1)
++    configurado=(perfil.get('filas_por_corrida'),perfil.get('concurrencia_por_proceso'),perfil.get('procesos'))
++    if perfil.get('version_experimento')!=VERSION_EXPERIMENTO or configurado!=esperado:
++        raise ValueError('Perfil candidato inconsistente. Crear otra version para cambiar sus condiciones.')
++    if (rows,concurrencia,procesos)!=esperado:
++        raise ValueError('La candidata v2.1 usa 50000 filas, concurrencia 50 y un proceso. No usar el comando anterior con 100.')
++    return perfil
++
++
+ def correr_prueba(rows, concurrencia, host, puerto, procesos, keyspace, partido, salida):
++    validar_perfil(rows,concurrencia,procesos)
+     if Cluster is None:
+         raise RuntimeError("Falta el driver: pip install cassandra-driver")
+ 
+@@ -109,10 +124,13 @@
+                              keyspace=keyspace, partido_prueba=partido, host=host, puerto=puerto,
+                              rampa_s=0,sostenimiento='Hasta agotar el lote; disminuye al drenar los ultimos pendientes',
+                              semilla_base=2030,usuarios=5000,buckets=13,timeout_operacion_s=10)
++        print(f'Experimento {VERSION_EXPERIMENTO}: concurrencia 50; mejora pendiente de medir')
+         scripts=[Path(__file__),Path(__file__).with_name('metricas_operaciones.py')]
+         huellas={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in scripts}
+         archivo.write(json.dumps({'evento':'inicio','fecha_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+-            'version_benchmark':VERSION_BENCHMARK,'configuracion':configuracion,'codigo_sha256':huellas})+'\n'); archivo.flush()
++            'version_benchmark':VERSION_BENCHMARK,'version_experimento':VERSION_EXPERIMENTO,
++            'perfil_sha256':hashlib.sha256(PERFIL.read_bytes()).hexdigest(),
++            'configuracion':configuracion,'codigo_sha256':huellas})+'\n'); archivo.flush()
+         rutas=[Path(salida).with_name(Path(salida).stem+f'.operaciones.p{i:02d}.jsonl') for i in range(procesos)]
+         for ruta in rutas:
+             with ruta.open('x',encoding='utf-8'):pass
+@@ -201,8 +219,8 @@
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument("--rows", type=int, default=50_000,
+                          help="Cantidad de filas a insertar en la prueba (default: 50.000)")
+-    parser.add_argument("--concurrencia", type=int, default=100,
+-                         help="Escrituras concurrentes en simultaneo por proceso (default: 100)")
++    parser.add_argument("--concurrencia", type=int, default=50,
++                         help="Limite fijo del perfil candidato: 50 operaciones por proceso")
+     parser.add_argument("--procesos", type=int, default=1,
+                          help="Procesos en paralelo, cada uno con su conexion (default: 1)")
+     parser.add_argument("--host", required=True)
+@@ -212,6 +230,10 @@
+     parser.add_argument("--salida", type=Path, required=True, help="JSONL nuevo; carpeta existente")
+     parser.add_argument("--confirmar-escrituras", action="store_true")
+     args = parser.parse_args()
++    try:
++        validar_perfil(args.rows,args.concurrencia,args.procesos)
++    except ValueError as exc:
++        parser.error(str(exc))
+     if not args.confirmar_escrituras:
+         parser.error('Esta prueba inserta y conserva datos. Revisar destino y usar --confirmar-escrituras.')
+     resultado = correr_prueba(args.rows, args.concurrencia, args.host, args.puerto, args.procesos,
+--- v2.0_base/config/escenario_escritura_simple.json
++++ v2.1_candidata_c50/config/escenario_escritura_simple.json
+@@ -1,5 +1,5 @@
+ {
+-  "estado": "DEFINIDO_NO_EJECUTADO",
++  "estado": "CANDIDATA_IMPLEMENTADA_SIN_MEDIR",
+   "flujo": "Insercion de comentarios sinteticos en el modulo Cassandra del Fixture 2030",
+   "consumidor": "Cliente de benchmark que representa escrituras de comentarios",
+   "modulo": "Hito 6, esquema de origin/correcciones@27f28e1",
+@@ -7,7 +7,7 @@
+   "usa_api_http": false,
+   "usa_csv_generador_masivo": false,
+   "filas_por_corrida": 50000,
+-  "concurrencia_por_proceso": 100,
++  "concurrencia_por_proceso": 50,
+   "procesos": 1,
+   "particiones_por_corrida": 13,
+   "universo_usuarios_sinteticos": 5000,
+@@ -40,7 +40,7 @@
+     "Los errores pueden persistir; conteos y confirmaciones se contrastan por separado"
+   ],
+   "version_benchmark": "2.0-instrumentado",
+-  "sostenimiento": "Hasta 100 operaciones logicas en curso mientras haya pendientes; disminuye al drenar el lote",
++  "sostenimiento": "Hasta 50 operaciones logicas en curso mientras haya pendientes; disminuye al drenar el lote",
+   "latencia_operacion": {
+     "inicio": "Inmediatamente antes de Session.execute_async",
+     "fin": "Callback de confirmacion/error o excepcion sincrona",
+@@ -80,5 +80,11 @@
+     "no_medidos": "Latencia fisica del disco, conexiones totales del servidor y numero de reintentos fisicos",
+     "requisito": "Monitor iniciado antes del benchmark; guardar serie, cobertura y huecos"
+   },
+-  "estabilidad": "Serie de resultados por segundo, errores y recursos; observaciones manuales con evidencia, sin declaracion automatica"
++  "estabilidad": "Serie de resultados por segundo, errores y recursos; observaciones manuales con evidencia, sin declaracion automatica",
++  "version_experimento": "v2.1_candidata_c50",
++  "version_referencia": "v2.0_base",
++  "hipotesis": "H1: menor presion de concurrencia puede reducir p99 sin perdida importante de throughput ni integridad",
++  "cambio_implementado": "Limite de concurrencia del cliente de 100 a 50; un proceso y el resto del trabajo identico",
++  "resultado_medido_candidata": null,
++  "decision_final": "Pendiente de pruebas conjuntas"
+ }

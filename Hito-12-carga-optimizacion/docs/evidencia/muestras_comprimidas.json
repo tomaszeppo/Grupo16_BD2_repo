@@ -1,0 +1,62 @@
+[
+  {
+    "archivo": "resultados/optimizado/manual-B-20261030-025822-9dff16/escrituras.operaciones.p00.jsonl",
+    "gzip": "resultados/optimizado/manual-B-20261030-025822-9dff16/escrituras.operaciones.p00.jsonl.gz",
+    "sha256_original": "1617e43bd4655feccd6e750ec6bdc520ed3c3ce5ecb861c6f8a89f20cfcd0e86"
+  },
+  {
+    "archivo": "resultados/optimizado/manual-B-20261030-025822-9dff16/escrituras.operaciones.p01.jsonl",
+    "gzip": "resultados/optimizado/manual-B-20261030-025822-9dff16/escrituras.operaciones.p01.jsonl.gz",
+    "sha256_original": "e7e6b36fb867d5e288c0a2c51b8561710e16278250a933b859e0ae08d518867a"
+  },
+  {
+    "archivo": "resultados/comparativas/m02-20261030-025057/A1/escrituras.operaciones.p00.jsonl",
+    "gzip": "resultados/comparativas/m02-20261030-025057/A1/escrituras.operaciones.p00.jsonl.gz",
+    "sha256_original": "00d00de71a596ffd8038b34a3ae9946ed671808ec2c477fb12ba5e03bc9773fd"
+  },
+  {
+    "archivo": "resultados/comparativas/m02-20261030-025057/A2/escrituras.operaciones.p00.jsonl",
+    "gzip": "resultados/comparativas/m02-20261030-025057/A2/escrituras.operaciones.p00.jsonl.gz",
+    "sha256_original": "feefd0bf6451bcbb252932335b2038a830ff680920d2423f3a31255a7d0ac3a9"
+  },
+  {
+    "archivo": "resultados/comparativas/m02-20261030-025057/A3/escrituras.operaciones.p00.jsonl",
+    "gzip": "resultados/comparativas/m02-20261030-025057/A3/escrituras.operaciones.p00.jsonl.gz",
+    "sha256_original": "4a89573e36db86f3841cfa71d4f129ec18669aaa0f85c32b1a05f3fa176ff367"
+  },
+  {
+    "archivo": "resultados/comparativas/m02-20261030-025057/B1/escrituras.operaciones.p00.jsonl",
+    "gzip": "resultados/comparativas/m02-20261030-025057/B1/escrituras.operaciones.p00.jsonl.gz",
+    "sha256_original": "43cb7a5184d7bee80031579abe04d9f021c680cf69e181aa1ea2d1712589d95f"
+  },
+  {
+    "archivo": "resultados/comparativas/m02-20261030-025057/B1/escrituras.operaciones.p01.jsonl",
+    "gzip": "resultados/comparativas/m02-20261030-025057/B1/escrituras.operaciones.p01.jsonl.gz",
+    "sha256_original": "05426173f1821c1f729ae87e2cb97596d21982863e7862fd197affc89f1e5eb8"
+  },
+  {
+    "archivo": "resultados/comparativas/m02-20261030-025057/B2/escrituras.operaciones.p00.jsonl",
+    "gzip": "resultados/comparativas/m02-20261030-025057/B2/escrituras.operaciones.p00.jsonl.gz",
+    "sha256_original": "0fe2801d95eb1206388f5d4dcd102397bc052433a6bcd739f52a246165027077"
+  },
+  {
+    "archivo": "resultados/comparativas/m02-20261030-025057/B2/escrituras.operaciones.p01.jsonl",
+    "gzip": "resultados/comparativas/m02-20261030-025057/B2/escrituras.operaciones.p01.jsonl.gz",
+    "sha256_original": "b188ce0a44321ad8833ec2c4b85242dac33d7928cabd7a5982df7fc142075f97"
+  },
+  {
+    "archivo": "resultados/comparativas/m02-20261030-025057/B3/escrituras.operaciones.p00.jsonl",
+    "gzip": "resultados/comparativas/m02-20261030-025057/B3/escrituras.operaciones.p00.jsonl.gz",
+    "sha256_original": "ec919df932752fcb261891b78f0d5b784297fa24a43183721b9974561fad7410"
+  },
+  {
+    "archivo": "resultados/comparativas/m02-20261030-025057/B3/escrituras.operaciones.p01.jsonl",
+    "gzip": "resultados/comparativas/m02-20261030-025057/B3/escrituras.operaciones.p01.jsonl.gz",
+    "sha256_original": "96f0f529d511a2de2dd0b4dee3ac008c130b9591db4ce48b42701ce50e4b2aa8"
+  },
+  {
+    "archivo": "resultados/base/base-20261030-002022/escrituras.operaciones.p00.jsonl",
+    "gzip": "resultados/base/base-20261030-002022/escrituras.operaciones.p00.jsonl.gz",
+    "sha256_original": "08c5f1fe78904dcbc58ff06617c94f56e708fc5b42b5db5d725040b06c9dac07"
+  }
+]

@@ -1,0 +1,58 @@
+from pathlib import Path
+import json
+import hashlib
+
+H=Path('Grupo16_BD2_repo/Hito-12-carga-optimizacion')
+V=H/'versiones/v2.2_candidata_paralelo'
+p=V/'carga/prueba_rendimiento.py'
+s=p.read_text(encoding='utf-8')
+s=s.replace('import random\n','')
+s=s.replace('from metricas_operaciones import', 'from perfil_paralelo import parametros, validar_perfil, inicializar_worker, esperar_inicio, abortar_inicio\n\nfrom metricas_operaciones import')
+s=s.replace("VERSION_BENCHMARK = '2.0-instrumentado'", "VERSION_BENCHMARK = '2.0-instrumentado'\nVERSION_EXPERIMENTO = 'v2.2_candidata_paralelo'")
+old="""        azar=random.Random(2030+indice);params=[]
+        for i in range(desde,hasta):
+            momento=BASE+datetime.timedelta(milliseconds=i)
+            params.append((partido,i%BUCKETS_PRUEBA,timeuuid(momento,i),f'user-{i%5000:06d}',
+                           'Comentario de prueba de rendimiento',momento,'visible',azar.randint(0,10)))"""
+assert old in s
+s=s.replace(old,"""        params=parametros(desde,hasta,partido,BASE,timeuuid)
+        # Datos y prepare fuera de la fase medida. Cada proceso tiene su propia sesion.
+        resultado['desde']=desde;resultado['hasta']=hasta
+        resultado['datos_sha256_sin_partido']=hashlib.sha256(
+            json.dumps([fila[1:] for fila in params],default=str,separators=(',',':')).encode()).hexdigest()""")
+s=s.replace('        inicio=time.perf_counter_ns()\n        resultados=', '        esperar_inicio()\n        inicio=time.perf_counter_ns()\n        resultados=')
+s=s.replace("        resultado['error_fase']=detalle_error(exc)\n    finally:", "        resultado['error_fase']=detalle_error(exc)\n        abortar_inicio()\n    finally:")
+s=s.replace('keyspace, partido, salida):\n    if Cluster', "keyspace, partido, salida, perfil='B'):\n    validar_perfil(perfil,rows,concurrencia,procesos)\n    if Cluster")
+s=s.replace('rampa_s=0,sostenimiento=', "perfil=perfil,concurrencia_total=concurrencia*procesos,semilla_por_indice_global=True,\n                             rampa_s=0,sostenimiento=")
+s=s.replace("Path(__file__).with_name('metricas_operaciones.py')]", "Path(__file__).with_name('metricas_operaciones.py'),Path(__file__).with_name('perfil_paralelo.py'),\n                 Path(__file__).resolve().parents[1]/'config/escenario_escritura_simple.json']")
+s=s.replace("'version_benchmark':VERSION_BENCHMARK,'configuracion'", "'version_benchmark':VERSION_BENCHMARK,'version_experimento':VERSION_EXPERIMENTO,'configuracion'")
+s=s.replace('        with multiprocessing.Pool(procesos) as pool:', "        contexto=multiprocessing.get_context('spawn')\n        barrera=contexto.Barrier(procesos)\n        with contexto.Pool(procesos,initializer=inicializar_worker,initargs=(barrera,)) as pool:")
+s=s.replace('    print(f"Benchmark {VERSION_BENCHMARK}")', '    print(f"Experimento {VERSION_EXPERIMENTO}; medidor {VERSION_BENCHMARK}")')
+s=s.replace('version_benchmark=VERSION_BENCHMARK,\n', 'version_benchmark=VERSION_BENCHMARK,version_experimento=VERSION_EXPERIMENTO,\n')
+s=s.replace('parser.add_argument("--rows"', 'parser.add_argument("--perfil", choices=("A","B"), default="B", help="A: 1x100; B: 2x50; ambos 50.000 filas")\n    parser.add_argument("--rows"')
+s=s.replace('type=int, default=100,','type=int, default=None,').replace('type=int, default=1,','type=int, default=None,')
+s=s.replace('(default: 100)', '(segun perfil)').replace('(default: 1)', '(segun perfil)')
+s=s.replace('    if not args.confirmar_escrituras:', '    if args.concurrencia is None:args.concurrencia=100 if args.perfil=="A" else 50\n    if args.procesos is None:args.procesos=1 if args.perfil=="A" else 2\n    if not args.confirmar_escrituras:')
+s=s.replace('args.keyspace, args.partido_prueba, args.salida)', 'args.keyspace, args.partido_prueba, args.salida, args.perfil)')
+p.write_text(s,encoding='utf-8')
+
+configpath=V/'config/escenario_escritura_simple.json'
+c=json.loads(configpath.read_text(encoding='utf-8'))
+c.update(estado='IMPLEMENTADO_SIN_CARGA_REAL',version_experimento='v2.2_candidata_paralelo',
+         perfil_por_defecto='B',perfiles={'A':{'filas':50000,'procesos':1,'concurrencia_por_proceso':100},
+         'B':{'filas':50000,'procesos':2,'concurrencia_por_proceso':50}},
+         concurrencia_por_proceso=50,procesos=2,concurrencia_total=100,
+         semilla='2030; secuencia global identica a la base de un proceso',
+         inicio='Barrera de trabajadores despues de conectar, preparar y generar; espera maxima 60 s',
+         sostenimiento='Hasta 100 operaciones globales mientras ambos trabajadores tengan pendientes; desciende al drenar',
+         comparacion='A y B deben medirse con este mismo codigo; la base historica es contexto')
+configpath.write_text(json.dumps(c,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+# El recolector identifica el perfil realmente seleccionado, sin cambiar el muestreo.
+rp=V/'scripts/registrar_base.py';r=rp.read_text(encoding='utf-8')
+r=r.replace("'carga/verificar_escrituras.py','config/", "'carga/verificar_escrituras.py','carga/perfil_paralelo.py','config/")
+r=r.replace("        dato={'fecha_utc':utc()", "        seleccionado=args.perfil\n        configuracion.update(configuracion['perfiles'][seleccionado])\n        configuracion['concurrencia_por_proceso']=configuracion['perfiles'][seleccionado]['concurrencia_por_proceso']\n        configuracion['perfil_seleccionado']=seleccionado\n        dato={'fecha_utc':utc()")
+# Argumento comun permite usar el mismo comando de monitoreo en los dos perfiles.
+r=r.replace("if __name__ == '__main__':", "if __name__ == '__main__':")
+rp.write_text(r,encoding='utf-8')
+print('M02: codigo y configuracion preparados; ninguna conexion ni carga ejecutada')

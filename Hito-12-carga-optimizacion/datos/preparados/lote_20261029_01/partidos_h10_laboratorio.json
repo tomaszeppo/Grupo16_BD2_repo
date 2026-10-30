@@ -1,0 +1,66 @@
+[
+  {
+    "id": "P-01",
+    "local": "ARG",
+    "visitante": "BRA",
+    "estadio": "EST001",
+    "fecha": "2030-06-15",
+    "fase": "Fase de grupos"
+  },
+  {
+    "id": "P-02",
+    "local": "ESP",
+    "visitante": "FRA",
+    "estadio": "EST002",
+    "fecha": "2030-06-15",
+    "fase": "Fase de grupos"
+  },
+  {
+    "id": "P-03",
+    "local": "GER",
+    "visitante": "ENG",
+    "estadio": "EST003",
+    "fecha": "2030-06-15",
+    "fase": "Fase de grupos"
+  },
+  {
+    "id": "P-04",
+    "local": "ITA",
+    "visitante": "POR",
+    "estadio": "EST004",
+    "fecha": "2030-06-15",
+    "fase": "Fase de grupos"
+  },
+  {
+    "id": "P-05",
+    "local": "NED",
+    "visitante": "BEL",
+    "estadio": "EST005",
+    "fecha": "2030-06-16",
+    "fase": "Fase de grupos"
+  },
+  {
+    "id": "P-06",
+    "local": "CRO",
+    "visitante": "URU",
+    "estadio": "EST006",
+    "fecha": "2030-06-16",
+    "fase": "Fase de grupos"
+  },
+  {
+    "id": "P-07",
+    "local": "MEX",
+    "visitante": "USA",
+    "estadio": "EST007",
+    "fecha": "2030-06-16",
+    "fase": "Fase de grupos"
+  },
+  {
+    "id": "P-08",
+    "local": "CAN",
+    "visitante": "JPN",
+    "estadio": "EST008",
+    "fecha": "2030-06-16",
+    "fase": "Fase de grupos"
+  }
+]

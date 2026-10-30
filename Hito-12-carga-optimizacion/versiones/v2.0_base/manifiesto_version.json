@@ -1,0 +1,74 @@
+{
+  "version_experimento": "v2.0_base",
+  "estado": "HISTORICO_DE_LINEA_BASE_NO_SOBRESCRIBIR",
+  "instrumentacion": "2.0-instrumentado",
+  "corrida_referencia": "base-20261030-002022",
+  "commit_repo": "f0b228ea6f747fd81b5dc89b30604a0f5ae6319a",
+  "nota": "La copia local fue no versionada en esa corrida; se identifica por hashes. No se ejecutaron nuevas cargas al conservarla.",
+  "archivos": [
+    {
+      "ruta": "carga/prueba_rendimiento.py",
+      "sha256": "1f079cf0dd0772adce7605744c60348382493811438ae47485e78ba3e33ea3ca",
+      "observacion": "Coincide con el hash observado en la linea base"
+    },
+    {
+      "ruta": "carga/metricas_operaciones.py",
+      "sha256": "562a4831b62f5a325c28efff665f61230f4f21c01800c6169ab4751668c8b4b4",
+      "observacion": "Coincide con el hash observado en la linea base"
+    },
+    {
+      "ruta": "carga/verificar_escrituras.py",
+      "sha256": "69d89f195d3ab382e033a238bd39223946519df34ef5960149c6b2b79624d7e4",
+      "observacion": "Coincide con el hash observado en la linea base"
+    },
+    {
+      "ruta": "config/escenario_escritura_simple.json",
+      "sha256": "dc546660a396cb77cad915a0c0d0f37b99b1cf21efc7255a49086dc8584b4717",
+      "observacion": "Coincide con el hash observado en la linea base"
+    },
+    {
+      "ruta": "scripts/esquema_comentarios_h6.cql",
+      "sha256": "d0385701f27fe5077d090fb8f3b2b043fb249720a8c4ec5f69fb759f2d0450c8",
+      "observacion": "Coincide con el hash observado en la linea base"
+    },
+    {
+      "ruta": "scripts/registrar_base.py",
+      "sha256": "aadaf444c40ac0da24de2359fa11644f5a781d296366ea02e9f0e14461436585",
+      "observacion": "Coincide con el hash observado en la linea base"
+    },
+    {
+      "ruta": "carga/requirements.txt",
+      "sha256": "44d78f420c0f9f84be26642aaf2947eaf0073d994f8fdcff870992f3cb9b8161",
+      "observacion": "Declaracion de dependencias; versiones instaladas observadas en JSONL e imagen"
+    }
+  ],
+  "versiones_observadas": {
+    "docker": {
+      "ServerVersion": "29.7.2",
+      "OperatingSystem": "Docker Desktop",
+      "OSType": "linux",
+      "Architecture": "x86_64",
+      "NCPU": 16,
+      "MemTotal": 7824109568,
+      "KernelVersion": "6.18.33.2-microsoft-standard-WSL2"
+    },
+    "imagen_cassandra": "sha256:da9dad3aaf67c4e5126c6aafa769460d75f27c1716951c48896ff5c4e97d2af3",
+    "cliente_imagen": "sha256:1ce4be69b147fab61c55c3431fdf13bbd8edd06a51932b0c7a5360b8ea4861e3",
+    "python": "3.12.16",
+    "driver": {
+      "version": "3.30.1",
+      "protocolo": 5,
+      "consistencia": 10,
+      "retry_policy": "RetryPolicy",
+      "timeout_s": 10,
+      "paginador": "execute_concurrent_with_args",
+      "raise_on_first_error": false
+    }
+  },
+  "evidencia": "../../resultados/base/base-20261030-002022",
+  "candidata_futura": {
+    "ruta_propuesta": "../v2.1_candidata_c50",
+    "creada": false,
+    "ejecutada": false
+  }
+}

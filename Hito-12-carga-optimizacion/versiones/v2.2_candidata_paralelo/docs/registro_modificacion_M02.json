@@ -1,0 +1,44 @@
+{
+  "modificacion": "M02",
+  "requisitos": [
+    "RF7",
+    "RF8",
+    "5.5"
+  ],
+  "hipotesis": "H2: posible limite de un proceso del cliente; repartir en dos con concurrencia global 100",
+  "hipotesis_previa": "../../docs/hipotesis_M02_paralelismo.md",
+  "cambio_implementado": true,
+  "cambio": "B=2x50 con spawn, sesiones propias, datos globales iguales e inicio coordinado; control A=1x100 en el mismo codigo",
+  "archivos_afectados": [
+    "carga/prueba_rendimiento.py",
+    "carga/perfil_paralelo.py",
+    "config/escenario_escritura_simple.json",
+    "scripts/registrar_base.py"
+  ],
+  "riesgos": [
+    "Mayor CPU/RAM/conexiones",
+    "Costo de preparacion",
+    "Posible limite compartido del servidor",
+    "Crecimiento de datos entre repeticiones"
+  ],
+  "prueba_ejecutada": {
+    "tipo": "unittest offline, sin base ni Docker",
+    "aprobadas": 9,
+    "python": "3.14.4",
+    "plataforma": "Windows"
+  },
+  "carga_real_ejecutada": false,
+  "resultado_medido": {
+    "throughput_A": null,
+    "throughput_B": null,
+    "p99_A": null,
+    "p99_B": null,
+    "persistencia_B": null
+  },
+  "decision_final": "Pendiente; candidata implementada sin mejora demostrada",
+  "protocolo": "docs/registro_modificacion_M02.md",
+  "historicos_verificados_por_sha256": {
+    "v2.0_base": 7,
+    "v2.1_candidata_c50": 13
+  }
+}

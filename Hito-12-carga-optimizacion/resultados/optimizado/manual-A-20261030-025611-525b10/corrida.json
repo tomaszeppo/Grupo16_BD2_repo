@@ -1,0 +1,15 @@
+﻿{
+    "raiz":  "C:\\Users\\Juani\\Documents\\ChatGPT\\DB 2\\Grupo16_BD2_repo\\Hito-12-carga-optimizacion",
+    "version":  "versiones/v2.2_candidata_paralelo",
+    "relativa":  "resultados/optimizado/manual-A-20261030-025611-525b10",
+    "salida":  "C:\\Users\\Juani\\Documents\\ChatGPT\\DB 2\\Grupo16_BD2_repo\\Hito-12-carga-optimizacion\\resultados\\optimizado\\manual-A-20261030-025611-525b10",
+    "perfil":  "A",
+    "corrida":  "manual-A-20261030-025611-525b10",
+    "partido":  "H12-manual-A-20261030-025611-525b10",
+    "cliente":  "h12-manual-a-20261030-025611-525b10",
+    "imagen":  "sha256:1ce4be69b147fab61c55c3431fdf13bbd8edd06a51932b0c7a5360b8ea4861e3",
+    "filas":  50000,
+    "procesos":  1,
+    "concurrencia_por_proceso":  100,
+    "concurrencia_total":  100
+}

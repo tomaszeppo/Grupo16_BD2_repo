@@ -1,0 +1,18 @@
+Verificacion de solo lectura: H12-m02-A3-20261030-025057
+Bucket | Esperados | Guardados | Coincide
+     0 |      3847 |      3847 | SI
+     1 |      3847 |      3847 | SI
+     2 |      3846 |      3846 | SI
+     3 |      3846 |      3846 | SI
+     4 |      3846 |      3846 | SI
+     5 |      3846 |      3846 | SI
+     6 |      3846 |      3846 | SI
+     7 |      3846 |      3846 | SI
+     8 |      3846 |      3846 | SI
+     9 |      3846 |      3846 | SI
+    10 |      3846 |      3846 | SI
+    11 |      3846 |      3846 | SI
+    12 |      3846 |      3846 | SI
+Total esperado: 50000 | Total guardado: 50000
+RESULTADO: COINCIDE
+Criterio completo (confirmaciones y persistencia): CUMPLIDO

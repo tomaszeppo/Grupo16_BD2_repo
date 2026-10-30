@@ -1,0 +1,165 @@
+{
+  "ruta": "Hito-10-fixture2030-APIREST/postman/fixture2030_collection.json",
+  "sha256": "213a206311824e0f756f08c712c0dc3f60d8307a58e21b1eabcb01017dadf021",
+  "requests": 38,
+  "metodos": {
+    "GET": 28,
+    "POST": 8,
+    "DELETE": 2
+  },
+  "ejecutada": false,
+  "requests_resumen": [
+    {
+      "nombre": "GET /health (200)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Equipo existente (200)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Equipo inexistente (404)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Código inválido (422)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Jugadores paginados (200)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Jugadores filtro Delantero (200)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "limit fuera de rango (422)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Partido existente (200)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Partido inexistente (404)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "ID inválido (422)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Eventos del partido (200)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Partido sin eventos (200 vacío)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Eventos de partido inexistente (404)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Comentarios ARG ventana 18:30 (200)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Partición vacía (200 vacío)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Sin ventana (422)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Ventana no alineada (422)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Crear comentario (201)",
+      "metodo": "POST"
+    },
+    {
+      "nombre": "Repetir con la misma clave (200)",
+      "metodo": "POST"
+    },
+    {
+      "nombre": "Misma clave, otro partido (409)",
+      "metodo": "POST"
+    },
+    {
+      "nombre": "Sin Idempotency-Key (422)",
+      "metodo": "POST"
+    },
+    {
+      "nombre": "Partido inexistente (404)",
+      "metodo": "POST"
+    },
+    {
+      "nombre": "Sesión vigente (200)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Sesión cerrada (404)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Sesión inexistente/expirada (404)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Invalidar sesión (204)",
+      "metodo": "DELETE"
+    },
+    {
+      "nombre": "Invalidar de nuevo, idempotente (204)",
+      "metodo": "DELETE"
+    },
+    {
+      "nombre": "Usuario inválido (422)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Agregado 1m (200)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Raw truncado (200)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Sin datos (200 vacío)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Fechas invertidas (422)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Ventana demasiado ancha (422)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Detalle del partido (200)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Detalle inexistente (404)",
+      "metodo": "GET"
+    },
+    {
+      "nombre": "Transición válida (200)",
+      "metodo": "POST"
+    },
+    {
+      "nombre": "Transición inválida (409)",
+      "metodo": "POST"
+    },
+    {
+      "nombre": "Estado fuera del dominio (422)",
+      "metodo": "POST"
+    }
+  ]
+}

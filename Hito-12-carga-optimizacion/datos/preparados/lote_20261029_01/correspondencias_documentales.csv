@@ -1,0 +1,9 @@
+id_h5_main,id_h10_laboratorio,equipo_local,equipo_visitante,fecha,estadio,estado,cassandra_h6,commit
+P001,P-01,ARG,BRA,2030-06-15,EST001,coincide_en_fuentes_main_no_habilita_importacion,PENDIENTE,f0b228ea6f747fd81b5dc89b30604a0f5ae6319a
+P002,P-02,ESP,FRA,2030-06-15,EST002,coincide_en_fuentes_main_no_habilita_importacion,PENDIENTE,f0b228ea6f747fd81b5dc89b30604a0f5ae6319a
+P003,P-03,GER,ENG,2030-06-15,EST003,coincide_en_fuentes_main_no_habilita_importacion,PENDIENTE,f0b228ea6f747fd81b5dc89b30604a0f5ae6319a
+P004,P-04,ITA,POR,2030-06-15,EST004,coincide_en_fuentes_main_no_habilita_importacion,PENDIENTE,f0b228ea6f747fd81b5dc89b30604a0f5ae6319a
+P005,P-05,NED,BEL,2030-06-16,EST005,coincide_en_fuentes_main_no_habilita_importacion,PENDIENTE,f0b228ea6f747fd81b5dc89b30604a0f5ae6319a
+P006,P-06,CRO,URU,2030-06-16,EST006,coincide_en_fuentes_main_no_habilita_importacion,PENDIENTE,f0b228ea6f747fd81b5dc89b30604a0f5ae6319a
+P007,P-07,MEX,USA,2030-06-16,EST007,coincide_en_fuentes_main_no_habilita_importacion,PENDIENTE,f0b228ea6f747fd81b5dc89b30604a0f5ae6319a
+P008,P-08,CAN,JPN,2030-06-16,EST008,coincide_en_fuentes_main_no_habilita_importacion,PENDIENTE,f0b228ea6f747fd81b5dc89b30604a0f5ae6319a

@@ -1,0 +1,31 @@
+{
+  "estado": "PLANTILLA_SIN_MEDICIONES",
+  "corrida_id": null,
+  "fecha_inicio_utc": null,
+  "commit": null,
+  "cambios_locales_sha256": null,
+  "version": "base_o_optimizado",
+  "perfil_dataset": null,
+  "dataset_manifiesto_sha256": null,
+  "escenario_sha256": null,
+  "imagenes_y_digests": [],
+  "hardware_y_limites": {},
+  "contenedores_ajenos": [],
+  "usuarios": null,
+  "rampa_s": 30,
+  "calentamiento_s": 30,
+  "medicion_s": 120,
+  "metricas": {
+    "requests": null,
+    "validas": null,
+    "errores": null,
+    "rps": null,
+    "p50_ms": null,
+    "p95_ms": null,
+    "p99_ms": null
+  },
+  "integridad": null,
+  "archivos_crudos": [],
+  "causa_finalizacion": null,
+  "observaciones": []
+}

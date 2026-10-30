@@ -1,0 +1,287 @@
+{
+  "origen": "resultados/optimizado/manual-B-20261030-025822-9dff16",
+  "configuracion": {
+    "evento": "inicio",
+    "fecha_utc": "2026-10-30T05:58:54.448402+00:00",
+    "version_benchmark": "2.0-instrumentado",
+    "version_experimento": "v2.2_candidata_paralelo",
+    "configuracion": {
+      "rows": 50000,
+      "concurrencia_por_proceso": 50,
+      "procesos": 2,
+      "keyspace": "fixture2030",
+      "partido_prueba": "H12-manual-B-20261030-025822-9dff16",
+      "host": "fixture2030-cassandra",
+      "puerto": 9042,
+      "perfil": "B",
+      "concurrencia_total": 100,
+      "semilla_por_indice_global": true,
+      "rampa_s": 0,
+      "sostenimiento": "Hasta agotar el lote; disminuye al drenar los ultimos pendientes",
+      "semilla_base": 2030,
+      "usuarios": 5000,
+      "buckets": 13,
+      "timeout_operacion_s": 10
+    },
+    "codigo_sha256": {
+      "prueba_rendimiento.py": "03c2fe2c542631629f7f2e676a305475bd35ca15f124d2c1d01ce4a011842972",
+      "metricas_operaciones.py": "562a4831b62f5a325c28efff665f61230f4f21c01800c6169ab4751668c8b4b4",
+      "perfil_paralelo.py": "387fb2d1a3a4c4f1d7cb079e6c56504b483b8bd03aa639501145cdfbe343368a",
+      "escenario_escritura_simple.json": "766c9c75eed132d05ad5988ab5b5c7387a4258fe0d9819c1d9080be9a5e0b18f"
+    }
+  },
+  "resultado": {
+    "evento": "resultado",
+    "previstas": 50000,
+    "intentadas": 50000,
+    "con_resultado": 50000,
+    "sin_resultado": 0,
+    "exitosas": 50000,
+    "fallidas": 0,
+    "sin_confirmacion_total": 0,
+    "no_intentadas": 0,
+    "segundos": 7.01110480999705,
+    "segundos_carga": 6.13568374,
+    "escrituras_por_segundo": 8149.0510461023205,
+    "intentos_por_segundo": 8149.0510461023205,
+    "escrituras_por_segundo_total": 7131.543651822976,
+    "tasa_error_porcentaje": 0.0,
+    "tasa_sin_confirmacion_porcentaje": 0.0,
+    "errores_por_tipo": {},
+    "latencia_todos_ms": {
+      "n": 50000,
+      "min": 1.250602,
+      "promedio": 12.177700995159999,
+      "p50": 7.957324,
+      "p95": 15.990913,
+      "p99": 112.338444,
+      "max": 1049.573404
+    },
+    "latencia_confirmadas_ms": {
+      "n": 50000,
+      "min": 1.250602,
+      "promedio": 12.177700995159999,
+      "p50": 7.957324,
+      "p95": 15.990913,
+      "p99": 112.338444,
+      "max": 1049.573404
+    },
+    "latencia_sin_confirmacion_ms": {
+      "n": 0,
+      "min": null,
+      "promedio": null,
+      "p50": null,
+      "p95": null,
+      "p99": null,
+      "max": null
+    },
+    "percentiles_metodo": "rango mas cercano: ceil(q*n); sin promediar percentiles entre procesos",
+    "serie_por_segundo": [
+      {
+        "segundo": 0,
+        "confirmadas": 12154,
+        "sin_confirmacion": 0,
+        "duracion_intervalo_s": 1.0,
+        "confirmadas_por_segundo": 12154.0
+      },
+      {
+        "segundo": 1,
+        "confirmadas": 9716,
+        "sin_confirmacion": 0,
+        "duracion_intervalo_s": 1.0,
+        "confirmadas_por_segundo": 9716.0
+      },
+      {
+        "segundo": 2,
+        "confirmadas": 7129,
+        "sin_confirmacion": 0,
+        "duracion_intervalo_s": 1.0,
+        "confirmadas_por_segundo": 7129.0
+      },
+      {
+        "segundo": 3,
+        "confirmadas": 9621,
+        "sin_confirmacion": 0,
+        "duracion_intervalo_s": 1.0,
+        "confirmadas_por_segundo": 9621.0
+      },
+      {
+        "segundo": 4,
+        "confirmadas": 5305,
+        "sin_confirmacion": 0,
+        "duracion_intervalo_s": 1.0,
+        "confirmadas_por_segundo": 5305.0
+      },
+      {
+        "segundo": 5,
+        "confirmadas": 4449,
+        "sin_confirmacion": 0,
+        "duracion_intervalo_s": 1.0,
+        "confirmadas_por_segundo": 4449.0
+      },
+      {
+        "segundo": 6,
+        "confirmadas": 1626,
+        "sin_confirmacion": 0,
+        "duracion_intervalo_s": 0.13568374000000016,
+        "confirmadas_por_segundo": 11983.7498583102
+      }
+    ],
+    "interpretacion_errores": "Sin confirmacion del cliente no implica rechazo ni ausencia en Cassandra; contrastar persistencia",
+    "observaciones_estabilidad": [
+      "Revisar serie temporal, errores y recursos durante la carga; una cifra agregada no demuestra estabilidad",
+      "Ultimo intervalo puede ser parcial y se informa su duracion",
+      "Las metricas incluyen el costo de instrumentacion del cliente; mantenerlo igual al comparar versiones"
+    ],
+    "fecha_utc": "2026-10-30T05:59:02.061423+00:00",
+    "python": "3.12.16",
+    "sistema": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.41",
+    "version_benchmark": "2.0-instrumentado",
+    "version_experimento": "v2.2_candidata_paralelo",
+    "datos_conservados": true,
+    "procesos": [
+      {
+        "proceso": 0,
+        "muestras": "/h12/resultados/optimizado/manual-B-20261030-025822-9dff16/escrituras.operaciones.p00.jsonl",
+        "inicio_ns": 24098002860577,
+        "fin_ns": 24104138507411,
+        "error_fase": null,
+        "driver": {
+          "version": "3.30.1",
+          "protocolo": 5,
+          "consistencia": 10,
+          "retry_policy": "RetryPolicy",
+          "timeout_s": 10,
+          "paginador": "execute_concurrent_with_args",
+          "raise_on_first_error": false
+        },
+        "desde": 0,
+        "hasta": 25000,
+        "datos_sha256_sin_partido": "6e2effd091005a5e42b3e3d749ce595b88b517ba5f203436e79937620d95edbf",
+        "respuestas_planificador": 25000,
+        "errores_planificador": 0,
+        "max_en_curso": 50,
+        "iniciadas": 25000,
+        "muestras_registradas": 25000
+      },
+      {
+        "proceso": 1,
+        "muestras": "/h12/resultados/optimizado/manual-B-20261030-025822-9dff16/escrituras.operaciones.p01.jsonl",
+        "inicio_ns": 24098002823671,
+        "fin_ns": 24104138493067,
+        "error_fase": null,
+        "driver": {
+          "version": "3.30.1",
+          "protocolo": 5,
+          "consistencia": 10,
+          "retry_policy": "RetryPolicy",
+          "timeout_s": 10,
+          "paginador": "execute_concurrent_with_args",
+          "raise_on_first_error": false
+        },
+        "desde": 25000,
+        "hasta": 50000,
+        "datos_sha256_sin_partido": "bc75af84ccf99d83bf4adf7c56ed2fbd696024c89fec86ce7f894c49bbd50816",
+        "respuestas_planificador": 25000,
+        "errores_planificador": 0,
+        "max_en_curso": 50,
+        "iniciadas": 25000,
+        "muestras_registradas": 25000
+      }
+    ],
+    "errores_fase": []
+  },
+  "verificacion": {
+    "fecha_utc": "2026-10-30T05:59:10.631637+00:00",
+    "modo": "solo_lectura",
+    "partido_prueba": "H12-manual-B-20261030-025822-9dff16",
+    "keyspace": "fixture2030",
+    "esperados": 50000,
+    "guardados": 50000,
+    "coincide": true,
+    "particiones": [
+      {
+        "bucket": 0,
+        "esperados": 3847,
+        "guardados": 3847,
+        "coincide": true
+      },
+      {
+        "bucket": 1,
+        "esperados": 3847,
+        "guardados": 3847,
+        "coincide": true
+      },
+      {
+        "bucket": 2,
+        "esperados": 3846,
+        "guardados": 3846,
+        "coincide": true
+      },
+      {
+        "bucket": 3,
+        "esperados": 3846,
+        "guardados": 3846,
+        "coincide": true
+      },
+      {
+        "bucket": 4,
+        "esperados": 3846,
+        "guardados": 3846,
+        "coincide": true
+      },
+      {
+        "bucket": 5,
+        "esperados": 3846,
+        "guardados": 3846,
+        "coincide": true
+      },
+      {
+        "bucket": 6,
+        "esperados": 3846,
+        "guardados": 3846,
+        "coincide": true
+      },
+      {
+        "bucket": 7,
+        "esperados": 3846,
+        "guardados": 3846,
+        "coincide": true
+      },
+      {
+        "bucket": 8,
+        "esperados": 3846,
+        "guardados": 3846,
+        "coincide": true
+      },
+      {
+        "bucket": 9,
+        "esperados": 3846,
+        "guardados": 3846,
+        "coincide": true
+      },
+      {
+        "bucket": 10,
+        "esperados": 3846,
+        "guardados": 3846,
+        "coincide": true
+      },
+      {
+        "bucket": 11,
+        "esperados": 3846,
+        "guardados": 3846,
+        "coincide": true
+      },
+      {
+        "bucket": 12,
+        "esperados": 3846,
+        "guardados": 3846,
+        "coincide": true
+      }
+    ],
+    "confirmadas_cliente": 50000,
+    "sin_confirmacion_cliente": 0,
+    "resultado_cliente_disponible": true,
+    "criterio_completo_cumplido": true
+  }
+}

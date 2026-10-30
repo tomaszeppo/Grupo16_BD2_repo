@@ -1,0 +1,8 @@
+{
+  "autoridad": "Neo4j",
+  "namespace": "f2030:h12:cache:partido:v1:",
+  "ttl_segundos": 15,
+  "payload": "Respuesta real validada de Neo4j; no precargar respuestas inventadas",
+  "fallback": "Neo4j con timeout acotado",
+  "invalidacion": "pendiente de implementar y verificar; por ahora no se modifica ni elimina ninguna clave"
+}

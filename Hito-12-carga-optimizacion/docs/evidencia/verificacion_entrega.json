@@ -1,0 +1,28 @@
+{
+  "documento_original_copia_identica": true,
+  "capturas_extraidas": 8,
+  "md_tematicos": 6,
+  "enlaces_nuevos_validos": true,
+  "sintaxis_python_json_validas": true,
+  "versiones_historicas_manifestadas_intactas": true,
+  "sqlite_hash_validado": true,
+  "pruebas_offline": {
+    "instrumentacion": 7,
+    "candidata_v21": 6,
+    "paralelismo_v22": 9,
+    "transformacion_datamart": 4,
+    "lector_sql_v11": 4,
+    "total": 30,
+    "resultado": "OK"
+  },
+  "cargas_nuevas_ejecutadas_durante_organizacion": 0,
+  "borrados": 0,
+  "notas": [
+    "Los scripts PowerShell se verifican sintacticamente, no se ejecutan cargas",
+    "Los porcentajes del informe comparan base historica con corrida manual B",
+    "La copia original del DOCX no fue editada"
+  ],
+  "sintaxis_entradas_powershell_valida": true,
+  "archivos_git_bytes_identicos_a_local": true,
+  "revision_patrones_secretos_sin_hallazgos": true
+}

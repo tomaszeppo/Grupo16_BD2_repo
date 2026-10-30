@@ -1,0 +1,13 @@
+-- PLANTILLA INACTIVA, NO EJECUTADA. No crea keyspace ni tablas.
+-- Sustituir {{KEYSPACE_VALIDADO}} solo al elegir el modelo de H6 y verificar su esquema.
+-- partido_id_cassandra no puede ser null: completar correspondencia antes de cargar.
+-- Clave completa estable para que los reintentos apunten a la misma fila.
+INSERT INTO {{KEYSPACE_VALIDADO}}.comentarios_por_partido_pais
+  (partido_id,pais,ventana,creado_en,comentario_id,usuario_id,usuario_nombre,contenido,likes,estado_moderacion)
+VALUES (?,?,?,?,?,?,?,?,?,?) IF NOT EXISTS;
+INSERT INTO {{KEYSPACE_VALIDADO}}.comentarios_por_likes_partido_pais
+  (partido_id,pais,ventana,likes,creado_en,comentario_id,usuario_nombre,contenido)
+VALUES (?,?,?,?,?,?,?,?) IF NOT EXISTS;
+-- Las dos tablas requieren reconciliacion si una escritura falla; no afirmar transaccion atomica.
+-- No se agrega comentarios_idempotencia ni se modifica la tabla existente del laboratorio.
+

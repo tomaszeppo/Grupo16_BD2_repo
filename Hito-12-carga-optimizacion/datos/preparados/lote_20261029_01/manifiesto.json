@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "estado": "PREPARADO_NO_INSERTADO",
+  "commit_origen": "f0b228ea6f747fd81b5dc89b30604a0f5ae6319a",
+  "sintetico": true,
+  "limites": [
+    "Horarios de comentarios sinteticos, no horarios oficiales",
+    "Cassandra sin ID de destino hasta validar correspondencia",
+    "Archivos H10 de apoyo, no reemplazan la reutilizacion de H4-H9",
+    "IDs del perfil H5 aun no aceptados por la API actual"
+  ],
+  "cantidades": {
+    "partidos_h5": 32,
+    "estadios_h5": 10,
+    "correspondencias_documentales": 8,
+    "comentarios_propuestos": 1920,
+    "particiones_propuestas": 128,
+    "mongo_equipos_h10": 16,
+    "mongo_jugadores_h10": 80,
+    "iris_partidos_h10": 8,
+    "influx_puntos_h10": 4800
+  },
+  "fuentes": [
+    {
+      "ruta": "Hito-5-fixture2030-neo4j/queries/carga_partidos.cypher",
+      "sha256": "73a483c42c81e25f0905bd0ddd4175cfaef25a9275c19f4edd70e32757946fb1"
+    },
+    {
+      "ruta": "Hito-10-fixture2030-APIREST/seed/datos.py",
+      "sha256": "6a969f05d90bb69b3b2464b06598b123f2d7e735e9485496ff545f986595fad0"
+    },
+    {
+      "ruta": "Hito-10-fixture2030-APIREST/seed/cargar_influx.py",
+      "sha256": "45fc2d426702f52e271a6e6d1c5c8c8098ff6f101ac9cff1dd656b70d4fbcbbd"
+    }
+  ],
+  "archivos": [
+    {
+      "ruta": "comentarios_propuestos.jsonl",
+      "bytes": 823680,
+      "sha256": "980fce231fd3f880a21e9983dee62e9f4342d62f550f0797c5e8314838a2588a"
+    },
+    {
+      "ruta": "correspondencias_documentales.csv",
+      "bytes": 1198,
+      "sha256": "215973363d9e5790a19f60081aec52410a0087cbea66462b0895d3c13c767912"
+    },
+    {
+      "ruta": "datamart_conteos_esperados.csv",
+      "bytes": 4397,
+      "sha256": "acf9b1511d0a47aeed252ec9e1482d2fc8ed7817d52225d521c79f044359d4d4"
+    },
+    {
+      "ruta": "influx_muestra_h10.lp",
+      "bytes": 928192,
+      "sha256": "f62bf21229f62ea91be1d3e1fe9b6d6fded544315150c273e385087589cdeb6f"
+    },
+    {
+      "ruta": "iris_partidos_h10.json",
+      "bytes": 1787,
+      "sha256": "a9672516bcf7c2f9b786b25b7f38702069bfdb881fee9bdcf33d527ae6cb5271"
+    },
+    {
+      "ruta": "mongo_equipos_h10.jsonl",
+      "bytes": 642,
+      "sha256": "a6af07f65acf06a1d88a231d1e3d12d949476da52a765b941804b8e870a19348"
+    },
+    {
+      "ruta": "mongo_jugadores_h10.jsonl",
+      "bytes": 7818,
+      "sha256": "59811b39c3ff010e08f3f5f1ce860d1336272418e18d61afab77eca7b4d6d4e0"
+    },
+    {
+      "ruta": "neo4j_parametros.json",
+      "bytes": 6751,
+      "sha256": "7460df9f1818c4a82fd895bdd8857da7fba220b714913b32f302df81921673ab"
+    },
+    {
+      "ruta": "partidos_h10_laboratorio.json",
+      "bytes": 1219,
+      "sha256": "d9804baa71a2692847bcc1bf5c7604d5a4d55584996c6d3551c88c11ab9311a2"
+    },
+    {
+      "ruta": "partidos_h5_main.csv",
+      "bytes": 1555,
+      "sha256": "760c8547980881aa303d9291ae53e9b3c43e2b4e1384fa9d727c745faa2fe7fb"
+    },
+    {
+      "ruta": "redis_politica_propuesta.json",
+      "bytes": 332,
+      "sha256": "cf5978e157b0350f4d5dcd5fe916ebdac738f7b5104150804f8a1e2144427967"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "fecha": "2026-10-30",
+  "refs_despues_fetch_all": {
+    "origin/main": "f0b228ea6f747fd81b5dc89b30604a0f5ae6319a",
+    "origin/correcciones": "27f28e164c988706d260b42990abdb370c1525d9"
+  },
+  "hallazgos": [
+    {
+      "rama": "origin/main",
+      "coincidencias": [
+        "origin/main:arquitectura-hito-12.html:45:<details><summary>Qué medimos y dónde lo miramos</summary><ul><li><strong>Generador:</strong> requests/s, operaciones exitosas, errores por tipo, p50, p95 y p99, y uso de recursos del propio cliente.</li><li><strong>API:</strong> duración por ruta, request ID, timeouts y tiempo dedicado al adaptador.</li><li><strong>Bases:</strong> consultas recibidas en Neo4j; hits, misses, evicciones y memoria de la caché en Redis, cuando las herramientas lo permitan.</li><li><strong>Entorno:</strong> CPU, RAM, disco y red del host y contenedores. Un generador saturado también puede explicar un techo de rendimiento.</li><li><strong>Integridad:</strong> comparar códigos, equipos, estadio y resultado entre fuente, API y caché; sin registros perdidos ni respuestas de otro partido.</li></ul><p>No hay cifras medidas en esta página. Cada resultado deberá venir de una ejecución guardada con fecha, commit, versiones, configuración y dataset.</p></details>",
+        "origin/main:arquitectura-hito-12.html:46:<details><summary>Qué puede salir mal con la caché</summary><p>Una copia puede quedar vieja hasta 15 segundos si no se invalida antes. Para una modificación en la fuente, proponemos invalidar la clave; si hay escrituras por fuera de ese camino, el TTL es el límite de frescura aceptado. No usamos esta caché para reemplazar el control de estados de IRIS.</p><p>Si Redis falla, proponemos volver a Neo4j con timeout acotado y registrar el fallback. Si Neo4j falla y no hay copia válida, corresponde un error controlado. Servir datos vencidos necesitaría un contrato nuevo y evidencia; no forma parte de la primera propuesta.</p><p>Al expirar una clave popular, muchos pedidos pueden ir juntos a la fuente. Si aparece ese cuello de botella, evaluamos agrupar la reconstrucción por clave como una segunda optimización, medida por separado.</p></details>"
+      ]
+    },
+    {
+      "rama": "origin/correcciones",
+      "coincidencias": [
+        "origin/correcciones:Hito-6-fixture2030-cassandra/docs/rendimiento.md:58:Si no se llega a 10.000 por segundo, se explica acá el cuello de botella observado",
+        "origin/correcciones:Hito-6-fixture2030-cassandra/docs/rendimiento.md:59:(CPU del cliente, CPU del nodo, disco). La cifra no se cambia.",
+        "origin/correcciones:Hito-6-fixture2030-cassandra/scripts/prueba_rendimiento.py:22:propia conexion: un solo proceso de Python se queda sin CPU antes de llegar al",
+        "origin/correcciones:Hito-7-fixture2030-redis/docs/rendimiento.md:57:  recién manda el siguiente, desde un solo proceso de Python y a través de la red de Docker"
+      ]
+    }
+  ],
+  "conclusion": "Antecedentes existentes; no analisis completo de esta corrida en ramas remotas"
+}

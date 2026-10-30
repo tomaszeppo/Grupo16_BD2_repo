@@ -1,0 +1,66 @@
+{
+  "estado": "PREPARACION_NO_EJECUTADA",
+  "flujo": "Publicar y consultar comentarios del Fixture 2030",
+  "operaciones_api": [
+    "POST /partidos/{id}/comentarios",
+    "GET /partidos/{id}/comentarios"
+  ],
+  "fuentes": {
+    "post": [
+      "Neo4j",
+      "Cassandra"
+    ],
+    "get": [
+      "Cassandra"
+    ]
+  },
+  "consumidor": "Hincha desde la aplicacion; cliente de carga durante la prueba",
+  "dataset_h6_correcciones": {
+    "objetivo_comentarios": 1200000,
+    "filas_reales_parametros_originales": 1199770,
+    "partidos": 32,
+    "populares": 5,
+    "porcentaje_en_populares": 70,
+    "usuarios_configurados": 50000,
+    "semilla": 2030,
+    "bucket_minutos": 10,
+    "buckets_por_partido": 13
+  },
+  "herramientas": {
+    "generador": {
+      "ruta": "scripts/generar_carga_masiva.py",
+      "conecta_bases": false,
+      "sobrescribe_archivos": false
+    },
+    "benchmark_cassandra": {
+      "ruta": "carga/prueba_rendimiento.py",
+      "rows_ejemplo": 50000,
+      "concurrencia_por_proceso_ejemplo": 100,
+      "procesos_ejemplo": 1,
+      "usa_api": false,
+      "requiere_confirmar_escrituras": true,
+      "conserva_datos": true
+    },
+    "latencia_api": {
+      "ruta": "carga/medir_latencia.py",
+      "metodo": "GET",
+      "n_por_defecto": 50,
+      "calentamiento_por_defecto": 5,
+      "concurrencia": 1,
+      "modifica_dominio": false
+    }
+  },
+  "pendientes_escenario_final": {
+    "proporcion_get_post": null,
+    "frecuencia_objetivo_http": null,
+    "usuarios_concurrentes_http": null,
+    "rampa_segundos": null,
+    "duracion_medicion_segundos": null,
+    "repeticiones": null,
+    "criterios_corte": null,
+    "modelo_destino_y_correspondencias": null
+  },
+  "compatibilidad": "H6 corregido usa comentarios_por_partido y buckets 10 minutos; H10 usa comentarios_por_partido_pais, pais y ventana UTC de 30 minutos. Adaptacion pendiente.",
+  "optimizacion": "A elegir tras medir y diagnosticar, sin presuponer cache Redis",
+  "restriccion_actual": "NO EJECUTAR: las pruebas se realizaran junto con el usuario; no insertar ni borrar datos durante esta preparacion."
+}

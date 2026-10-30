@@ -1,0 +1,324 @@
+{
+  "capturado_utc": "2026-10-29T22:45:37.960566+00:00",
+  "modo": "solo_lectura",
+  "fuentes": {
+    "mongodb": {
+      "estado": "ok",
+      "inventario": {
+        "jugadores": {
+          "documentos": 80,
+          "indices": [
+            {
+              "nombre": "_id_",
+              "campos": [
+                [
+                  "_id",
+                  1
+                ]
+              ],
+              "unico": false
+            },
+            {
+              "nombre": "equipo_1",
+              "campos": [
+                [
+                  "equipo",
+                  1
+                ]
+              ],
+              "unico": false
+            },
+            {
+              "nombre": "apellido_1",
+              "campos": [
+                [
+                  "apellido",
+                  1
+                ]
+              ],
+              "unico": false
+            },
+            {
+              "nombre": "posicion_1",
+              "campos": [
+                [
+                  "posicion",
+                  1
+                ]
+              ],
+              "unico": false
+            }
+          ]
+        },
+        "equipos": {
+          "documentos": 16,
+          "indices": [
+            {
+              "nombre": "_id_",
+              "campos": [
+                [
+                  "_id",
+                  1
+                ]
+              ],
+              "unico": false
+            },
+            {
+              "nombre": "codigo_1",
+              "campos": [
+                [
+                  "codigo",
+                  1
+                ]
+              ],
+              "unico": true
+            }
+          ]
+        }
+      }
+    },
+    "neo4j": {
+      "estado": "ok",
+      "inventario": {
+        "labels": [
+          {
+            "label": "Equipo",
+            "cantidad": 16
+          },
+          {
+            "label": "Estadio",
+            "cantidad": 8
+          },
+          {
+            "label": "Evento",
+            "cantidad": 5
+          },
+          {
+            "label": "Partido",
+            "cantidad": 8
+          }
+        ],
+        "partidos": [
+          {
+            "id": "P-01",
+            "fecha": "2030-06-15",
+            "equipos": [
+              "BRA",
+              "ARG"
+            ]
+          },
+          {
+            "id": "P-02",
+            "fecha": "2030-06-15",
+            "equipos": [
+              "FRA",
+              "ESP"
+            ]
+          },
+          {
+            "id": "P-03",
+            "fecha": "2030-06-15",
+            "equipos": [
+              "ENG",
+              "GER"
+            ]
+          },
+          {
+            "id": "P-04",
+            "fecha": "2030-06-15",
+            "equipos": [
+              "POR",
+              "ITA"
+            ]
+          },
+          {
+            "id": "P-05",
+            "fecha": "2030-06-16",
+            "equipos": [
+              "BEL",
+              "NED"
+            ]
+          },
+          {
+            "id": "P-06",
+            "fecha": "2030-06-16",
+            "equipos": [
+              "URU",
+              "CRO"
+            ]
+          },
+          {
+            "id": "P-07",
+            "fecha": "2030-06-16",
+            "equipos": [
+              "USA",
+              "MEX"
+            ]
+          },
+          {
+            "id": "P-08",
+            "fecha": "2030-06-16",
+            "equipos": [
+              "JPN",
+              "CAN"
+            ]
+          }
+        ],
+        "indices": [
+          {
+            "name": "equipo_codigo",
+            "type": "RANGE",
+            "state": "ONLINE"
+          },
+          {
+            "name": "estadio_id",
+            "type": "RANGE",
+            "state": "ONLINE"
+          },
+          {
+            "name": "evento_id",
+            "type": "RANGE",
+            "state": "ONLINE"
+          },
+          {
+            "name": "index_343aff4e",
+            "type": "LOOKUP",
+            "state": "ONLINE"
+          },
+          {
+            "name": "index_f7700477",
+            "type": "LOOKUP",
+            "state": "ONLINE"
+          },
+          {
+            "name": "partido_id",
+            "type": "RANGE",
+            "state": "ONLINE"
+          }
+        ]
+      }
+    },
+    "cassandra": {
+      "estado": "ok",
+      "inventario": {
+        "tablas": [
+          {
+            "table_name": "comentarios_idempotencia"
+          },
+          {
+            "table_name": "comentarios_por_likes_partido_pais"
+          },
+          {
+            "table_name": "comentarios_por_partido_pais"
+          }
+        ],
+        "particion_muestra": {
+          "partido": "P-01",
+          "pais": "ARG",
+          "ventana": "2030-06-15T18:30:00Z",
+          "filas_hasta_1000": 5
+        },
+        "conteo_global": "no ejecutado"
+      }
+    },
+    "redis": {
+      "estado": "ok",
+      "inventario": {
+        "version": "7.4.12",
+        "keyspace": {
+          "db0": {
+            "keys": 3,
+            "expires": 3,
+            "avg_ttl": 1292434,
+            "subexpiry": 0
+          }
+        },
+        "claves_fixture": [
+          {
+            "clave": "f2030:sesion:U003",
+            "tipo": "hash",
+            "ttl": 1287
+          },
+          {
+            "clave": "f2030:sesion:U002",
+            "tipo": "hash",
+            "ttl": 1287
+          },
+          {
+            "clave": "f2030:sesion:U001",
+            "tipo": "hash",
+            "ttl": 1287
+          }
+        ],
+        "claves_h12": []
+      }
+    },
+    "influxdb": {
+      "estado": "ok",
+      "inventario": {
+        "tablas": [
+          {
+            "table_name": "estadisticas_partido"
+          },
+          {
+            "table_name": "distinct_caches"
+          },
+          {
+            "table_name": "influxdb_schema"
+          },
+          {
+            "table_name": "last_caches"
+          },
+          {
+            "table_name": "parquet_files"
+          },
+          {
+            "table_name": "processing_engine_logs"
+          },
+          {
+            "table_name": "processing_engine_trigger_arguments"
+          },
+          {
+            "table_name": "processing_engine_triggers"
+          },
+          {
+            "table_name": "queries"
+          },
+          {
+            "table_name": "tables"
+          },
+          {
+            "table_name": "views"
+          },
+          {
+            "table_name": "columns"
+          },
+          {
+            "table_name": "df_settings"
+          },
+          {
+            "table_name": "schemata"
+          },
+          {
+            "table_name": "routines"
+          },
+          {
+            "table_name": "parameters"
+          }
+        ],
+        "puntos": [
+          {
+            "cantidad": 4800
+          }
+        ]
+      }
+    },
+    "iris": {
+      "estado": "ok",
+      "inventario": {
+        "Fixture.Partido": 8,
+        "Fixture.Evento": 2
+      }
+    }
+  }
+}

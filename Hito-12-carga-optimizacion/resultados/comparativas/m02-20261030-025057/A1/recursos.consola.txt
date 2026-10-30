@@ -1,0 +1,8 @@
+Monitoreo de solo lectura activo. Ahora iniciar benchmark en la otra consola.
+Se detiene al terminar el contenedor cliente o con Ctrl+C; no detiene Cassandra ni la carga.
+2026-10-30T05:50:59.200232+00:00 | cliente=no_creado | CPU host=None | fixture2030-cassandra: CPU=0.97% RAM=4.5GiB / 7.287GiB RED=11.5MB / 1.61MB DISCO=797MB / 239MB
+2026-10-30T05:51:01.200581+00:00 | cliente=running | CPU host=38.188976377952756 | fixture2030-cassandra: CPU=255.61% RAM=4.511GiB / 7.287GiB RED=13.5MB / 2.09MB DISCO=807MB / 241MB | h12-m02-a1-20261030-025057: CPU=97.24% RAM=96.27MiB / 7.287GiB RED=480kB / 2.02MB DISCO=32.3MB / 0B
+2026-10-30T05:51:03.200632+00:00 | cliente=running | CPU host=37.109375 | fixture2030-cassandra: CPU=200.25% RAM=4.512GiB / 7.287GiB RED=16.3MB / 2.37MB DISCO=808MB / 241MB | h12-m02-a1-20261030-025057: CPU=93.19% RAM=167.8MiB / 7.287GiB RED=756kB / 4.86MB DISCO=32.3MB / 0B
+2026-10-30T05:51:05.201005+00:00 | cliente=running | CPU host=38.47128378378378 | fixture2030-cassandra: CPU=178.20% RAM=4.496GiB / 7.287GiB RED=19.4MB / 2.68MB DISCO=809MB / 248MB | h12-m02-a1-20261030-025057: CPU=95.72% RAM=231.6MiB / 7.287GiB RED=1.05MB / 7.71MB DISCO=32.3MB / 774kB
+2026-10-30T05:51:07.201377+00:00 | cliente=exited | CPU host=28.285714285714285 | fixture2030-cassandra: CPU=0.99% RAM=4.502GiB / 7.287GiB RED=23.1MB / 3.1MB DISCO=844MB / 252MB
+Recursos conservados en C:\Users\Juani\Documents\ChatGPT\DB 2\Grupo16_BD2_repo\Hito-12-carga-optimizacion\resultados\comparativas\m02-20261030-025057\A1\recursos.jsonl

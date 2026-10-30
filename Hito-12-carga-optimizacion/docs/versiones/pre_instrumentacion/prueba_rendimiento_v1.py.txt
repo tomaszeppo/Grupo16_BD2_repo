@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+"""H12: benchmark de escrituras directas a Cassandra, adaptado del H6 corregido.
+Requiere host, puerto, keyspace, ID H12 exclusivo, salida nueva y --confirmar-escrituras.
+Los registros permanecen en la base. No hay limpieza automatica ni llamadas a la API.
+Consultar README y --help para los parametros. Requiere cassandra-driver instalado.
+"""
+
+import argparse
+import datetime
+import json
+import multiprocessing
+import platform
+import random
+import re
+import time
+import uuid
+from pathlib import Path
+
+try:
+    from cassandra.cluster import Cluster
+    from cassandra.concurrent import execute_concurrent_with_args
+except ImportError:
+    Cluster = None
+
+PARTIDO_PRUEBA = "P-PRUEBA"
+BUCKETS_PRUEBA = 13
+BASE = datetime.datetime(2030, 6, 8, 18, 0, 0)
+ORIGEN_UUID1 = datetime.datetime(1582, 10, 15)
+
+INSERT_CQL = """
+INSERT INTO comentarios_por_partido
+    (partido_codigo, bucket, comentario_id, usuario_id, contenido, creado_en, estado_moderacion, likes)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+"""
+
+
+def timeuuid(momento, contador):
+    ts = (momento - ORIGEN_UUID1) // datetime.timedelta(microseconds=1) * 10
+    seq = contador & 0x3FFF
+    nodo = ((contador >> 14) & 0xFFFFFFFFFF) | 0x010000000000
+    return uuid.UUID(fields=(ts & 0xFFFFFFFF, (ts >> 32) & 0xFFFF,
+                             ((ts >> 48) & 0x0FFF) | 0x1000, (seq >> 8) | 0x80, seq & 0xFF, nodo))
+
+
+def trabajo(args):
+    """Corre en cada proceso: inserta su tramo de filas y devuelve (exitosas, fallidas)."""
+    indice, desde, hasta, concurrencia, host, puerto, keyspace, partido = args
+    cluster = Cluster([host], port=puerto)
+    session = cluster.connect(keyspace)
+    insert = session.prepare(INSERT_CQL)
+    azar = random.Random(2030 + indice)
+    params = []
+    for i in range(desde, hasta):
+        momento = BASE + datetime.timedelta(milliseconds=i)
+        params.append((partido, i % BUCKETS_PRUEBA, timeuuid(momento, i),
+                       f"user-{i % 5000:06d}", "Comentario de prueba de rendimiento",
+                       momento, "visible", azar.randint(0, 10)))
+    resultados = execute_concurrent_with_args(session, insert, params, concurrency=concurrencia)
+    fallidas = sum(1 for ok, _ in resultados if not ok)
+    cluster.shutdown()
+    return len(params) - fallidas, fallidas
+
+
+def correr_prueba(rows, concurrencia, host, puerto, procesos, keyspace, partido, salida):
+    if Cluster is None:
+        raise RuntimeError("Falta el driver: pip install cassandra-driver")
+
+    if min(rows, concurrencia, procesos) <= 0 or procesos > rows:
+        raise ValueError("Filas, concurrencia y procesos deben ser positivos; procesos <= filas")
+    if not re.fullmatch(r'[A-Za-z][A-Za-z0-9_]*', keyspace) or keyspace.lower().startswith('system'):
+        raise ValueError("Keyspace de laboratorio no valido")
+    if not re.fullmatch(r'H12-[A-Za-z0-9_-]{1,60}', partido):
+        raise ValueError("La particion de prueba debe usar un ID H12- exclusivo de esta corrida")
+    # Se reserva una salida nueva antes de conectar: ninguna corrida pisa evidencia previa.
+    with Path(salida).open('x', encoding='utf-8') as archivo:
+        configuracion = dict(rows=rows, concurrencia_por_proceso=concurrencia, procesos=procesos,
+                             keyspace=keyspace, partido_prueba=partido, host=host, puerto=puerto)
+        archivo.write(json.dumps({'evento':'inicio','configuracion':configuracion})+'\n'); archivo.flush()
+        cluster = Cluster([host], port=puerto, connect_timeout=10)
+        try:
+            session = cluster.connect(keyspace)
+            # Leer todas las particiones de la corrida impide reutilizar datos anteriores.
+            consulta = session.prepare('SELECT comentario_id FROM comentarios_por_partido WHERE partido_codigo=? AND bucket=? LIMIT 1')
+            for bucket in range(BUCKETS_PRUEBA):
+                if session.execute(consulta, (partido,bucket)).one():
+                    raise ValueError('La particion de esta corrida ya contiene datos; usar un ID nuevo')
+        except Exception as exc:
+            archivo.write(json.dumps({'evento':'preflight_fallido','tipo':type(exc).__name__})+'\n')
+            raise
+        finally:
+            cluster.shutdown()
+        try:
+            resultado = ejecutar(rows, concurrencia, host, puerto, procesos, keyspace, partido)
+            archivo.write(json.dumps({'evento':'resultado',**resultado})+'\n')
+            return resultado
+        except Exception as exc:
+            archivo.write(json.dumps({'evento':'fallo','tipo':type(exc).__name__, 'datos_parciales_conservados':True})+'\n')
+            raise
+
+
+def ejecutar(rows, concurrencia, host, puerto, procesos, keyspace, partido):
+
+    tramo = rows // procesos
+    tareas = []
+    for p in range(procesos):
+        desde = p * tramo
+        hasta = rows if p == procesos - 1 else desde + tramo
+        tareas.append((p, desde, hasta, concurrencia, host, puerto, keyspace, partido))
+
+    print(f"Insertando {rows} filas con concurrencia {concurrencia} por proceso y {procesos} proceso(s)...")
+    inicio = time.time()
+    if procesos == 1:
+        salidas = [trabajo(tareas[0])]
+    else:
+        with multiprocessing.Pool(procesos) as pool:
+            salidas = pool.map(trabajo, tareas)
+    elapsed = time.time() - inicio
+
+    exitosas = sum(s[0] for s in salidas)
+    fallidas = sum(s[1] for s in salidas)
+    tasa = exitosas / elapsed if elapsed > 0 else 0
+
+    print()
+    print("=== Resultado ===")
+    print(f"Fecha de ejecucion (UTC): {datetime.datetime.now(datetime.timezone.utc).isoformat()}")
+    print(f"Filas exitosas: {exitosas} / {rows} (fallidas: {fallidas})")
+    print(f"Tiempo total: {elapsed:.2f}s")
+    print(f"Tasa obtenida: {tasa:.0f} escrituras/seg")
+    print(f"Concurrencia por proceso: {concurrencia} | procesos: {procesos}")
+    print(f"Python: {platform.python_version()} - SO: {platform.platform()}")
+
+    print(f'Datos conservados en {partido}; evidencia en el archivo indicado por --salida.')
+    return {'fecha_utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            'exitosas':exitosas, 'fallidas':fallidas, 'segundos':elapsed,
+            'escrituras_por_segundo':tasa, 'python':platform.python_version(),
+            'sistema':platform.platform(), 'datos_conservados':True}
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--rows", type=int, default=50_000,
+                         help="Cantidad de filas a insertar en la prueba (default: 50.000)")
+    parser.add_argument("--concurrencia", type=int, default=100,
+                         help="Escrituras concurrentes en simultaneo por proceso (default: 100)")
+    parser.add_argument("--procesos", type=int, default=1,
+                         help="Procesos en paralelo, cada uno con su conexion (default: 1)")
+    parser.add_argument("--host", required=True)
+    parser.add_argument("--puerto", type=int, required=True)
+    parser.add_argument("--keyspace", required=True)
+    parser.add_argument("--partido-prueba", required=True, help="ID H12- nuevo por corrida")
+    parser.add_argument("--salida", type=Path, required=True, help="JSONL nuevo; carpeta existente")
+    parser.add_argument("--confirmar-escrituras", action="store_true")
+    args = parser.parse_args()
+    if not args.confirmar_escrituras:
+        parser.error('Esta prueba inserta y conserva datos. Revisar destino y usar --confirmar-escrituras.')
+    resultado = correr_prueba(args.rows, args.concurrencia, args.host, args.puerto, args.procesos,
+                             args.keyspace, args.partido_prueba, args.salida)
+    raise SystemExit(1 if resultado['fallidas'] else 0)

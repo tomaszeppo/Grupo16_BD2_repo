@@ -1,0 +1,40 @@
+{
+  "modificacion": "M01",
+  "fecha": "2026-10-30",
+  "requisitos": [
+    "RF7",
+    "RF8",
+    "5.5"
+  ],
+  "problema_hipotesis": "H1: posible presion del cliente de un proceso con 100 pendientes y cola de latencias",
+  "cambio_implementado": {
+    "concurrencia_antes": 100,
+    "concurrencia_despues": 50,
+    "filas": 50000,
+    "procesos": 1,
+    "controles": "Perfil validado antes de conectar; identificacion de experimento y hash del perfil"
+  },
+  "archivos_funcionales_afectados": [
+    "carga/prueba_rendimiento.py",
+    "config/escenario_escritura_simple.json"
+  ],
+  "costo_riesgo": [
+    "Menor throughput o mayor duracion",
+    "Variacion del entorno y crecimiento de tabla entre corridas",
+    "Costo de conservar nuevas filas y muestras"
+  ],
+  "prueba_ejecutada_despues": {
+    "verificaciones_aisladas": 6,
+    "aprobadas": 6,
+    "conexiones_cassandra": 0,
+    "carga_comparativa_ejecutada": false
+  },
+  "resultado_medido_candidata": null,
+  "referencia": {
+    "corrida": "base-20261030-002022",
+    "throughput": 6261.365263153138,
+    "p99_ms": 172.385016,
+    "confirmadas_y_persistidas": 50000
+  },
+  "decision_final": "Pendiente de medicion; candidata implementada, no mejora demostrada"
+}
