@@ -1,0 +1,230 @@
+{
+  "commit": "c7eed72",
+  "contenedor": "fixture2030-api-redis-1",
+  "fases": {
+    "antes": {
+      "hora_utc": "2026-10-31T01:21:04.894741+00:00",
+      "health": {
+        "codigo": 200,
+        "cuerpo": {
+          "estado": "ok",
+          "fuentes": {
+            "mongodb": {
+              "estado": "ok",
+              "latencia_ms": 2.1
+            },
+            "neo4j": {
+              "estado": "ok",
+              "latencia_ms": 5.2
+            },
+            "cassandra": {
+              "estado": "ok",
+              "latencia_ms": 3.2
+            },
+            "redis": {
+              "estado": "ok",
+              "latencia_ms": 3.8
+            },
+            "influxdb": {
+              "estado": "ok",
+              "latencia_ms": 3.6
+            },
+            "iris": {
+              "estado": "ok",
+              "latencia_ms": 1.9
+            }
+          }
+        }
+      },
+      "sesion_U001": {
+        "codigo": 200,
+        "cuerpo": {
+          "usuario_id": "U001",
+          "session_id": "S-DEMO-001",
+          "rol": "fan",
+          "estado_acceso": "ACTIVA",
+          "creado_en": "2030-06-14T10:00:00-03:00",
+          "ultimo_acceso": "2030-06-14T10:05:00-03:00",
+          "acciones": 1,
+          "ttl_segundos": 63
+        }
+      },
+      "alertas_prometheus": []
+    },
+    "durante_15s": {
+      "hora_utc": "2026-10-31T01:21:20.389869+00:00",
+      "health": {
+        "codigo": 503,
+        "cuerpo": {
+          "estado": "degradado",
+          "fuentes": {
+            "mongodb": {
+              "estado": "ok",
+              "latencia_ms": 1.7
+            },
+            "neo4j": {
+              "estado": "ok",
+              "latencia_ms": 4.8
+            },
+            "cassandra": {
+              "estado": "ok",
+              "latencia_ms": 3.8
+            },
+            "redis": {
+              "estado": "caida",
+              "latencia_ms": 3864.4
+            },
+            "influxdb": {
+              "estado": "ok",
+              "latencia_ms": 3.5
+            },
+            "iris": {
+              "estado": "ok",
+              "latencia_ms": 1.6
+            }
+          }
+        }
+      },
+      "sesion_U001": {
+        "codigo": 503,
+        "cuerpo": {
+          "error": {
+            "codigo": "DEPENDENCIA_NO_DISPONIBLE",
+            "mensaje": "La fuente 'redis' no está disponible en este momento.",
+            "request_id": "e731943492d54086940644f99219d18e"
+          }
+        }
+      },
+      "alertas_prometheus": [
+        {
+          "alerta": "BaseNoDisponible",
+          "estado": "pending",
+          "fuente": "redis",
+          "job": "api",
+          "desde": "2026-10-31T01:21:10.070422575Z"
+        }
+      ]
+    },
+    "durante_fin": {
+      "hora_utc": "2026-10-31T01:22:28.138893+00:00",
+      "health": {
+        "codigo": 503,
+        "cuerpo": {
+          "estado": "degradado",
+          "fuentes": {
+            "mongodb": {
+              "estado": "ok",
+              "latencia_ms": 1.6
+            },
+            "neo4j": {
+              "estado": "ok",
+              "latencia_ms": 5.1
+            },
+            "cassandra": {
+              "estado": "ok",
+              "latencia_ms": 4.1
+            },
+            "redis": {
+              "estado": "caida",
+              "latencia_ms": 3850.0
+            },
+            "influxdb": {
+              "estado": "ok",
+              "latencia_ms": 3.4
+            },
+            "iris": {
+              "estado": "ok",
+              "latencia_ms": 2.0
+            }
+          }
+        }
+      },
+      "sesion_U001": {
+        "codigo": 503,
+        "cuerpo": {
+          "error": {
+            "codigo": "DEPENDENCIA_NO_DISPONIBLE",
+            "mensaje": "La fuente 'redis' no está disponible en este momento.",
+            "request_id": "c212b7638e8a4493b5fd59c81e5dda55"
+          }
+        }
+      },
+      "alertas_prometheus": [
+        {
+          "alerta": "BaseNoDisponible",
+          "estado": "firing",
+          "fuente": "redis",
+          "job": "api",
+          "desde": "2026-10-31T01:21:10.070422575Z"
+        },
+        {
+          "alerta": "ErroresServidorAltos",
+          "estado": "pending",
+          "fuente": null,
+          "job": null,
+          "desde": "2026-10-31T01:21:50.070422575Z"
+        }
+      ]
+    },
+    "despues": {
+      "hora_utc": "2026-10-31T01:23:21.243437+00:00",
+      "health": {
+        "codigo": 200,
+        "cuerpo": {
+          "estado": "ok",
+          "fuentes": {
+            "mongodb": {
+              "estado": "ok",
+              "latencia_ms": 1.9
+            },
+            "neo4j": {
+              "estado": "ok",
+              "latencia_ms": 3.9
+            },
+            "cassandra": {
+              "estado": "ok",
+              "latencia_ms": 3.6
+            },
+            "redis": {
+              "estado": "ok",
+              "latencia_ms": 0.8
+            },
+            "influxdb": {
+              "estado": "ok",
+              "latencia_ms": 1.8
+            },
+            "iris": {
+              "estado": "ok",
+              "latencia_ms": 1.8
+            }
+          }
+        }
+      },
+      "sesion_U001": {
+        "codigo": 404,
+        "cuerpo": {
+          "error": {
+            "codigo": "SESION_NO_VIGENTE",
+            "mensaje": "No existe una sesión vigente para 'U001' (inexistente o expirada).",
+            "request_id": "679a480518e7418a99c3f26e08ae29d2"
+          }
+        }
+      },
+      "alertas_prometheus": []
+    }
+  },
+  "detenido_utc": "2026-10-31T01:21:04.915203+00:00",
+  "iniciado_utc": "2026-10-31T01:22:36.239936+00:00",
+  "ventana_utc": {
+    "desde": "2026-10-31T01:20:34.877036+00:00",
+    "hasta": "2026-10-31T01:23:21.482867+00:00"
+  },
+  "trafico_de_fondo": {
+    "GET partidos 200": 276,
+    "GET sesiones 200": 106,
+    "GET sesiones 404": 147,
+    "GET sesiones 503": 22,
+    "GET sesiones 504": 1,
+    "POST partidos 201": 276
+  }
+}

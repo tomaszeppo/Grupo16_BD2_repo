@@ -1,0 +1,7 @@
+# Para los scripts de prueba y los tests (se instalan en .venv; la API corre en su contenedor)
+httpx>=0.27
+pytest>=8.0
+prometheus_client==0.22.1
+fastapi>=0.115
+pydantic-settings>=2.5
+PyYAML>=6.0

@@ -1,0 +1,105 @@
+# Monitoreo del Fixture 2030. Se suma a las bases del Hito 10 por su red (fixture2030_net) sin modificarlas.
+# Requiere el stack del Hito 10 levantado: Hito-10-fixture2030-APIREST/scripts/levantar_servicios.sh
+name: fixture2030-monitoreo
+
+x-limites: &limites
+  restart: unless-stopped
+  networks: [fixture2030]
+
+services:
+  # API del Hito 10 envuelta con métricas. Puerto 8001 para no chocar con la API original (8000).
+  api_metricas:
+    <<: *limites
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      additional_contexts:
+        h10: ../Hito-10-fixture2030-APIREST
+    env_file: ../Hito-10-fixture2030-APIREST/.env
+    environment:
+      MONGO_HOST: mongodb
+      NEO4J_URI: bolt://neo4j:7687
+      CASSANDRA_HOST: cassandra
+      REDIS_HOST: redis
+      INFLUX_URL: http://influxdb:8181
+      IRIS_HOST: iris
+      MONGO_PORT: "27017"
+      CASSANDRA_PORT: "9042"
+      REDIS_PORT: "6379"
+      IRIS_PORT: "1972"
+    volumes:
+      - ../Hito-10-fixture2030-APIREST/app:/srv/h10/app:ro
+      - ./api_instrumentada:/srv/h13/api_instrumentada:ro
+    ports: ["127.0.0.1:8001:8001"]
+    mem_limit: 512m
+    cpus: 1.0
+
+  prometheus:
+    <<: *limites
+    image: prom/prometheus:v3.5.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus:/etc/prometheus/reglas:ro
+      - prometheus_data:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    mem_limit: 512m
+    cpus: 0.5
+
+  grafana:
+    <<: *limites
+    image: grafana/grafana:12.1.1
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?definir GRAFANA_ADMIN_PASSWORD en .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_RENDERING_SERVER_URL: http://renderizador:8081/render
+      GF_RENDERING_CALLBACK_URL: http://grafana:3000/
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports: ["127.0.0.1:3000:3000"]
+    mem_limit: 512m
+    cpus: 0.5
+
+  # Solo para guardar capturas de los paneles como evidencia (scripts/capturar_panel.ps1).
+  renderizador:
+    <<: *limites
+    image: grafana/grafana-image-renderer:v4.0.10
+    mem_limit: 768m
+    cpus: 1.0
+
+  # Exportadores: métricas internas de las bases que tienen uno disponible para la versión en uso.
+  redis_exporter:
+    <<: *limites
+    image: oliver006/redis_exporter:v1.75.0
+    env_file: ../Hito-10-fixture2030-APIREST/.env
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    mem_limit: 128m
+    cpus: 0.25
+
+  mongodb_exporter:
+    <<: *limites
+    image: percona/mongodb_exporter:0.44.0
+    # Usuario y contraseña llegan por variables desde el .env del Hito 10 (los scripts pasan ambos --env-file).
+    command: ["--collect-all", "--compatible-mode"]
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/admin
+      MONGODB_USER: ${MONGO_USER:-admin}
+      MONGODB_PASSWORD: ${MONGO_PASSWORD:?pasar tambien --env-file ../Hito-10-fixture2030-APIREST/.env (lo hacen los scripts)}
+    mem_limit: 128m
+    cpus: 0.25
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  fixture2030:
+    external: true
+    name: fixture2030_net

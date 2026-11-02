@@ -1,0 +1,200 @@
+﻿{
+    "fecha_local":  "2026-10-30T21:55:45",
+    "commit":  "c7eed72",
+    "destinos":  [
+                     {
+                         "discoveredLabels":  {
+                                                  "__address__":  "api_metricas:8001",
+                                                  "__metrics_path__":  "/metrics",
+                                                  "__scheme__":  "http",
+                                                  "__scrape_interval__":  "5s",
+                                                  "__scrape_timeout__":  "4s",
+                                                  "componente":  "api-fixture",
+                                                  "job":  "api",
+                                                  "tipo":  "aplicacion"
+                                              },
+                         "labels":  {
+                                        "componente":  "api-fixture",
+                                        "instance":  "api_metricas:8001",
+                                        "job":  "api",
+                                        "tipo":  "aplicacion"
+                                    },
+                         "scrapePool":  "api",
+                         "scrapeUrl":  "http://api_metricas:8001/metrics",
+                         "globalUrl":  "http://api_metricas:8001/metrics",
+                         "lastError":  "",
+                         "lastScrape":  "2026-10-31T00:55:44.677053025Z",
+                         "lastScrapeDuration":  0.041476072,
+                         "health":  "up",
+                         "scrapeInterval":  "5s",
+                         "scrapeTimeout":  "4s"
+                     },
+                     {
+                         "discoveredLabels":  {
+                                                  "__address__":  "mongodb_exporter:9216",
+                                                  "__metrics_path__":  "/metrics",
+                                                  "__scheme__":  "http",
+                                                  "__scrape_interval__":  "5s",
+                                                  "__scrape_timeout__":  "4s",
+                                                  "componente":  "mongodb",
+                                                  "job":  "mongodb",
+                                                  "tipo":  "infraestructura"
+                                              },
+                         "labels":  {
+                                        "componente":  "mongodb",
+                                        "instance":  "mongodb_exporter:9216",
+                                        "job":  "mongodb",
+                                        "tipo":  "infraestructura"
+                                    },
+                         "scrapePool":  "mongodb",
+                         "scrapeUrl":  "http://mongodb_exporter:9216/metrics",
+                         "globalUrl":  "http://mongodb_exporter:9216/metrics",
+                         "lastError":  "",
+                         "lastScrape":  "2026-10-31T00:55:40.543332549Z",
+                         "lastScrapeDuration":  0.316141867,
+                         "health":  "up",
+                         "scrapeInterval":  "5s",
+                         "scrapeTimeout":  "4s"
+                     },
+                     {
+                         "discoveredLabels":  {
+                                                  "__address__":  "localhost:9090",
+                                                  "__metrics_path__":  "/metrics",
+                                                  "__scheme__":  "http",
+                                                  "__scrape_interval__":  "5s",
+                                                  "__scrape_timeout__":  "4s",
+                                                  "componente":  "prometheus",
+                                                  "job":  "prometheus",
+                                                  "tipo":  "monitoreo"
+                                              },
+                         "labels":  {
+                                        "componente":  "prometheus",
+                                        "instance":  "localhost:9090",
+                                        "job":  "prometheus",
+                                        "tipo":  "monitoreo"
+                                    },
+                         "scrapePool":  "prometheus",
+                         "scrapeUrl":  "http://localhost:9090/metrics",
+                         "globalUrl":  "http://ade8940e66c6:9090/metrics",
+                         "lastError":  "",
+                         "lastScrape":  "2026-10-31T00:55:40.490668195Z",
+                         "lastScrapeDuration":  0.003422969,
+                         "health":  "up",
+                         "scrapeInterval":  "5s",
+                         "scrapeTimeout":  "4s"
+                     },
+                     {
+                         "discoveredLabels":  {
+                                                  "__address__":  "redis_exporter:9121",
+                                                  "__metrics_path__":  "/metrics",
+                                                  "__scheme__":  "http",
+                                                  "__scrape_interval__":  "5s",
+                                                  "__scrape_timeout__":  "4s",
+                                                  "componente":  "redis",
+                                                  "job":  "redis",
+                                                  "tipo":  "infraestructura"
+                                              },
+                         "labels":  {
+                                        "componente":  "redis",
+                                        "instance":  "redis_exporter:9121",
+                                        "job":  "redis",
+                                        "tipo":  "infraestructura"
+                                    },
+                         "scrapePool":  "redis",
+                         "scrapeUrl":  "http://redis_exporter:9121/metrics",
+                         "globalUrl":  "http://redis_exporter:9121/metrics",
+                         "lastError":  "",
+                         "lastScrape":  "2026-10-31T00:55:41.66513475Z",
+                         "lastScrapeDuration":  0.009601148,
+                         "health":  "up",
+                         "scrapeInterval":  "5s",
+                         "scrapeTimeout":  "4s"
+                     }
+                 ],
+    "disponibilidad":  [
+                           {
+                               "metric":  {
+                                              "__name__":  "fixture2030_dependencia_disponible",
+                                              "componente":  "api-fixture",
+                                              "fuente":  "cassandra",
+                                              "instance":  "api_metricas:8001",
+                                              "job":  "api",
+                                              "tipo":  "aplicacion"
+                                          },
+                               "value":  [
+                                             1793408145.542,
+                                             "1"
+                                         ]
+                           },
+                           {
+                               "metric":  {
+                                              "__name__":  "fixture2030_dependencia_disponible",
+                                              "componente":  "api-fixture",
+                                              "fuente":  "influxdb",
+                                              "instance":  "api_metricas:8001",
+                                              "job":  "api",
+                                              "tipo":  "aplicacion"
+                                          },
+                               "value":  [
+                                             1793408145.542,
+                                             "1"
+                                         ]
+                           },
+                           {
+                               "metric":  {
+                                              "__name__":  "fixture2030_dependencia_disponible",
+                                              "componente":  "api-fixture",
+                                              "fuente":  "iris",
+                                              "instance":  "api_metricas:8001",
+                                              "job":  "api",
+                                              "tipo":  "aplicacion"
+                                          },
+                               "value":  [
+                                             1793408145.542,
+                                             "1"
+                                         ]
+                           },
+                           {
+                               "metric":  {
+                                              "__name__":  "fixture2030_dependencia_disponible",
+                                              "componente":  "api-fixture",
+                                              "fuente":  "mongodb",
+                                              "instance":  "api_metricas:8001",
+                                              "job":  "api",
+                                              "tipo":  "aplicacion"
+                                          },
+                               "value":  [
+                                             1793408145.542,
+                                             "1"
+                                         ]
+                           },
+                           {
+                               "metric":  {
+                                              "__name__":  "fixture2030_dependencia_disponible",
+                                              "componente":  "api-fixture",
+                                              "fuente":  "neo4j",
+                                              "instance":  "api_metricas:8001",
+                                              "job":  "api",
+                                              "tipo":  "aplicacion"
+                                          },
+                               "value":  [
+                                             1793408145.542,
+                                             "1"
+                                         ]
+                           },
+                           {
+                               "metric":  {
+                                              "__name__":  "fixture2030_dependencia_disponible",
+                                              "componente":  "api-fixture",
+                                              "fuente":  "redis",
+                                              "instance":  "api_metricas:8001",
+                                              "job":  "api",
+                                              "tipo":  "aplicacion"
+                                          },
+                               "value":  [
+                                             1793408145.542,
+                                             "1"
+                                         ]
+                           }
+                       ]
+}

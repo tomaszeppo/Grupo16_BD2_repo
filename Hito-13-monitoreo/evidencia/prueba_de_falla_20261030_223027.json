@@ -1,0 +1,239 @@
+{
+  "commit": "c7eed72",
+  "contenedor": "fixture2030-api-redis-1",
+  "fases": {
+    "antes": {
+      "hora_utc": "2026-10-31T01:28:10.760899+00:00",
+      "health": {
+        "codigo": 200,
+        "cuerpo": {
+          "estado": "ok",
+          "fuentes": {
+            "mongodb": {
+              "estado": "ok",
+              "latencia_ms": 5.3
+            },
+            "neo4j": {
+              "estado": "ok",
+              "latencia_ms": 5.0
+            },
+            "cassandra": {
+              "estado": "ok",
+              "latencia_ms": 4.8
+            },
+            "redis": {
+              "estado": "ok",
+              "latencia_ms": 3.2
+            },
+            "influxdb": {
+              "estado": "ok",
+              "latencia_ms": 3.9
+            },
+            "iris": {
+              "estado": "ok",
+              "latencia_ms": 2.2
+            }
+          }
+        }
+      },
+      "sesion_U001": {
+        "codigo": 200,
+        "cuerpo": {
+          "usuario_id": "U001",
+          "session_id": "S-DEMO-001",
+          "rol": "fan",
+          "estado_acceso": "ACTIVA",
+          "creado_en": "2030-06-14T10:00:00-03:00",
+          "ultimo_acceso": "2030-06-14T10:05:00-03:00",
+          "acciones": 1,
+          "ttl_segundos": 1672
+        }
+      },
+      "alertas_prometheus": []
+    },
+    "durante_15s": {
+      "hora_utc": "2026-10-31T01:28:26.238511+00:00",
+      "health": {
+        "codigo": 503,
+        "cuerpo": {
+          "estado": "degradado",
+          "fuentes": {
+            "mongodb": {
+              "estado": "ok",
+              "latencia_ms": 3.7
+            },
+            "neo4j": {
+              "estado": "ok",
+              "latencia_ms": 5.4
+            },
+            "cassandra": {
+              "estado": "ok",
+              "latencia_ms": 4.5
+            },
+            "redis": {
+              "estado": "caida",
+              "latencia_ms": 3859.3
+            },
+            "influxdb": {
+              "estado": "ok",
+              "latencia_ms": 2.6
+            },
+            "iris": {
+              "estado": "ok",
+              "latencia_ms": 0.9
+            }
+          }
+        }
+      },
+      "sesion_U001": {
+        "codigo": 503,
+        "cuerpo": {
+          "error": {
+            "codigo": "DEPENDENCIA_NO_DISPONIBLE",
+            "mensaje": "La fuente 'redis' no está disponible en este momento.",
+            "request_id": "16b45277151e4f9a8970fa62dba239be"
+          }
+        }
+      },
+      "alertas_prometheus": [
+        {
+          "alerta": "BaseNoDisponible",
+          "estado": "pending",
+          "fuente": "redis",
+          "job": "api",
+          "desde": "2026-10-31T01:28:15.070422575Z"
+        },
+        {
+          "alerta": "DestinoCaido",
+          "estado": "pending",
+          "fuente": null,
+          "job": "redis",
+          "desde": "2026-10-31T01:28:15.070422575Z"
+        }
+      ]
+    },
+    "durante_fin": {
+      "hora_utc": "2026-10-31T01:29:33.973516+00:00",
+      "health": {
+        "codigo": 503,
+        "cuerpo": {
+          "estado": "degradado",
+          "fuentes": {
+            "mongodb": {
+              "estado": "ok",
+              "latencia_ms": 1.9
+            },
+            "neo4j": {
+              "estado": "ok",
+              "latencia_ms": 2.5
+            },
+            "cassandra": {
+              "estado": "ok",
+              "latencia_ms": 4.7
+            },
+            "redis": {
+              "estado": "caida",
+              "latencia_ms": 3847.5
+            },
+            "influxdb": {
+              "estado": "ok",
+              "latencia_ms": 2.5
+            },
+            "iris": {
+              "estado": "ok",
+              "latencia_ms": 2.7
+            }
+          }
+        }
+      },
+      "sesion_U001": {
+        "codigo": 503,
+        "cuerpo": {
+          "error": {
+            "codigo": "DEPENDENCIA_NO_DISPONIBLE",
+            "mensaje": "La fuente 'redis' no está disponible en este momento.",
+            "request_id": "1acbdedcc69c4ecd85706739e18c5c78"
+          }
+        }
+      },
+      "alertas_prometheus": [
+        {
+          "alerta": "BaseNoDisponible",
+          "estado": "firing",
+          "fuente": "redis",
+          "job": "api",
+          "desde": "2026-10-31T01:28:15.070422575Z"
+        },
+        {
+          "alerta": "ErroresServidorAltos",
+          "estado": "pending",
+          "fuente": null,
+          "job": null,
+          "desde": "2026-10-31T01:28:50.070422575Z"
+        }
+      ]
+    },
+    "despues": {
+      "hora_utc": "2026-10-31T01:30:26.997571+00:00",
+      "health": {
+        "codigo": 200,
+        "cuerpo": {
+          "estado": "ok",
+          "fuentes": {
+            "mongodb": {
+              "estado": "ok",
+              "latencia_ms": 3.2
+            },
+            "neo4j": {
+              "estado": "ok",
+              "latencia_ms": 5.0
+            },
+            "cassandra": {
+              "estado": "ok",
+              "latencia_ms": 3.4
+            },
+            "redis": {
+              "estado": "ok",
+              "latencia_ms": 2.9
+            },
+            "influxdb": {
+              "estado": "ok",
+              "latencia_ms": 3.5
+            },
+            "iris": {
+              "estado": "ok",
+              "latencia_ms": 2.0
+            }
+          }
+        }
+      },
+      "sesion_U001": {
+        "codigo": 200,
+        "cuerpo": {
+          "usuario_id": "U001",
+          "session_id": "S-DEMO-001",
+          "rol": "fan",
+          "estado_acceso": "ACTIVA",
+          "creado_en": "2030-06-14T10:00:00-03:00",
+          "ultimo_acceso": "2030-06-14T10:05:00-03:00",
+          "acciones": 1,
+          "ttl_segundos": 1536
+        }
+      },
+      "alertas_prometheus": []
+    }
+  },
+  "detenido_utc": "2026-10-31T01:28:10.787351+00:00",
+  "iniciado_utc": "2026-10-31T01:29:41.994278+00:00",
+  "ventana_utc": {
+    "desde": "2026-10-31T01:27:40.740818+00:00",
+    "hasta": "2026-10-31T01:30:27.121672+00:00"
+  },
+  "trafico_de_fondo": {
+    "GET partidos 200": 275,
+    "GET sesiones 200": 252,
+    "GET sesiones 503": 22,
+    "GET sesiones 504": 1,
+    "POST partidos 201": 275
+  }
+}

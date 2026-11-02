@@ -1,0 +1,60 @@
+{
+  "commit": "c7eed72",
+  "partido": "P-03",
+  "pasos": [
+    {
+      "accion": "GET detalle (antes)",
+      "hora_utc": "2026-10-31T01:01:02.234109+00:00",
+      "codigo": 200,
+      "cuerpo": {
+        "codigo": "P-03",
+        "equipo_local": "GER",
+        "equipo_visitante": "ENG",
+        "fecha_hora": "2030-06-15T18:30:00",
+        "sede": "Camp Nou",
+        "estado": "Programado",
+        "eventos": []
+      }
+    },
+    {
+      "accion": "POST estado = En juego",
+      "hora_utc": "2026-10-31T01:01:02.333253+00:00",
+      "codigo": 200,
+      "cuerpo": {
+        "codigo": "P-03",
+        "equipo_local": "GER",
+        "equipo_visitante": "ENG",
+        "fecha_hora": "2030-06-15T18:30:00",
+        "sede": "Camp Nou",
+        "estado": "En juego",
+        "eventos": []
+      }
+    },
+    {
+      "accion": "POST estado = Finalizado",
+      "hora_utc": "2026-10-31T01:01:04.350715+00:00",
+      "codigo": 200,
+      "cuerpo": {
+        "codigo": "P-03",
+        "equipo_local": "GER",
+        "equipo_visitante": "ENG",
+        "fecha_hora": "2030-06-15T18:30:00",
+        "sede": "Camp Nou",
+        "estado": "Finalizado",
+        "eventos": []
+      }
+    },
+    {
+      "accion": "POST estado = En juego",
+      "hora_utc": "2026-10-31T01:01:06.363294+00:00",
+      "codigo": 409,
+      "cuerpo": {
+        "error": {
+          "codigo": "CONFLICTO",
+          "mensaje": "El partido 'P-03' no puede pasar de 'Finalizado' a 'En juego'.",
+          "request_id": "6313b9e4d6e3405e9ccaa104c3244961"
+        }
+      }
+    }
+  ]
+}

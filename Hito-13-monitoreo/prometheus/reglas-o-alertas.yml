@@ -1,0 +1,45 @@
+# Cada alerta documenta en docs/alertas_y_umbral.md: métrica, condición, duración, severidad, componente,
+# impacto en el Fixture, acción y por qué el umbral es razonable o experimental.
+groups:
+  - name: fixture2030
+    rules:
+      - alert: BaseNoDisponible
+        expr: fixture2030_dependencia_disponible == 0
+        for: 30s
+        labels: {severidad: critica}
+        annotations:
+          resumen: "La base {{ $labels.fuente }} no responde al ping de la API"
+          impacto: "Los endpoints que dependen de {{ $labels.fuente }} responden 503; el resto de la API sigue funcionando"
+          accion: "Revisar el contenedor de {{ $labels.fuente }} (docker ps / logs) y la conectividad desde la red fixture2030_net"
+
+      - alert: DestinoCaido
+        expr: up == 0
+        for: 30s
+        labels: {severidad: alta}
+        annotations:
+          resumen: "Prometheus no puede leer el job {{ $labels.job }}"
+          impacto: "El panel deja de mostrar datos de {{ $labels.componente }}: el monitoreo está ciego en esa parte"
+          accion: "Abrir http://127.0.0.1:9090/targets, leer el último error y revisar el contenedor del job"
+
+      - alert: ErroresServidorAltos
+        expr: |
+          sum(rate(fixture2030_http_requests_total{codigo=~"5.."}[1m]))
+            / sum(rate(fixture2030_http_requests_total[1m])) > 0.05
+        for: 1m
+        labels: {severidad: alta}
+        annotations:
+          resumen: "Más del 5% de los pedidos a la API terminan en 5xx"
+          impacto: "Usuarios reciben errores al comentar, consultar partidos o validar sesión"
+          accion: "Ver en el panel qué código (503 base caída, 504 tiempo máximo) y qué endpoint; seguir con la duración por base"
+
+      - alert: LatenciaComentariosAlta
+        expr: |
+          histogram_quantile(0.99, sum by (le) (
+            rate(fixture2030_http_request_duration_seconds_bucket{endpoint="/partidos/{partido_id}/comentarios", metodo="POST"}[1m])
+          )) > 0.5
+        for: 1m
+        labels: {severidad: media}
+        annotations:
+          resumen: "El p99 de crear comentarios supera 500 ms"
+          impacto: "En un pico después de un gol, 1 de cada 100 comentarios tarda más de medio segundo"
+          accion: "Comparar duración por base (neo4j valida el partido, cassandra guarda) para ubicar la demora"

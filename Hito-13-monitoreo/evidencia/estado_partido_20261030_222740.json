@@ -1,0 +1,60 @@
+{
+  "commit": "c7eed72",
+  "partido": "P-05",
+  "pasos": [
+    {
+      "accion": "GET detalle (antes)",
+      "hora_utc": "2026-10-31T01:27:34.119229+00:00",
+      "codigo": 200,
+      "cuerpo": {
+        "codigo": "P-05",
+        "equipo_local": "NED",
+        "equipo_visitante": "BEL",
+        "fecha_hora": "2030-06-16T18:30:00",
+        "sede": "Stade de France",
+        "estado": "Programado",
+        "eventos": []
+      }
+    },
+    {
+      "accion": "POST estado = En juego",
+      "hora_utc": "2026-10-31T01:27:34.142775+00:00",
+      "codigo": 200,
+      "cuerpo": {
+        "codigo": "P-05",
+        "equipo_local": "NED",
+        "equipo_visitante": "BEL",
+        "fecha_hora": "2030-06-16T18:30:00",
+        "sede": "Stade de France",
+        "estado": "En juego",
+        "eventos": []
+      }
+    },
+    {
+      "accion": "POST estado = Finalizado",
+      "hora_utc": "2026-10-31T01:27:36.163067+00:00",
+      "codigo": 200,
+      "cuerpo": {
+        "codigo": "P-05",
+        "equipo_local": "NED",
+        "equipo_visitante": "BEL",
+        "fecha_hora": "2030-06-16T18:30:00",
+        "sede": "Stade de France",
+        "estado": "Finalizado",
+        "eventos": []
+      }
+    },
+    {
+      "accion": "POST estado = En juego",
+      "hora_utc": "2026-10-31T01:27:38.177724+00:00",
+      "codigo": 409,
+      "cuerpo": {
+        "error": {
+          "codigo": "CONFLICTO",
+          "mensaje": "El partido 'P-05' no puede pasar de 'Finalizado' a 'En juego'.",
+          "request_id": "732e08b4286145a392748c91d8c94505"
+        }
+      }
+    }
+  ]
+}

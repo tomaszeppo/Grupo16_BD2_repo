@@ -1,0 +1,27 @@
+{
+  "corrida": "20261030_222612",
+  "inicio_utc": "2026-10-31T01:26:12.844195+00:00",
+  "fin_utc": "2026-10-31T01:27:12.850459+00:00",
+  "partido": "P-01",
+  "tasa_objetivo_por_s": 50.0,
+  "hilos": 16,
+  "duracion_s": 59.99,
+  "tasa_real_por_s": 50.01,
+  "enviados": 3000,
+  "creados_201": 3000,
+  "reintentos_200": 0,
+  "errores": {},
+  "creados_por_pais": {
+    "ARG": 750,
+    "BRA": 750,
+    "ESP": 750,
+    "MAR": 750
+  },
+  "verificacion": {
+    "particiones_leidas": 4,
+    "ids_creados": 3000,
+    "ids_encontrados": 3000,
+    "faltantes": 0,
+    "duplicados": 0
+  }
+}
