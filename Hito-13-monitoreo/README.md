@@ -26,6 +26,8 @@ prometheus/              reglas de alerta
 grafana/                 datasource y panel aprovisionados desde archivos
 api_instrumentada/       envoltura que agrega /metrics a la API del Hito 10
 scripts/                 iniciar, verificar destinos, prueba controlada, limpiar
+panel_web/               panel técnico (8085): métricas de Prometheus y botón "Simular situaciones"
+vista_hincha/            vista del hincha (8086): pantallas del Fixture sobre la API
 tests/                   pruebas de la instrumentación y del generador de comentarios (sin bases)
 docs/                    documentación del hito
 evidencia/               resultados de las pruebas, sin secretos
@@ -78,8 +80,37 @@ evidencia/               resultados de las pruebas, sin secretos
 | Prometheus, destinos | http://127.0.0.1:9090/targets |
 | Prometheus, alertas | http://127.0.0.1:9090/alerts |
 | Grafana, panel "Fixture 2030 — Plataforma" | http://127.0.0.1:3000 (usuario `admin`, contraseña del `.env`) |
+| Panel técnico (paso 5) | http://127.0.0.1:8085 |
+| Vista del hincha (paso 5) | http://127.0.0.1:8086 |
+
+5. **Panel técnico y vista del hincha** (opcionales). Corren en el host, cada uno en su terminal. La primera vez, instalar sus dependencias en el mismo entorno:
+
+   ```powershell
+   .venv\Scripts\pip install -r panel_web\requirements.txt -r vista_hincha\requirements.txt
+   cd panel_web;    ..\.venv\Scripts\python -m uvicorn server:app --host 127.0.0.1 --port 8085
+   cd vista_hincha; ..\.venv\Scripts\python -m uvicorn server:app --host 127.0.0.1 --port 8086
+   ```
+
+   El panel técnico consulta Prometheus y muestra lo mismo que los 15 paneles de Grafana, más el estado de las cuatro reglas de alerta. Cada base indica si se mide solo desde la API o también con exportador. La vista del hincha está explicada en [vista_hincha/README.md](vista_hincha/README.md).
 
 ## Repetir la demostración
+
+### Desde el panel técnico: "Simular situaciones"
+
+El botón **Simular situaciones** corre seis situaciones seguidas, sin intervención, en unos 6 minutos:
+
+| Situación | Qué hace | Qué se mira |
+|---|---|---|
+| 0. Preparación | Vuelve a sembrar las sesiones de Redis si vencieron y elige un partido en "Programado" (P-08, P-06 o P-02) | Consola de actividad |
+| 1. Operación normal | 40 s de lecturas contra las seis bases: es la línea de base | Pedidos por segundo, latencia por base, exportadores |
+| 2. Pico de comentarios | El mismo momento `pico` de abajo | Tráfico, comentarios por país, p99 de crear comentarios frente al umbral de 500 ms |
+| 3. Cambio de estado | El momento `estado` sobre el partido elegido | Respuestas por código: aparece el 409 |
+| 4. Caída de Redis | El momento `falla` | Disponibilidad, 503, destinos y reglas de alerta |
+| 5. Captura | Guarda los 15 paneles y las series de todo el recorrido en `evidencia/dashboards/recorrido_<fecha>/` | Consola de actividad |
+
+Mientras corre, una barra indica la situación actual y qué mirar, y los gráficos correspondientes se marcan con "MIRAR". Pide confirmación antes de empezar, porque detiene Redis y deja un partido en "Finalizado" sin vuelta atrás. Si no queda partido en "Programado", la situación 3 se saltea y el resto sigue. La situación 1 también se puede correr sola con `.venv\Scripts\python scripts\prueba_controlada.py normal --duracion 40`.
+
+### Desde la terminal
 
 ```powershell
 & .\scripts\ejecutar_prueba_controlada.ps1                    # los tres momentos y las capturas (unos 5 minutos)

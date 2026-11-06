@@ -178,6 +178,48 @@
     .footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 27px; padding-top: 12px; border-top: 1px solid #e3e8e4; color: #9aa39d; font-size: 9px; }
     .toast { position: fixed; z-index: 20; right: 20px; bottom: 20px; max-width: min(440px, calc(100vw - 40px)); padding: 11px 14px; border: 1px solid #dbe7df; border-radius: 9px; background: #fff; color: #455148; box-shadow: 0 12px 35px rgba(31,50,39,.13); font-size: 11px; opacity: 0; transform: translateY(8px); pointer-events: none; transition: .2s; }
     .toast.show { opacity: 1; transform: translateY(0); }
+    /* Recorrido de situaciones */
+    .watch { outline: 2px solid var(--green); outline-offset: 2px; position: relative; }
+    .watch::after { content: 'MIRAR'; position: absolute; top: -9px; right: 12px; padding: 2px 7px; border-radius: 4px; background: var(--green); color: #fff; font: 700 8px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .1em; }
+    .tour { padding: 16px; border: 1px solid #cfe7da; border-radius: 14px; background: linear-gradient(180deg, #f3fbf7, #fff 60%); box-shadow: var(--shadow); margin-bottom: 12px; }
+    .tour-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .tour-head h3 { margin: 0; color: #24322a; font-size: 14px; font-weight: 760; }
+    .tour-head p { margin: 4px 0 0; color: var(--muted); font-size: 10px; max-width: 70ch; }
+    .tour-controls { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+    .tour-controls .field { width: 120px; flex: none; }
+    .tour-controls .confirm { margin: 0; max-width: 230px; }
+    .tour-controls .btn { min-height: 36px; }
+    .steps { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 8px; margin-top: 14px; }
+    .step { min-width: 0; padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: #fff; display: flex; flex-direction: column; gap: 5px; }
+    .step-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+    .step-num { color: #9ca69f; font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
+    .step h4 { margin: 0; color: #2f3b33; font-size: 11px; font-weight: 740; }
+    .step .dur { color: #9aa39e; font-size: 8.5px; }
+    .step .what { color: #6f7a73; font-size: 9px; line-height: 1.45; }
+    .step .look { margin: 0; padding-left: 13px; color: #5a665e; font-size: 9px; line-height: 1.45; }
+    .step .proves { color: var(--green-dark); font-size: 9px; line-height: 1.45; font-weight: 600; }
+    .step .result { margin-top: auto; padding: 7px 8px; border-radius: 7px; background: #f4f6f4; color: #4b574f; font-size: 9px; line-height: 1.45; }
+    .step .result:empty { display: none; }
+    .step.running { border-color: var(--green); box-shadow: 0 0 0 3px rgba(19,168,121,.12); }
+    .step.done .result { background: var(--green-wash); color: var(--green-dark); }
+    .step.failed { border-color: #f0d1cf; }
+    .step.failed .result { background: var(--red-wash); color: #a74e4a; }
+    .step.skipped { opacity: .75; }
+    .step.skipped .result { background: var(--amber-wash); color: #8a6326; }
+    .dock { position: fixed; z-index: 15; left: 50%; bottom: max(14px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(820px, calc(100vw - 24px)); display: none; gap: 12px; align-items: center; padding: 11px 14px; border-radius: 12px; background: #1f2a24; color: #e8efe9; box-shadow: 0 14px 40px rgba(20,35,27,.28); }
+    .dock.show { display: flex; }
+    .dock-main { min-width: 0; flex: 1; }
+    .dock-title { font-size: 12px; font-weight: 740; }
+    .dock-title span { color: #8fc9ad; font-weight: 600; margin-right: 6px; }
+    .dock-look { margin-top: 2px; color: #b7c7bd; font-size: 10px; }
+    .dock-bar { height: 3px; margin-top: 7px; border-radius: 2px; background: rgba(255,255,255,.12); overflow: hidden; }
+    .dock-bar i { display: block; height: 100%; width: 0; background: #2fc58f; transition: width .5s; }
+    .dock .btn { flex: none; }
+    .rule-state { font-size: 8px; }
+    .rule-meta { margin-top: 3px; color: #9aa39e; font: 8.5px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .alert-item.idle { border-color: var(--line); border-left-color: #c9d2cc; background: #fbfcfb; }
+    @media (max-width: 1180px) { .steps { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    @media (max-width: 650px) { .steps { grid-template-columns: 1fr; } .dock { flex-direction: column; align-items: stretch; } }
     @media (min-width: 1500px) { .main { margin-left: 72px; padding-right: 34px; padding-left: 34px; } .kpi-grid { gap: 13px; } .section { margin-top: 28px; } }
     @media (max-width: 1180px) { .db-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } .topbar { align-items: flex-start; } .top-actions { max-width: 370px; } }
     @media (max-width: 900px) { .main { padding: 14px 15px 38px; } .kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .db-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .test-grid { grid-template-columns: 1fr; } .test-card p { min-height: 0; } }
@@ -227,6 +269,7 @@
       </div>
       <div class="top-actions">
         <div class="system-pills"><span class="system-pill" id="api-pill"><i class="pulse"></i> API</span><span class="system-pill" id="prom-pill"><i class="pulse"></i> Prometheus</span></div>
+        <a class="btn primary" href="#recorrido">▶ Simular situaciones</a>
         <a class="btn" href="http://127.0.0.1:8001/docs" target="_blank" rel="noreferrer">Swagger ↗</a>
         <a class="btn" href="http://127.0.0.1:3000" target="_blank" rel="noreferrer">Grafana ↗</a>
         <button class="btn" id="refresh-btn" type="button">↻ Actualizar</button>
@@ -241,36 +284,39 @@
         <div class="last-updated" id="last-update">Esperando métricas…</div>
       </div>
       <div class="kpi-grid">
-        <article class="metric-card"><div class="metric-top"><div class="metric-label">Bases disponibles</div><span class="metric-index">01 / 04</span></div><div class="metric-value green" id="kpi-dbs">— / 6</div><div class="metric-foot"><strong id="kpi-dbs-sub">Disponibilidad medida desde la API</strong><span>dependencias</span></div><canvas class="spark" id="spark-dbs" aria-label="Histórico de bases disponibles"></canvas></article>
-        <article class="metric-card"><div class="metric-top"><div class="metric-label">Peticiones por segundo</div><span class="metric-index">02 / 04</span></div><div class="metric-value" id="kpi-rps">—</div><div class="metric-foot"><strong>Promedio móvil</strong><span>ventana 1 min</span></div><canvas class="spark" id="spark-rps" aria-label="Histórico de peticiones por segundo"></canvas></article>
-        <article class="metric-card"><div class="metric-top"><div class="metric-label">Latencia p95 de la API</div><span class="metric-index">03 / 04</span></div><div class="metric-value blue" id="kpi-p95">—</div><div class="metric-foot"><strong>95% de respuestas</strong><span>milisegundos</span></div><canvas class="spark" id="spark-p95" aria-label="Histórico de latencia p95"></canvas></article>
-        <article class="metric-card"><div class="metric-top"><div class="metric-label">Respuestas 5xx</div><span class="metric-index">04 / 04</span></div><div class="metric-value red" id="kpi-errors">—</div><div class="metric-foot"><strong>Errores del servidor</strong><span>porcentaje</span></div><canvas class="spark" id="spark-errors" aria-label="Histórico de errores 5xx"></canvas></article>
+        <article class="metric-card" data-watch="falla"><div class="metric-top"><div class="metric-label">Bases disponibles</div><span class="metric-index">01 / 04</span></div><div class="metric-value green" id="kpi-dbs">— / 6</div><div class="metric-foot"><strong id="kpi-dbs-sub">Disponibilidad medida desde la API</strong><span>dependencias</span></div><canvas class="spark" id="spark-dbs" aria-label="Histórico de bases disponibles"></canvas></article>
+        <article class="metric-card" data-watch="normal pico"><div class="metric-top"><div class="metric-label">Peticiones por segundo</div><span class="metric-index">02 / 04</span></div><div class="metric-value" id="kpi-rps">—</div><div class="metric-foot"><strong>Promedio móvil</strong><span>ventana 1 min</span></div><canvas class="spark" id="spark-rps" aria-label="Histórico de peticiones por segundo"></canvas></article>
+        <article class="metric-card" data-watch="pico"><div class="metric-top"><div class="metric-label">Latencia p95 de la API</div><span class="metric-index">03 / 04</span></div><div class="metric-value blue" id="kpi-p95">—</div><div class="metric-foot"><strong>95% de respuestas</strong><span>milisegundos</span></div><canvas class="spark" id="spark-p95" aria-label="Histórico de latencia p95"></canvas></article>
+        <article class="metric-card" data-watch="falla"><div class="metric-top"><div class="metric-label">Respuestas 5xx</div><span class="metric-index">04 / 04</span></div><div class="metric-value red" id="kpi-errors">—</div><div class="metric-foot"><strong>Errores del servidor</strong><span>porcentaje</span></div><canvas class="spark" id="spark-errors" aria-label="Histórico de errores 5xx"></canvas></article>
       </div>
     </section>
 
     <section class="section" id="databases">
-      <div class="section-head"><div><div class="section-overline">02 — Persistencia</div><h2 class="section-title">Servicios conectados</h2><p class="section-desc">Disponibilidad reportada por la API instrumentada y latencia p95 por adaptador.</p></div><div class="section-kicker">6 motores · 1 plataforma</div></div>
-      <div class="db-grid" id="db-grid"><div class="db-card"><div class="db-symbol">M</div><div class="db-main"><div class="db-name">MongoDB</div><div class="db-type">Documentos</div><div class="db-meta">Esperando datos</div></div><span class="status">—</span></div></div>
+      <div class="section-head"><div><div class="section-overline">02 — Persistencia</div><h2 class="section-title">Servicios conectados</h2><p class="section-desc">Disponibilidad y latencia p95 medidas desde la API instrumentada. MongoDB y Redis suman un exportador con datos internos. No se mide CPU, memoria ni disco de cada base: es una limitación documentada del laboratorio.</p></div><div class="section-kicker">6 motores · 1 plataforma</div></div>
+      <div class="db-grid" id="db-grid" data-watch="normal falla"><div class="db-card"><div class="db-symbol">M</div><div class="db-main"><div class="db-name">MongoDB</div><div class="db-type">Documentos</div><div class="db-meta">Esperando datos</div></div><span class="status">—</span></div></div>
     </section>
 
     <section class="section" id="performance">
       <div class="section-head"><div><div class="section-overline">03 — Telemetría</div><h2 class="section-title">Rendimiento en tiempo real</h2><p class="section-desc">Series temporales consultadas directamente a Prometheus. Actualización cada 5 segundos.</p></div><div class="section-kicker">Últimos 10 minutos</div></div>
       <div class="chart-grid">
-        <article class="panel"><div class="panel-head"><div><div class="panel-title">Tráfico HTTP</div><div class="panel-note">Peticiones por segundo · API instrumentada</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-rps"></canvas></article>
-        <article class="panel"><div class="panel-head"><div><div class="panel-title">Tiempo de respuesta</div><div class="panel-note">Comparativa de percentiles p95 y p99 · ms</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-latency"></canvas></article>
-        <article class="panel"><div class="panel-head"><div><div class="panel-title">CPU de la API</div><div class="panel-note">Uso del proceso · porcentaje de un núcleo</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-cpu"></canvas></article>
+        <article class="panel" data-watch="normal pico"><div class="panel-head"><div><div class="panel-title">Tráfico HTTP</div><div class="panel-note">Peticiones por segundo · API instrumentada</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-rps"></canvas></article>
+        <article class="panel" data-watch="pico"><div class="panel-head"><div><div class="panel-title">Tiempo de respuesta</div><div class="panel-note">Comparativa de percentiles p95 y p99 · ms</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-latency"></canvas></article>
+        <article class="panel full" data-watch="normal estado"><div class="panel-head"><div><div class="panel-title">Pedidos por endpoint</div><div class="panel-note">Qué parte de la API recibe el tráfico · pedidos por segundo (las seis rutas más usadas)</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-endpoints"></canvas></article>
+        <article class="panel" data-watch="estado falla"><div class="panel-head"><div><div class="panel-title">Respuestas por código</div><div class="panel-note">201 creado · 200 correcto · 409 transición rechazada · 503 base caída · 504 tiempo máximo</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-codes"></canvas></article>
+        <article class="panel" data-watch="normal pico"><div class="panel-head"><div><div class="panel-title">Latencia por base de datos</div><div class="panel-note">Percentil p95 de las operaciones de cada adaptador · ms</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-db-latency"></canvas></article>
+        <article class="panel" data-watch="pico"><div class="panel-head"><div><div class="panel-title">Comentarios por país</div><div class="panel-note">Altas efectivas por segundo · Cassandra</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-comments"></canvas></article>
+        <article class="panel" data-watch="pico"><div class="panel-head"><div><div class="panel-title">p99 de crear comentarios</div><div class="panel-note">Lo que vigila la alerta LatenciaComentariosAlta · se dispara sobre 500 ms · ms</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-p99-post"></canvas></article>
+        <article class="panel" data-watch="pico"><div class="panel-head"><div><div class="panel-title">CPU de la API</div><div class="panel-note">Uso del proceso · porcentaje de un núcleo</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-cpu"></canvas></article>
         <article class="panel"><div class="panel-head"><div><div class="panel-title">Memoria residente</div><div class="panel-note">RSS del proceso de la API · MB</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-memory"></canvas></article>
-        <article class="panel"><div class="panel-head"><div><div class="panel-title">Latencia por base de datos</div><div class="panel-note">Percentil p95 de las operaciones de cada adaptador · ms</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-db-latency"></canvas></article>
-        <article class="panel"><div class="panel-head"><div><div class="panel-title">Comentarios por país</div><div class="panel-note">Altas efectivas por segundo · Cassandra</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-comments"></canvas></article>
-        <article class="panel full"><div class="panel-head"><div><div class="panel-title">Disponibilidad histórica de las seis bases</div><div class="panel-note">Cada tramo corresponde a una recolección de Prometheus. Verde = disponible · rojo = caída.</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart tall" id="chart-availability"></canvas></article>
+        <article class="panel full" data-watch="falla"><div class="panel-head"><div><div class="panel-title">Disponibilidad histórica de las seis bases</div><div class="panel-note">Cada tramo corresponde a una recolección de Prometheus. Verde = disponible · rojo = caída.</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart tall" id="chart-availability"></canvas></article>
       </div>
     </section>
 
     <section class="section">
       <div class="section-head"><div><div class="section-overline">04 — Exportadores</div><h2 class="section-title">Actividad de los motores</h2><p class="section-desc">Métricas específicas expuestas por los exportadores de MongoDB y Redis.</p></div></div>
       <div class="chart-grid">
-        <article class="panel"><div class="panel-head"><div><div class="panel-title">Operaciones de MongoDB</div><div class="panel-note">Operaciones por segundo según tipo</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-mongo"></canvas></article>
-        <article class="panel"><div class="panel-head"><div><div class="panel-title">Comandos de Redis</div><div class="panel-note">Comandos procesados por segundo</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-redis"></canvas></article>
+        <article class="panel" data-watch="normal"><div class="panel-head"><div><div class="panel-title">Operaciones de MongoDB</div><div class="panel-note">Operaciones por segundo según tipo</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-mongo"></canvas></article>
+        <article class="panel" data-watch="normal falla"><div class="panel-head"><div><div class="panel-title">Comandos de Redis</div><div class="panel-note">Comandos procesados por segundo</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-redis"></canvas></article>
         <article class="panel"><div class="panel-head"><div><div class="panel-title">Memoria de Redis</div><div class="panel-note">Memoria usada y límite configurado · MB</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-redis-memory"></canvas></article>
       </div>
     </section>
@@ -278,16 +324,28 @@
     <section class="section" id="infrastructure">
       <div class="section-head"><div><div class="section-overline">05 — Observabilidad</div><h2 class="section-title">Salud del monitoreo</h2><p class="section-desc">Destinos recolectados y alertas evaluadas por Prometheus.</p></div></div>
       <div class="bottom-grid">
-        <article class="panel"><div class="panel-head"><div><div class="panel-title">Targets de Prometheus</div><div class="panel-note">Estado del último scrape</div></div><span class="live-tag">EN VIVO</span></div><div class="table-wrap"><table><thead><tr><th>Job</th><th>Estado</th><th>Última recolección</th></tr></thead><tbody id="targets-body"><tr><td colspan="3" class="small-muted">Esperando datos de Prometheus…</td></tr></tbody></table></div></article>
-        <article class="panel"><div class="panel-head"><div><div class="panel-title">Alertas activas</div><div class="panel-note">Reglas definidas para el Hito 13</div></div><span class="live-tag">EN VIVO</span></div><div class="alert-list" id="alerts-list"><div class="alert-empty">No hay alertas para mostrar todavía.</div></div></article>
+        <article class="panel" data-watch="falla"><div class="panel-head"><div><div class="panel-title">Targets de Prometheus</div><div class="panel-note">Estado del último scrape</div></div><span class="live-tag">EN VIVO</span></div><div class="table-wrap"><table><thead><tr><th>Job</th><th>Estado</th><th>Última recolección</th></tr></thead><tbody id="targets-body"><tr><td colspan="3" class="small-muted">Esperando datos de Prometheus…</td></tr></tbody></table></div></article>
+        <article class="panel" data-watch="falla"><div class="panel-head"><div><div class="panel-title">Reglas de alerta</div><div class="panel-note">Las cuatro reglas del Hito 13 y su estado: en reposo, pendiente o disparada</div></div><span class="live-tag">EN VIVO</span></div><div class="alert-list" id="alerts-list"><div class="alert-empty">Esperando datos de Prometheus…</div></div></article>
       </div>
     </section>
 
     <section class="section" id="tests">
       <div class="section-head"><div><div class="section-overline">06 — Laboratorio</div><h2 class="section-title">Pruebas para la defensa</h2><p class="section-desc">Ejecutá los escenarios existentes y observá cómo cambian las métricas del entorno.</p></div><div class="section-kicker">Una ejecución a la vez</div></div>
+      <div class="tour" id="recorrido">
+        <div class="tour-head">
+          <div><h3>Simular todas las situaciones</h3><p>Corre las seis situaciones en orden, sin intervención: preparación, operación normal, pico de comentarios, cambio de estado en IRIS, caída de Redis y captura de evidencia. Mientras avanza, los gráficos que hay que mirar se marcan con <strong>MIRAR</strong>. Dura unos 6 minutos con los valores por defecto.</p></div>
+          <div class="tour-controls">
+            <div class="field"><label for="tour-count">Comentarios del pico</label><input id="tour-count" type="number" min="100" max="6000" step="100" value="3000"></div>
+            <div class="field"><label for="tour-rate">Pedidos / s</label><input id="tour-rate" type="number" min="1" max="100" step="1" value="50"></div>
+            <label class="confirm"><input type="checkbox" id="tour-confirm"><span>Autorizo detener Redis unos 75 s y usar un partido en Programado (el cambio no tiene vuelta atrás).</span></label>
+            <button class="btn primary" id="run-tour" type="button" disabled>▶ Simular situaciones</button>
+          </div>
+        </div>
+        <div class="steps" id="steps"></div>
+      </div>
       <div class="test-grid">
         <article class="test-card"><div class="test-card-top"><span class="test-number">ESCENARIO 01</span><span class="test-icon">↗</span></div><h3>Pico de comentarios</h3><p>Genera tráfico sostenido y verifica en Cassandra que no haya faltantes ni duplicados.</p><div class="field-row"><div class="field"><label for="load-count">Cantidad de comentarios</label><input id="load-count" type="number" min="100" max="6000" step="100" value="3000"></div><div class="field"><label for="load-rate">Peticiones / s</label><input id="load-rate" type="number" min="1" max="100" step="1" value="50"></div></div><button class="btn primary" id="run-pico" type="button">Ejecutar prueba ↗</button></article>
-        <article class="test-card"><div class="test-card-top"><span class="test-number">ESCENARIO 02</span><span class="test-icon">⇄</span></div><h3>Transición de estado en IRIS</h3><p>Prueba la máquina de estados y el rechazo de una transición inválida con HTTP 409.</p><div class="field-row"><div class="field"><label for="match-id">Partido de prueba</label><select id="match-id"><option value="P-06">P-06</option><option value="P-07">P-07</option></select></div></div><div class="warning-copy">La transición es irreversible. Elegí un partido que siga en estado “Programado”.</div><button class="btn primary" id="run-estado" type="button">Ejecutar transición ↗</button></article>
+        <article class="test-card"><div class="test-card-top"><span class="test-number">ESCENARIO 02</span><span class="test-icon">⇄</span></div><h3>Transición de estado en IRIS</h3><p>Prueba la máquina de estados y el rechazo de una transición inválida con HTTP 409.</p><div class="field-row"><div class="field"><label for="match-id">Partido de prueba</label><select id="match-id"><option value="P-06">P-06</option><option value="P-08">P-08</option><option value="P-02">P-02</option></select></div></div><div class="warning-copy">La transición es irreversible. Elegí un partido que siga en estado “Programado”.</div><button class="btn primary" id="run-estado" type="button">Ejecutar transición ↗</button></article>
         <article class="test-card danger-card"><div class="test-card-top"><span class="test-number">ESCENARIO 03</span><span class="test-icon">!</span></div><h3>Falla controlada de Redis</h3><p>Detiene Redis durante 75 segundos mientras genera tráfico de fondo y luego lo reinicia.</p><label class="confirm"><input type="checkbox" id="confirm-redis"><span>Confirmo que autorizo detener y reiniciar el contenedor Redis durante esta demostración.</span></label><button class="btn danger" id="run-falla" type="button" disabled>Simular caída de Redis</button></article>
       </div>
       <div class="job-panel"><div class="job-header"><strong>Consola de actividad</strong><span class="job-status" id="job-status">Sin pruebas en ejecución</span></div><pre class="job-logs" id="job-logs">Las ejecuciones y sus resultados aparecerán acá.</pre></div>
@@ -298,17 +356,22 @@
   </main>
 </div>
 <div class="toast" id="toast" role="status"></div>
+<div class="dock" id="dock" role="status" aria-live="polite">
+  <div class="dock-main"><div class="dock-title" id="dock-title"></div><div class="dock-look" id="dock-look"></div><div class="dock-bar"><i id="dock-bar"></i></div></div>
+  <a class="btn" href="#recorrido">Ver recorrido</a>
+  <button class="btn" id="dock-close" type="button" hidden>Cerrar</button>
+</div>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
   const COLORS = ["#11a879", "#4779d0", "#e49a43", "#8b74b7", "#159b9b", "#d96d69", "#b9874f"];
   const DATABASES = [
-    {id:"mongodb", name:"MongoDB", type:"Documentos", symbol:"M"},
-    {id:"neo4j", name:"Neo4j", type:"Grafo", symbol:"N"},
-    {id:"cassandra", name:"Cassandra", type:"Columnas", symbol:"C"},
-    {id:"redis", name:"Redis", type:"Clave–valor", symbol:"R"},
-    {id:"influxdb", name:"InfluxDB", type:"Series temporales", symbol:"I"},
-    {id:"iris", name:"IRIS", type:"Objetos", symbol:"O"},
+    {id:"mongodb", name:"MongoDB", type:"Documentos", symbol:"M", via:"API + exportador"},
+    {id:"neo4j", name:"Neo4j", type:"Grafo", symbol:"N", via:"Solo desde la API"},
+    {id:"cassandra", name:"Cassandra", type:"Columnas", symbol:"C", via:"Solo desde la API"},
+    {id:"redis", name:"Redis", type:"Clave–valor", symbol:"R", via:"API + exportador"},
+    {id:"influxdb", name:"InfluxDB", type:"Series temporales", symbol:"I", via:"Solo desde la API"},
+    {id:"iris", name:"IRIS", type:"Objetos", symbol:"O", via:"Solo desde la API"},
   ];
   let dashboardBusy = false;
   let currentJobStatus = "idle";
@@ -377,7 +440,7 @@
       const state = availability[db.id];
       const ms = latency[db.id] === undefined || latency[db.id] === null ? null : latency[db.id] * 1000;
       const meta = ms === null ? "p95 de operación: —" : `p95 de operación: ${fmt(ms, 2)} ms`;
-      return `<article class="db-card"><div class="db-symbol">${db.symbol}</div><div class="db-main"><div class="db-name">${db.name}</div><div class="db-type">${db.type}</div><div class="db-meta">${meta}</div></div>${statusHtml(state)}</article>`;
+      return `<article class="db-card"><div class="db-symbol">${db.symbol}</div><div class="db-main"><div class="db-name">${db.name}</div><div class="db-type">${db.type}</div><div class="db-meta">${meta}</div><div class="db-meta">${db.via}</div></div>${statusHtml(state)}</article>`;
     }).join("");
   }
   function setupCanvas(canvas) {
@@ -421,6 +484,12 @@
     ctx.fillStyle = '#89928d'; ctx.textAlign = 'left'; ctx.fillText('-10 min', pad.l, h-7);
     ctx.textAlign = 'center'; ctx.fillText('-5 min', pad.l+plotW/2, h-7);
     ctx.textAlign = 'right'; ctx.fillText('ahora', w-pad.r, h-7);
+    if (options.threshold !== undefined && options.threshold >= min && options.threshold <= max) {
+      const ty = y(options.threshold);
+      ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = '#d96d69'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(pad.l, ty); ctx.lineTo(w - pad.r, ty); ctx.stroke(); ctx.restore();
+      ctx.fillStyle = '#c0504c'; ctx.textAlign = 'right'; ctx.fillText(options.thresholdLabel || 'umbral', w - pad.r, ty - 4);
+    }
     valid.forEach((s, index) => {
       const color = options.colors?.[index] || COLORS[index % COLORS.length];
       ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath();
@@ -474,13 +543,36 @@
     }).join('');
   }
   function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-  function updateAlerts(alerts) {
+  const RULE_STATE = {inactive: ['En reposo', ''], pending: ['Pendiente', 'warn'], firing: ['Disparada', 'down']};
+  function updateRules(rules, alerts) {
     const list=$("alerts-list");
-    if(!alerts || !alerts.length){list.innerHTML='<div class="alert-empty">✓ No hay alertas activas. Las reglas están configuradas y evaluándose.</div>';return;}
-    list.innerHTML=alerts.map(a=>{
-      const critical=(a.severity||'').toLowerCase().includes('crit');
-      return `<div class="alert-item ${critical?'critical':''}"><div class="alert-title"><span>${escapeHtml(a.name)}</span><span class="status ${critical?'down':'warn'}">${escapeHtml(a.state)}</span></div><div class="alert-detail">${escapeHtml(a.summary||a.source||'Alerta activa')}</div>${a.action?`<div class="alert-action">Acción: ${escapeHtml(a.action)}</div>`:''}</div>`;
+    if(!rules || !rules.length){
+      list.innerHTML='<div class="alert-empty">No se pudieron leer las reglas de Prometheus.</div>';
+      return;
+    }
+    list.innerHTML=rules.map(r=>{
+      const [label, cls] = RULE_STATE[r.state] || [r.state, ''];
+      const active = r.state !== 'inactive';
+      const critical = active && (r.severity||'').toLowerCase().includes('crit');
+      const action = active ? (alerts||[]).find(a=>a.name===r.name)?.action : '';
+      const sources = r.sources && r.sources.length ? ` · afecta a ${r.sources.join(', ')}` : '';
+      const summary = (r.summary || '').replace(/\{\{[^}]*\}\}/g, '…');
+      return `<div class="alert-item ${active?(critical?'critical':''):'idle'}"><div class="alert-title"><span>${escapeHtml(r.name)}</span><span class="status rule-state ${cls}">${label}</span></div><div class="alert-detail">${escapeHtml(summary)}${escapeHtml(sources)}</div><div class="rule-meta">severidad ${escapeHtml(r.severity||'—')} · se dispara si dura ${r.forSeconds||0} s</div>${action?`<div class="alert-action">Acción: ${escapeHtml(action)}</div>`:''}</div>`;
     }).join('');
+  }
+  const ENDPOINT_NAMES = {
+    '/partidos/{partido_id}/comentarios':'comentarios', '/partidos/{partido_id}':'partido', '/partidos/{partido_id}/detalle':'detalle',
+    '/partidos/{partido_id}/estado':'estado', '/partidos/{partido_id}/eventos':'eventos', '/partidos/{partido_id}/estadisticas':'estadísticas',
+    '/equipos/{codigo}/jugadores':'jugadores', '/equipos/{codigo}':'equipo', '/sesiones/{usuario_id}':'sesiones', '/health':'health',
+  };
+  function topSeries(series, n) {
+    return series.map(s=>({...s, peak: Math.max(0, ...s.points.map(p=>p[1]))}))
+      .filter(s=>s.peak > 0).sort((a,b)=>b.peak-a.peak).slice(0, n);
+  }
+  function codeColor(code) {
+    if (code.startsWith('2')) return code === '201' ? '#11a879' : '#4779d0';
+    if (code.startsWith('4')) return '#cb8a31';
+    return code === '504' ? '#8b74b7' : '#d96d69';
   }
 
   function drawSparkline(id, points, color) {
@@ -546,6 +638,14 @@
     drawLineChart('chart-memory',parseSeries(m.memory,null),{digits:0});
     drawLineChart('chart-db-latency',parseSeries(m.db_p95,'fuente',(v)=>v*1000),{digits:1});
     drawLineChart('chart-comments',parseSeries(m.comments,'pais'),{digits:2});
+    const endpoints = (m.by_endpoint||[]).map(row=>({
+      name: `${row.metric?.metodo||''} ${ENDPOINT_NAMES[row.metric?.endpoint] || row.metric?.endpoint || ''}`.trim(),
+      points: (row.values||[]).map(([t,v])=>[Number(t),Number(v)]).filter(p=>Number.isFinite(p[1])),
+    }));
+    drawLineChart('chart-endpoints', topSeries(endpoints, 6), {digits:1});
+    const codes = topSeries(parseSeries(m.by_code,'codigo'), 6).sort((a,b)=>a.name.localeCompare(b.name));
+    drawLineChart('chart-codes', codes, {digits:1, colors: codes.map(s=>codeColor(s.name))});
+    drawLineChart('chart-p99-post', parseSeries(m.p99_post_comments,null,(v)=>v*1000).map(s=>({...s,name:'p99 POST comentarios'})), {digits:0, threshold:500, thresholdLabel:'umbral de la alerta · 500 ms'});
     drawAvailability('chart-availability',parseSeries(m.availability,'fuente'));
     drawLineChart('chart-mongo',parseSeries(m.mongo_ops,'type'),{digits:2});
     drawLineChart('chart-redis',parseSeries(m.redis_commands,null),{digits:2});
@@ -567,7 +667,7 @@
       updateDatabases(metrics);
       renderCharts(metrics);
       updateTargets(data.targets);
-      updateAlerts(data.alerts);
+      updateRules(data.rules, data.alerts);
       $("last-update").textContent=`Actualizado ${new Date(data.generatedAt).toLocaleTimeString('es-AR')}`;
     } catch(error) {
       setPill('api-pill',false,'API');
@@ -575,6 +675,66 @@
       setNotice(`No se pudo actualizar el panel: ${error.message}. Asegurate de tener Prometheus (9090) y la API instrumentada (8001) activos.`);
     } finally { dashboardBusy=false; }
   }
+  // Qué hace cada situación del recorrido y qué hay que mirar mientras corre.
+  const STEPS = [
+    {id:'preparacion', dur:'unos segundos', what:'Revisa que la sesión U001 siga vigente (vence a los 30 min) y elige un partido que siga en Programado.', look:['Consola de actividad'], proves:'Que el entorno está listo antes de medir.'},
+    {id:'normal', dur:'40 s', what:'Uso tranquilo: lee sesión, plantel, partido, jugadas, estado, estadísticas y comentarios. Una lectura por base, en bucle.', look:['Peticiones por segundo','Latencia por base: aparecen las seis','Pedidos por endpoint','MongoDB y Redis en exportadores'], proves:'La línea de base: así se ve el sistema sano.'},
+    {id:'pico', dur:'cantidad ÷ tasa, más 20 s de pausa', what:'El minuto después de un gol: comentarios de ARG, BRA, ESP y MAR a ritmo fijo contra P-01. Al final lee Cassandra y cuenta.', look:['Tráfico HTTP sube a la tasa elegida','Comentarios por país: cuatro líneas parejas','p99 de crear comentarios bajo 500 ms','Respuestas 5xx en 0'], proves:'Que aguanta el ritmo sin errores y no se pierde ni duplica nada.'},
+    {id:'estado', dur:'unos 10 s', what:'Lleva un partido de Programado a En juego y a Finalizado, y después intenta volverlo a En juego.', look:['Respuestas por código: aparece 409','Pedidos por endpoint: POST estado'], proves:'Que IRIS hace cumplir la regla: un partido finalizado no vuelve a jugarse.'},
+    {id:'falla', dur:'unos 2 min 30 s', what:'Con tráfico de fondo, detiene el contenedor de Redis 75 s y lo vuelve a iniciar sin borrar sus datos.', look:['Bases disponibles: 5 / 6','Disponibilidad histórica: tramo rojo en Redis','Respuestas por código: aparece 503','Reglas de alerta: pendiente y disparada','Targets: redis DOWN'], proves:'Que la caída afecta solo a las sesiones, que el monitoreo la detecta y avisa, y que todo vuelve al reiniciar.'},
+    {id:'captura', dur:'1 min aprox.', what:'Guarda los 15 paneles de Grafana como imagen y las series de Prometheus de todo el recorrido.', look:['Consola de actividad'], proves:'Deja evidencia con fecha y commit.'},
+  ];
+  const STATUS_LABEL = {pending:['En espera',''], running:['En curso','up'], done:['Listo','up'], failed:['Con error','down'], skipped:['Salteado','warn']};
+  let dockDismissed = null;
+  function renderSteps(job) {
+    const tour = job && job.mode === 'recorrido' ? job : null;
+    $("steps").innerHTML = STEPS.map((s, i) => {
+      const st = tour ? tour.steps[i] : {status:'pending', summary:'', title:''};
+      const title = (tour && st.title) || ['Preparación','Operación normal','Pico de comentarios','Cambio de estado en IRIS','Caída de Redis','Captura de evidencia'][i];
+      const [label, cls] = STATUS_LABEL[st.status] || [st.status, ''];
+      return `<article class="step ${st.status}"><div class="step-top"><span class="step-num">SITUACIÓN ${i}</span><span class="status ${cls}">${label}</span></div><h4>${escapeHtml(title)}</h4><div class="dur">${escapeHtml(s.dur)}</div><div class="what">${escapeHtml(s.what)}</div><ul class="look">${s.look.map(l=>`<li>${escapeHtml(l)}</li>`).join('')}</ul><div class="proves">${escapeHtml(s.proves)}</div><div class="result">${escapeHtml(st.summary||'')}</div></article>`;
+    }).join('');
+  }
+  function elapsed(iso) {
+    if (!iso) return '';
+    const s = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+    return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  }
+  function updateTourUi(job) {
+    const tour = job && job.mode === 'recorrido' ? job : null;
+    const running = tour && tour.status === 'running';
+    const idx = running ? tour.currentStep : null;
+    const stepId = idx !== null && idx !== undefined ? STEPS[idx]?.id : null;
+    document.querySelectorAll('[data-watch]').forEach(el => {
+      el.classList.toggle('watch', Boolean(stepId) && el.dataset.watch.split(' ').includes(stepId));
+    });
+    const dock = $("dock");
+    if (!tour || dockDismissed === tour.id) { dock.classList.remove('show'); return; }
+    dock.classList.add('show');
+    const done = tour.steps.filter(s => ['done','failed','skipped'].includes(s.status)).length;
+    $("dock-bar").style.width = `${Math.round(done / tour.steps.length * 100)}%`;
+    if (running && stepId) {
+      const step = tour.steps[idx];
+      $("dock-title").innerHTML = `<span>Situación ${idx} de ${STEPS.length - 1}</span>${escapeHtml(step.title)} · ${elapsed(step.startedAt)}`;
+      $("dock-look").textContent = `Mirá: ${STEPS[idx].look.join(' · ')}`;
+      $("dock-close").hidden = true;
+    } else if (running) {
+      $("dock-title").innerHTML = '<span>Recorrido</span>Pausa entre situaciones';
+      $("dock-look").textContent = 'El tráfico vuelve a la normalidad antes de la próxima situación.';
+      $("dock-close").hidden = true;
+    } else {
+      const failed = tour.steps.filter(s => s.status === 'failed').length;
+      $("dock-title").innerHTML = `<span>Recorrido</span>${failed ? `Terminó con ${failed} situación(es) con error` : 'Terminado'}`;
+      $("dock-look").textContent = 'El resultado de cada situación quedó en su tarjeta, en la sección Pruebas.';
+      $("dock-close").hidden = false;
+    }
+  }
+  $('dock-close').addEventListener('click', async () => {
+    try { const job = await (await fetch('/api/job',{cache:'no-store'})).json(); dockDismissed = job.id; } catch (e) {}
+    $("dock").classList.remove('show');
+  });
+  renderSteps(null);
+
   async function refreshJob() {
     try {
       const response=await fetch('/api/job',{cache:'no-store'});
@@ -585,10 +745,26 @@
       $("job-logs").textContent=(job.logs&&job.logs.length)?job.logs.join('\n'):'Las ejecuciones y sus resultados aparecerán acá.';
       $("job-logs").scrollTop=$("job-logs").scrollHeight;
       ['run-pico','run-estado','run-falla','capture-btn'].forEach(id=>$(id).disabled=running);
-      ['load-count','load-rate','match-id'].forEach(id=>$(id).disabled=running);
+      ['load-count','load-rate','match-id','tour-count','tour-rate'].forEach(id=>$(id).disabled=running);
       $("run-falla").disabled=running||!$("confirm-redis").checked;
+      $("run-tour").disabled=running||!$("tour-confirm").checked;
+      if (job.mode === 'recorrido') renderSteps(job);
+      updateTourUi(job);
     } catch(e) { /* El panel principal informa problemas de conexión. */ }
   }
+  $('tour-confirm').addEventListener('change',()=>{if(currentJobStatus!=='running')$('run-tour').disabled=!$('tour-confirm').checked;});
+  $('run-tour').addEventListener('click',async()=>{
+    const cantidad=Number($('tour-count').value), tasa=Number($('tour-rate').value);
+    if(!Number.isInteger(cantidad)||cantidad<100||cantidad>6000||!Number.isFinite(tasa)||tasa<=0||tasa>100){showToast('Usá entre 100 y 6.000 comentarios, con una tasa de hasta 100 pedidos/s.');return;}
+    try {
+      const response=await fetch('/api/recorrido',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cantidad,tasa,confirmar:true})});
+      const result=await response.json();
+      if(!response.ok) throw new Error(result.detail||`HTTP ${response.status}`);
+      dockDismissed=null;
+      showToast('Recorrido iniciado. Seguí la barra de abajo: indica qué mirar en cada situación.');
+      await refreshJob();
+    } catch(error) { showToast(error.message); }
+  });
   async function startTest(payload) {
     try {
       const response=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});

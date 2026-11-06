@@ -1,0 +1,60 @@
+{
+  "commit": "3d83a76",
+  "partido": "P-07",
+  "pasos": [
+    {
+      "accion": "GET detalle (antes)",
+      "hora_utc": "2026-11-06T23:09:06.167421+00:00",
+      "codigo": 200,
+      "cuerpo": {
+        "codigo": "P-07",
+        "equipo_local": "MEX",
+        "equipo_visitante": "USA",
+        "fecha_hora": "2030-06-16T18:30:00",
+        "sede": "Azteca",
+        "estado": "Programado",
+        "eventos": []
+      }
+    },
+    {
+      "accion": "POST estado = En juego",
+      "hora_utc": "2026-11-06T23:09:06.211273+00:00",
+      "codigo": 200,
+      "cuerpo": {
+        "codigo": "P-07",
+        "equipo_local": "MEX",
+        "equipo_visitante": "USA",
+        "fecha_hora": "2030-06-16T18:30:00",
+        "sede": "Azteca",
+        "estado": "En juego",
+        "eventos": []
+      }
+    },
+    {
+      "accion": "POST estado = Finalizado",
+      "hora_utc": "2026-11-06T23:09:08.227986+00:00",
+      "codigo": 200,
+      "cuerpo": {
+        "codigo": "P-07",
+        "equipo_local": "MEX",
+        "equipo_visitante": "USA",
+        "fecha_hora": "2030-06-16T18:30:00",
+        "sede": "Azteca",
+        "estado": "Finalizado",
+        "eventos": []
+      }
+    },
+    {
+      "accion": "POST estado = En juego",
+      "hora_utc": "2026-11-06T23:09:10.235088+00:00",
+      "codigo": 409,
+      "cuerpo": {
+        "error": {
+          "codigo": "CONFLICTO",
+          "mensaje": "El partido 'P-07' no puede pasar de 'Finalizado' a 'En juego'.",
+          "request_id": "d6a586957c6b40319c3e77196d82c860"
+        }
+      }
+    }
+  ]
+}

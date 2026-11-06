@@ -1,6 +1,6 @@
 # Defensa final: cómo vamos a mostrar el sistema
 
-La defensa es sobre las bases y las decisiones de arquitectura. Swagger y Grafana son el medio para mostrar que lo que explicamos es lo que está construido. No usamos diapositivas ni una interfaz gráfica: la explicación va sobre el repositorio, Swagger (http://127.0.0.1:8001/docs) y el panel de Grafana.
+La defensa es sobre las bases y las decisiones de arquitectura. Swagger, Grafana y el panel técnico son el medio para mostrar que lo que explicamos es lo que está construido. No usamos diapositivas: la explicación va sobre el repositorio, Swagger (http://127.0.0.1:8001/docs), el panel técnico (http://127.0.0.1:8085) y Grafana. Las tres demos se pueden correr juntas con el botón "Simular situaciones" del panel técnico (ver el [README](../README.md#repetir-la-demostración)); la vista del hincha (http://127.0.0.1:8086) sirve para mostrar qué base hay detrás de cada pantalla.
 
 ## Orden de la exposición (20 minutos, 3 integrantes)
 

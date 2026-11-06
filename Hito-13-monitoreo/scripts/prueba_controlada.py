@@ -1,5 +1,6 @@
 """Los tres momentos de la demo y la captura de evidencia. Lo invoca ejecutar_prueba_controlada.ps1.
 
+  normal  lecturas moderadas contra las seis bases: la línea de base para comparar
   pico    ráfaga de comentarios por país (scripts/carga_comentarios.py) contra la API instrumentada
   estado  transición Programado -> En juego -> Finalizado de un partido en IRIS
   falla   docker stop / start del contenedor de Redis con tráfico de fondo; registra antes, durante y después
@@ -66,6 +67,58 @@ def foto(cliente):
             for a in (alertas.get("cuerpo") or {}).get("data", {}).get("alerts", [])
         ],
     }
+
+
+# Una lectura por base: así la operación normal deja datos en todos los paneles de duración por base.
+LECTURAS_NORMALES = (
+    ("redis", "/sesiones/U001", {}),
+    ("mongodb", "/equipos/ARG/jugadores", {}),
+    ("neo4j", "/partidos/P-01", {}),
+    ("neo4j", "/partidos/P-01/eventos", {}),
+    ("iris", "/partidos/P-01/detalle", {}),
+    ("influxdb", "/partidos/P-01/estadisticas",
+     {"desde": "2030-06-15T18:30:00Z", "hasta": "2030-06-15T18:40:00Z", "agregacion": "1m"}),
+    ("cassandra", "/partidos/P-01/comentarios", {"pais": "ARG", "ventana": "2030-06-15T18:30:00Z"}),
+)
+
+
+def percentil(valores, p):
+    """Percentil por rango más cercano, el mismo criterio que usamos para el pico."""
+    if not valores:
+        return None
+    orden = sorted(valores)
+    return orden[max(0, min(len(orden) - 1, round(p / 100 * len(orden) + 0.5) - 1))]
+
+
+def momento_normal(args):
+    """Tráfico de lectura moderado contra las seis bases: es la línea de base con la que se comparan las demás situaciones."""
+    print(f"Operación normal: {args.duracion} s de lecturas contra las seis bases")
+    codigos = Counter()
+    duraciones = {}
+    fin = time.monotonic() + args.duracion
+    inicio = ahora()
+    with httpx.Client(base_url=API, timeout=10) as c:
+        while time.monotonic() < fin:
+            for fuente, url, params in LECTURAS_NORMALES:
+                t = time.perf_counter()
+                try:
+                    r = c.get(url, params=params)
+                    codigos[f"{fuente} {r.status_code}"] += 1
+                except httpx.HTTPError as exc:
+                    codigos[f"{fuente} {type(exc).__name__}"] += 1
+                duraciones.setdefault(fuente, []).append((time.perf_counter() - t) * 1000)
+            time.sleep(0.5)
+    registro = {
+        "commit": commit(),
+        "ventana_utc": {"desde": inicio.isoformat(), "hasta": ahora().isoformat()},
+        "respuestas_por_base": dict(sorted(codigos.items())),
+        "tiempo_cliente_ms": {
+            fuente: {"pedidos": len(v), "p50": round(percentil(v, 50), 2), "p95": round(percentil(v, 95), 2)}
+            for fuente, v in sorted(duraciones.items())
+        },
+    }
+    print(json.dumps(registro["respuestas_por_base"], ensure_ascii=False))
+    guardar(f"operacion_normal_{datetime.now():%Y%m%d_%H%M%S}.json", registro)
 
 
 def momento_pico(args):
@@ -213,6 +266,8 @@ def leer_env(clave):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="momento", required=True)
+    n = sub.add_parser("normal")
+    n.add_argument("--duracion", type=int, default=40)
     p = sub.add_parser("pico")
     p.add_argument("--partido", default="P-01")
     p.add_argument("--cantidad", type=int, default=3000)
@@ -229,7 +284,7 @@ def main():
     c.add_argument("--hasta", required=True)
     c.add_argument("--nombre", required=True)
     args = ap.parse_args()
-    {"pico": momento_pico, "estado": momento_estado, "falla": momento_falla, "capturar": capturar}[args.momento](args)
+    {"normal": momento_normal, "pico": momento_pico, "estado": momento_estado, "falla": momento_falla, "capturar": capturar}[args.momento](args)
 
 
 if __name__ == "__main__":
