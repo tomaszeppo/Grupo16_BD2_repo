@@ -37,7 +37,8 @@ done
 if [[ -z "${INFLUX_TOKEN:-}" ]]; then
   INFLUX_TOKEN="$(docker compose exec -T influxdb influxdb3 create token --admin | tr -d '\r' | grep -oE 'apiv3_[A-Za-z0-9_-]+' | head -n1)"
   [[ -n "$INFLUX_TOKEN" ]] || { echo "No se pudo crear el token de InfluxDB (¿ya existía uno? borrá el volumen o cargá INFLUX_TOKEN en .env)" >&2; exit 1; }
-  sed -i '/^INFLUX_TOKEN=/d' .env
+  awk '!/^INFLUX_TOKEN=/' .env > .env.tmp
+  mv .env.tmp .env
   printf 'INFLUX_TOKEN=%s\n' "$INFLUX_TOKEN" >> .env
   echo "  token creado y guardado en .env (no se versiona)"
 fi
