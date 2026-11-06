@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123e38">
+  <title>Fixture 2030 · Tu tribuna</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <section id="login" class="login-layout" aria-label="Ingresar al Fixture">
+    <div class="login-story">
+      <a class="brand light" href="/" aria-label="Fixture 2030, inicio"><span class="brand-icon">f<span>30</span></span><span>FIXTURE <b>2030</b></span></a>
+      <div class="story-content"><span class="eyebrow">EL MUNDO EN LA MISMA TRIBUNA</span><h1>El Mundial<br>se vive<br> <em>de cerca.</em></h1><p>Tu selección. Cada jugada.<br>Y millones de formas de gritar un gol.</p></div>
+      <div class="pitch-art" aria-hidden="true"><div class="pitch-mid"></div><div class="pitch-circle"></div><div class="pitch-box"></div><span class="ball"></span><span class="pitch-dot d1"></span><span class="pitch-dot d2"></span><span class="pitch-dot d3"></span></div>
+      <div class="story-footer"><span>UNA PASIÓN. TODO EL MUNDO.</span><span>↗ 2030</span></div>
+    </div>
+    <div class="login-side"><div class="login-top"><span>LA EXPERIENCIA DEL HINCHA</span><span class="small-pill">Primera versión</span></div>
+      <div class="login-form-wrap"><span class="section-tag">BIENVENIDO A TU TRIBUNA</span><h2>El partido empieza acá.</h2><p class="intro">Entrá para seguir el fixture, mirar las jugadas y compartir el partido con tu gente.</p>
+        <form id="login-form">
+          <label for="name">¿Cómo te llamamos?</label><input id="name" name="nombre" maxlength="60" autocomplete="nickname" placeholder="Tu nombre en la tribuna" required>
+          <label for="country">¿Desde dónde alentás?</label><select id="country" name="pais"><option value="ARG">🇦🇷 Argentina</option><option value="BRA">🇧🇷 Brasil</option><option value="URU">🇺🇾 Uruguay</option><option value="ESP">🇪🇸 España</option><option value="FRA">🇫🇷 Francia</option></select>
+          <label for="user-id">Usuario de laboratorio</label><input id="user-id" name="usuario_id" value="U001" pattern="U[0-9]{3,6}" autocomplete="username" required aria-describedby="session-help">
+          <p id="session-help" class="field-help">Ingresás con una sesión existente del Fixture. La API actual no crea cuentas ni valida contraseñas. U001 y U003 deben tener una sesión activa.</p>
+          <div id="login-error" class="error-box" role="alert" hidden></div>
+          <button class="button primary login-submit" id="login-submit" type="submit">Entrar a mi tribuna <span>↗</span></button>
+        </form>
+        <div class="or"><span></span>¿QUERÉS DAR UNA VUELTA?<span></span></div>
+        <button class="button secondary demo-button" id="demo-login">Explorar la demostración <span>→</span></button>
+        <p class="demo-help">Sin conectar las bases. Datos sintéticos. Abrí otra pestaña para probar la tribuna compartida.</p>
+      </div><div class="login-bottom"><span>Fixture Mundial 2030</span><span>Hecho para vivirlo juntos.</span></div>
+    </div>
+  </section>
+
+  <div id="application" hidden>
+    <header class="site-header"><a class="brand" href="/" aria-label="Fixture 2030, inicio"><span class="brand-icon">f<span>30</span></span><span>FIXTURE <b>2030</b></span></a><nav aria-label="Secciones"><a href="#/inicio" data-nav="inicio">Inicio</a><a href="#/historial" data-nav="historial">Historial</a></nav><div class="account"><span class="avatar" id="avatar">F</span><div><strong id="account-name"></strong><span id="account-country"></span></div><button id="logout" class="text-button" title="Cerrar la sesión actual del Fixture">Salir ↗</button></div></header>
+    <div id="mode-banner" class="mode-banner"></div>
+    <main class="shell" id="fixture">
+      <div id="home-view" hidden>
+      <section class="welcome"><div><span class="section-tag">TU LUGAR EN EL MUNDIAL</span><h1>Se juega en la cancha.<br><em>Se vive en la tribuna.</em></h1><p id="welcome-text">Todo lo que pasa en el partido, en un solo lugar.</p></div><div class="edition"><span class="edition-number">20<br>30<span>✳</span></span><span>EL FÚTBOL<br>NOS ENCUENTRA.</span></div></section>
+      <div class="home-toolbar"><div><span class="live-label">EL MUNDIAL, AHORA</span><h2>Partidos en curso <span id="live-count" class="count">—</span></h2><p class="subtle">Elegí un encuentro para entrar a su tribuna.</p></div><button class="button secondary" id="open-history">Ver historial <span>↗</span></button></div>
+      <p id="catalog-status" class="subtle" role="status">Consultando los estados del fixture…</p>
+      <div id="match-list" class="fixture-grid" aria-label="Partidos en curso"><div class="empty">Consultando los encuentros…</div></div>
+      <div class="section-heading upcoming-heading"><h2>Lo que viene</h2><button class="text-button" id="refresh">Actualizar ↻</button></div><div id="upcoming-list" class="fixture-grid upcoming"></div>
+      <div id="unknown-list"></div>
+      <p id="catalog-note" class="subtle">Fixture de laboratorio · Fechas y resultados simulados. El estado de cada encuentro se consulta por separado.</p>
+      </div>
+      <section id="history-view" hidden><a class="back-link" href="#/inicio">← Volver al inicio</a><div class="home-toolbar"><div><span class="section-tag">CADA PARTIDO DEJA UNA HISTORIA</span><h1>El historial.</h1><p class="subtle">Encuentros finalizados. Volvé a sus jugadas y resultados.</p></div><button class="button secondary" id="refresh-history">Actualizar ↻</button></div><div id="history-list" class="fixture-grid"></div></section>
+      <div id="page-error" class="error-box" role="alert" hidden></div>
+      <section id="detail-view" hidden>
+      <div class="detail-toolbar"><a class="back-link" id="back-to-list" href="#/inicio">← Volver a partidos</a><span id="detail-context" class="section-tag"></span></div>
+      <div class="match-layout">
+        <div class="match-main">
+          <section class="scoreboard" aria-label="Partido seleccionado"><div class="score-top"><span id="match-phase">FASE DE GRUPOS</span><span id="match-state" class="match-state">Consultando estado…</span><span id="match-date"></span></div><div class="teams"><div class="team"><span class="team-flag" id="home-flag"></span><h2 id="home-name"></h2><span id="home-code"></span></div><div class="score-center"><div class="score" id="score">— : —</div><span id="score-note">Sin marcador disponible</span></div><div class="team"><span class="team-flag" id="away-flag"></span><h2 id="away-name"></h2><span id="away-code"></span></div></div><div class="score-bottom"><span>⌖ <span id="stadium"></span></span><span id="last-update">Actualización cada 15 s</span></div></section>
+          <div class="tabs" role="tablist" aria-label="Información del partido"><button role="tab" id="tab-summary" aria-controls="panel-summary" aria-selected="true" data-tab="summary">El partido</button><button role="tab" id="tab-stats" aria-controls="panel-stats" aria-selected="false" tabindex="-1" data-tab="stats">En números</button><button role="tab" id="tab-teams" aria-controls="panel-teams" aria-selected="false" tabindex="-1" data-tab="teams">Los protagonistas</button></div>
+          <section id="panel-summary" role="tabpanel" aria-labelledby="tab-summary"><div class="section-heading"><h2>Así va el encuentro</h2><span class="section-tag">CADA JUGADA CUENTA</span></div><div id="event-list" class="event-list"></div><div class="fan-note"><span>✳</span><div><h3 id="fan-note-title">Tu mirada también juega.</h3><p id="fan-note-copy">Compartí lo que ves con la hinchada de tu país. Un comentario, mil formas de sentirlo.</p></div><a href="#conversation" aria-label="Ir a los comentarios">↗</a></div></section>
+          <section id="panel-stats" role="tabpanel" aria-labelledby="tab-stats" hidden><div class="section-heading"><h2>El partido, en números</h2><span class="section-tag">VENTANA DE 10 MIN</span></div><label class="interval-label" for="stats-start">Desde (tu hora local)</label><div class="interval-row"><input type="datetime-local" id="stats-start" value="2030-06-15T15:30"><button id="apply-stats" class="button compact">Consultar</button></div><p class="subtle">Los datos sembrados de P-01 y P-02 cubren el 15/06/2030, de 18:30 a 18:40 UTC.</p><div id="stats-content"></div></section>
+          <section id="panel-teams" role="tabpanel" aria-labelledby="tab-teams" hidden><div class="section-heading"><h2>Los protagonistas</h2><select id="team-picker" aria-label="Selección a consultar"></select></div><p class="subtle">Planteles sintéticos del laboratorio.</p><div id="players-list" class="players-list"></div></section>
+          <section class="availability"><div class="section-heading"><h2>Tu experiencia, al día</h2><span class="section-tag">ESTADO DE LOS SERVICIOS</span></div><div id="fan-services" class="fan-services"></div><p class="subtle">Disponibilidad de las consultas que acabamos de hacer. Si una falla, podés seguir usando las demás.</p></section>
+        </div>
+        <aside class="conversation card" id="conversation"><div class="conversation-header"><span class="section-tag">LA OTRA MITAD DEL PARTIDO</span><h2>La tribuna <span id="chat-flag"></span></h2><p>El partido se comenta con tu gente.</p><div id="live-status" class="connection-status" role="status">Conectando la tribuna…</div><span id="live-checked" class="subtle"></span></div><div class="chat-filter"><label for="comment-period">Ver comentarios de</label><select id="comment-period"><option value="now">En directo</option><option value="lab">Comentarios de la muestra</option></select><span id="comment-window" class="subtle"></span></div><div id="comments-list" class="comments-list" aria-live="polite"></div><button id="more-comments" class="text-button" hidden>Ver más comentarios ↓</button><form id="comment-form"><label for="comment">Sumá tu voz</label><textarea id="comment" rows="3" maxlength="280" placeholder="¿Cómo estás viviendo el partido?" required></textarea><div class="compose-footer"><span id="char-count">0 / 280</span><button class="button primary compact" type="submit" id="send-comment">Comentar ↗</button></div><p id="comment-feedback" class="subtle" role="status"></p></form><div id="chat-foot" class="chat-foot">Alentamos con pasión. Nos tratamos con respeto.</div></aside>
+      </div>
+      </section>
+      <footer class="site-footer"><a class="brand" href="#fixture">FIXTURE <b>2030</b></a><span>La cancha es una. Las historias, millones.</span><span>Proyecto académico · Grupo 16</span></footer>
+    </main>
+    <div id="toast" class="toast" role="status" hidden></div>
+  </div>
+</body>
+</html>
