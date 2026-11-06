@@ -12,7 +12,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 RAIZ = Path(__file__).resolve().parents[1]
-sys.path[:0] = [str(RAIZ), str(RAIZ.parent / "Hito-10-fixture2030-APIREST")]
+sys.path[:0] = [str(RAIZ), str(RAIZ.parents[1] / "Hito-10-fixture2030-APIREST")]
 import server
 from app.schemas.partidos import PartidoGrafo, EventosPartido
 from app.schemas.iris import PartidoIris

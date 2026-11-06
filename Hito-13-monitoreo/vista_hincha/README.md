@@ -2,7 +2,7 @@
 
 Recorrido separado en login, menú principal, historial y detalle del partido. El inicio muestra encuentros en juego y próximos; el historial incluye solo finalizados, según el estado consultado en IRIS. Al abrir un encuentro en juego se entra a su tribuna, con comentarios actualizados automáticamente por país. HTML, CSS y JavaScript sin framework; FastAPI sirve la vista y adapta el contrato del Hito 10 para usar un mismo origen.
 
-Todo lo nuevo está en esta carpeta. No modifica la API, las bases, el panel de observabilidad ni su Compose. Rama: `codex/vista-hincha`.
+La vista vive en `Hito-13-monitoreo/vista_hincha/`, al mismo nivel que el panel técnico `panel_web/`, en la rama `Hito-13-interfaz-visual`. No modifica la API, las bases, el panel de observabilidad ni su Compose. Cada vista se inicia por separado.
 
 ## Iniciar localmente
 
