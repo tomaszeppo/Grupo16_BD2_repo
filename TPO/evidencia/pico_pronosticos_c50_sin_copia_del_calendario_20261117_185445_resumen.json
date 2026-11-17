@@ -1,0 +1,77 @@
+{
+  "escenario": "pico_pronosticos",
+  "etiqueta": "c50_sin_copia_del_calendario",
+  "inicio": "2026-11-17T18:54:45.846408+00:00",
+  "commit": "sin commit",
+  "parametros": {
+    "usuarios": 100000,
+    "concurrencia": 50,
+    "duracion": 30.0,
+    "partido": "P-03",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "0",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio; 6 procesos y 50 hilos",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": false,
+        "antiguedad_segundos": null,
+        "desactualizado": true
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [
+    "En el mismo equipo estaban levantados tambien los contenedores de los Hitos 10 y 13 (Cassandra, IRIS, Neo4j, Grafana y otros), que compiten por memoria y CPU.",
+    "CALENDARIO_TTL_SEGUNDOS=0: cada pronostico consulta el partido en Neo4j. Comparar con pico_pronosticos c50_registro_minimo."
+  ],
+  "duracion_real_segundos": 30.0,
+  "medicion": {
+    "total": 2751,
+    "por_segundo": 91.7,
+    "exitosos": 2751,
+    "errores": 0,
+    "porcentaje_de_error": 0.0,
+    "errores_por_estado": {},
+    "p50_ms": 523.7,
+    "p95_ms": 795.0,
+    "p99_ms": 892.8,
+    "max_ms": 1173.7,
+    "max_ms_incluyendo_errores": 1173.7,
+    "por_ruta": {
+      "PUT /partidos/{id}/pronostico": {
+        "total": 2751,
+        "por_segundo": 91.7,
+        "exitosos": 2751,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 523.7,
+        "p95_ms": 795.0,
+        "p99_ms": 892.8,
+        "max_ms": 1173.7,
+        "max_ms_incluyendo_errores": 1173.7
+      }
+    }
+  },
+  "fin": "2026-11-17T18:55:17.197069+00:00"
+}

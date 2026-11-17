@@ -1,0 +1,94 @@
+{
+  "escenario": "posicion_ranking",
+  "etiqueta": "c50_100000_usuarios",
+  "inicio": "2026-11-17T18:53:54.099184+00:00",
+  "commit": "sin commit",
+  "parametros": {
+    "usuarios": 100000,
+    "concurrencia": 50,
+    "duracion": 30.0,
+    "partido": "P-03",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio; 6 procesos y 50 hilos",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 81.08651,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [
+    "En el mismo equipo estaban levantados tambien los contenedores de los Hitos 10 y 13 (Cassandra, IRIS, Neo4j, Grafana y otros), que compiten por memoria y CPU.",
+    "Puntajes reales de 100.000 usuarios, resultado de cerrar P-05 y P-06."
+  ],
+  "duracion_real_segundos": 30.0,
+  "medicion": {
+    "total": 734,
+    "por_segundo": 24.5,
+    "exitosos": 654,
+    "errores": 80,
+    "porcentaje_de_error": 10.9,
+    "errores_por_estado": {
+      "504": 80
+    },
+    "p50_ms": 1398.9,
+    "p95_ms": 5198.3,
+    "p99_ms": 6193.6,
+    "max_ms": 6499.8,
+    "max_ms_incluyendo_errores": 6698.1,
+    "por_ruta": {
+      "GET /ranking": {
+        "total": 131,
+        "por_segundo": 4.4,
+        "exitosos": 131,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 136.5,
+        "p95_ms": 404.3,
+        "p99_ms": 603.0,
+        "max_ms": 1005.9,
+        "max_ms_incluyendo_errores": 1005.9
+      },
+      "GET /ranking/usuarios/{id}": {
+        "total": 603,
+        "por_segundo": 20.1,
+        "exitosos": 523,
+        "errores": 80,
+        "porcentaje_de_error": 13.27,
+        "errores_por_estado": {
+          "504": 80
+        },
+        "p50_ms": 1795.3,
+        "p95_ms": 5512.5,
+        "p99_ms": 6195.2,
+        "max_ms": 6499.8,
+        "max_ms_incluyendo_errores": 6698.1
+      }
+    }
+  },
+  "fin": "2026-11-17T18:54:27.833944+00:00"
+}

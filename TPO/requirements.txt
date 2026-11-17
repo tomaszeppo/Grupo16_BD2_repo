@@ -1,0 +1,8 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic-settings>=2.5
+httpx>=0.27
+pymongo>=4.8
+neo4j>=5.24
+prometheus-client>=0.21
+pytest>=8.0

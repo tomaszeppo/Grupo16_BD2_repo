@@ -1,0 +1,116 @@
+{
+  "escenario": "lecturas_fixture",
+  "etiqueta": "c200_listado_desde_la_copia",
+  "inicio": "2026-11-17T18:36:56.980508+00:00",
+  "commit": "sin commit",
+  "parametros": {
+    "usuarios": 1000,
+    "concurrencia": 200,
+    "duracion": 30.0,
+    "partido": "P-03",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio; 6 procesos y 200 hilos",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 37.349085,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [
+    "En el mismo equipo estaban levantados tambien los contenedores de los Hitos 10 y 13 (Cassandra, IRIS, Neo4j, Grafana y otros), que compiten por memoria y CPU.",
+    "Despues de la mejora: GET /partidos sale de la copia en memoria del calendario."
+  ],
+  "duracion_real_segundos": 30.0,
+  "medicion": {
+    "total": 1969,
+    "por_segundo": 65.6,
+    "exitosos": 1969,
+    "errores": 0,
+    "porcentaje_de_error": 0.0,
+    "errores_por_estado": {},
+    "p50_ms": 3082.8,
+    "p95_ms": 3932.3,
+    "p99_ms": 8106.4,
+    "max_ms": 9420.3,
+    "max_ms_incluyendo_errores": 9420.3,
+    "por_ruta": {
+      "GET /partidos": {
+        "total": 472,
+        "por_segundo": 15.7,
+        "exitosos": 472,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 2894.9,
+        "p95_ms": 3929.2,
+        "p99_ms": 7875.0,
+        "max_ms": 9251.9,
+        "max_ms_incluyendo_errores": 9251.9
+      },
+      "GET /partidos/{id}": {
+        "total": 895,
+        "por_segundo": 29.8,
+        "exitosos": 895,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 3102.2,
+        "p95_ms": 4812.4,
+        "p99_ms": 8542.8,
+        "max_ms": 9420.3,
+        "max_ms_incluyendo_errores": 9420.3
+      },
+      "GET /partidos/{id}/eventos": {
+        "total": 393,
+        "por_segundo": 13.1,
+        "exitosos": 393,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 3109.8,
+        "p95_ms": 3899.9,
+        "p99_ms": 7802.2,
+        "max_ms": 9251.0,
+        "max_ms_incluyendo_errores": 9251.0
+      },
+      "GET /partidos/{id}/eventos/{id}/cadena": {
+        "total": 209,
+        "por_segundo": 7.0,
+        "exitosos": 209,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 3123.1,
+        "p95_ms": 3805.4,
+        "p99_ms": 5043.4,
+        "max_ms": 9254.7,
+        "max_ms_incluyendo_errores": 9254.7
+      }
+    }
+  },
+  "fin": "2026-11-17T18:37:29.686051+00:00"
+}

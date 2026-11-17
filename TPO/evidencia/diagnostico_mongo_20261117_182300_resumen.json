@@ -1,0 +1,41 @@
+{
+  "escenario": "diagnostico_mongo",
+  "inicio": "2026-11-17T18:23:00.810368+00:00",
+  "commit": "sin commit",
+  "parametros": {
+    "hilos": 50,
+    "segundos": 10.0
+  },
+  "entorno": {
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "nodos_de_mongodb": 3
+  },
+  "que_mide": "upsert de documentos chicos directo con el driver, sin la API, con tres garantías de escritura",
+  "medicion": {
+    "w1_sin_esperar_al_diario": {
+      "escrituras": 15318,
+      "por_segundo": 1530.1,
+      "p50_ms": 24.9,
+      "p95_ms": 79.6,
+      "p99_ms": 101.9
+    },
+    "w1_con_diario": {
+      "escrituras": 12625,
+      "por_segundo": 1253.2,
+      "p50_ms": 28.6,
+      "p95_ms": 88.5,
+      "p99_ms": 103.9
+    },
+    "mayoria": {
+      "escrituras": 9943,
+      "por_segundo": 992.8,
+      "p50_ms": 41.1,
+      "p95_ms": 99.6,
+      "p99_ms": 127.9
+    }
+  },
+  "notas": [
+    "En el mismo equipo estaban levantados tambien los contenedores de los Hitos 10 y 13."
+  ]
+}

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prode Mundial 2030</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <a class="saltar" href="#contenido">Ir al contenido</a>
+  <header class="cabecera">
+    <a class="marca" href="#/fixture">Prode <span>Mundial 2030</span></a>
+    <nav id="menu" aria-label="Secciones">
+      <a href="#/fixture">Fixture</a>
+      <a href="#/ranking">Ranking</a>
+      <a href="#/prodes">Mis prodes</a>
+      <a href="#/admin">Administración</a>
+    </nav>
+    <div id="quien" class="quien"></div>
+  </header>
+
+  <main id="contenido" tabindex="-1"></main>
+
+  <footer class="pie">
+    <span id="salud" class="salud">Consultando el estado de las bases…</span>
+    <span>Datos de laboratorio. Cada bloque indica qué base respondió.</span>
+  </footer>
+
+  <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

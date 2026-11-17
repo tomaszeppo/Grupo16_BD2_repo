@@ -1,0 +1,71 @@
+{
+  "escenario": "cierre_partido",
+  "etiqueta": "100000_pronosticos",
+  "inicio": "2026-11-17T18:52:38.035268+00:00",
+  "commit": "sin commit",
+  "parametros": {
+    "usuarios": 1000,
+    "concurrencia": 20,
+    "duracion": 30,
+    "partido": "P-05",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 20.718871,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [
+    "En el mismo equipo estaban levantados tambien los contenedores de los Hitos 10 y 13 (Cassandra, IRIS, Neo4j, Grafana y otros), que compiten por memoria y CPU."
+  ],
+  "medicion": {
+    "partido": "P-05",
+    "marcador": {
+      "goles_local": 2,
+      "goles_visitante": 1
+    },
+    "respuesta_del_cierre_ms": 25.2,
+    "hasta_puntuacion_completa_ms": 25927.8,
+    "puntuacion": {
+      "estado": "completa",
+      "pasos": {
+        "puntuar": 8406.9,
+        "sumar": 17297.7,
+        "foto": 11.9
+      },
+      "pronosticos": 100000,
+      "iniciada_en": "2026-11-17T18:52:38.129000Z",
+      "terminada_en": "2026-11-17T18:53:03.864000Z"
+    },
+    "repeticion_del_cierre": {
+      "estado_http": 202,
+      "ranking_sin_cambios": true
+    }
+  },
+  "fin": "2026-11-17T18:53:06.059229+00:00"
+}

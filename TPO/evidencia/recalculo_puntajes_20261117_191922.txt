@@ -1,0 +1,3 @@
+Usuarios con puntaje guardado: 100001
+Pronósticos puntuados: 120001
+Sin diferencias: la suma partido a partido coincide con el recálculo completo.

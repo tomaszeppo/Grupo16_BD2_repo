@@ -1,0 +1,679 @@
+{
+  "escenario": "caida",
+  "etiqueta": "neo4j_corte_brusco",
+  "inicio": "2026-11-17T19:04:40.584976+00:00",
+  "commit": "sin commit",
+  "parametros": {
+    "usuarios": 100000,
+    "concurrencia": 20,
+    "duracion": 75.0,
+    "partido": "P-03",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio; 4 procesos y 20 hilos",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 10.676189,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [
+    "En el mismo equipo estaban levantados tambien los contenedores de los Hitos 10 y 13.",
+    "Se mato el contenedor neo4j con docker compose kill cerca del segundo 20 y se lo volvio a levantar unos 35 segundos despues. La carga son solo pronosticos (MongoDB); el partido se valida con la copia del calendario."
+  ],
+  "duracion_real_segundos": 75.0,
+  "medicion": {
+    "total": 9301,
+    "por_segundo": 124.0,
+    "exitosos": 9301,
+    "errores": 0,
+    "porcentaje_de_error": 0.0,
+    "errores_por_estado": {},
+    "p50_ms": 126.3,
+    "p95_ms": 299.2,
+    "p99_ms": 397.3,
+    "max_ms": 9082.7,
+    "max_ms_incluyendo_errores": 9082.7,
+    "por_ruta": {
+      "PUT /partidos/{id}/pronostico": {
+        "total": 9301,
+        "por_segundo": 124.0,
+        "exitosos": 9301,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 126.3,
+        "p95_ms": 299.2,
+        "p99_ms": 397.3,
+        "max_ms": 9082.7,
+        "max_ms_incluyendo_errores": 9082.7
+      }
+    }
+  },
+  "linea_de_tiempo": [
+    {
+      "segundo": 0,
+      "total": 175,
+      "errores": 0,
+      "estados": {
+        "200": 175
+      }
+    },
+    {
+      "segundo": 1,
+      "total": 151,
+      "errores": 0,
+      "estados": {
+        "200": 151
+      }
+    },
+    {
+      "segundo": 2,
+      "total": 120,
+      "errores": 0,
+      "estados": {
+        "200": 120
+      }
+    },
+    {
+      "segundo": 3,
+      "total": 99,
+      "errores": 0,
+      "estados": {
+        "200": 99
+      }
+    },
+    {
+      "segundo": 4,
+      "total": 153,
+      "errores": 0,
+      "estados": {
+        "200": 153
+      }
+    },
+    {
+      "segundo": 5,
+      "total": 142,
+      "errores": 0,
+      "estados": {
+        "200": 142
+      }
+    },
+    {
+      "segundo": 6,
+      "total": 139,
+      "errores": 0,
+      "estados": {
+        "200": 139
+      }
+    },
+    {
+      "segundo": 7,
+      "total": 146,
+      "errores": 0,
+      "estados": {
+        "200": 146
+      }
+    },
+    {
+      "segundo": 8,
+      "total": 113,
+      "errores": 0,
+      "estados": {
+        "200": 113
+      }
+    },
+    {
+      "segundo": 9,
+      "total": 88,
+      "errores": 0,
+      "estados": {
+        "200": 88
+      }
+    },
+    {
+      "segundo": 10,
+      "total": 75,
+      "errores": 0,
+      "estados": {
+        "200": 75
+      }
+    },
+    {
+      "segundo": 11,
+      "total": 87,
+      "errores": 0,
+      "estados": {
+        "200": 87
+      }
+    },
+    {
+      "segundo": 12,
+      "total": 69,
+      "errores": 0,
+      "estados": {
+        "200": 69
+      }
+    },
+    {
+      "segundo": 13,
+      "total": 91,
+      "errores": 0,
+      "estados": {
+        "200": 91
+      }
+    },
+    {
+      "segundo": 14,
+      "total": 90,
+      "errores": 0,
+      "estados": {
+        "200": 90
+      }
+    },
+    {
+      "segundo": 15,
+      "total": 90,
+      "errores": 0,
+      "estados": {
+        "200": 90
+      }
+    },
+    {
+      "segundo": 16,
+      "total": 78,
+      "errores": 0,
+      "estados": {
+        "200": 78
+      }
+    },
+    {
+      "segundo": 17,
+      "total": 90,
+      "errores": 0,
+      "estados": {
+        "200": 90
+      }
+    },
+    {
+      "segundo": 18,
+      "total": 77,
+      "errores": 0,
+      "estados": {
+        "200": 77
+      }
+    },
+    {
+      "segundo": 19,
+      "total": 85,
+      "errores": 0,
+      "estados": {
+        "200": 85
+      }
+    },
+    {
+      "segundo": 20,
+      "total": 84,
+      "errores": 0,
+      "estados": {
+        "200": 84
+      }
+    },
+    {
+      "segundo": 21,
+      "total": 79,
+      "errores": 0,
+      "estados": {
+        "200": 79
+      }
+    },
+    {
+      "segundo": 22,
+      "total": 93,
+      "errores": 0,
+      "estados": {
+        "200": 93
+      }
+    },
+    {
+      "segundo": 23,
+      "total": 97,
+      "errores": 0,
+      "estados": {
+        "200": 97
+      }
+    },
+    {
+      "segundo": 24,
+      "total": 95,
+      "errores": 0,
+      "estados": {
+        "200": 95
+      }
+    },
+    {
+      "segundo": 25,
+      "total": 83,
+      "errores": 0,
+      "estados": {
+        "200": 83
+      }
+    },
+    {
+      "segundo": 26,
+      "total": 79,
+      "errores": 0,
+      "estados": {
+        "200": 79
+      }
+    },
+    {
+      "segundo": 27,
+      "total": 75,
+      "errores": 0,
+      "estados": {
+        "200": 75
+      }
+    },
+    {
+      "segundo": 28,
+      "total": 81,
+      "errores": 0,
+      "estados": {
+        "200": 81
+      }
+    },
+    {
+      "segundo": 29,
+      "total": 89,
+      "errores": 0,
+      "estados": {
+        "200": 89
+      }
+    },
+    {
+      "segundo": 30,
+      "total": 82,
+      "errores": 0,
+      "estados": {
+        "200": 82
+      }
+    },
+    {
+      "segundo": 31,
+      "total": 75,
+      "errores": 0,
+      "estados": {
+        "200": 75
+      }
+    },
+    {
+      "segundo": 32,
+      "total": 84,
+      "errores": 0,
+      "estados": {
+        "200": 84
+      }
+    },
+    {
+      "segundo": 33,
+      "total": 90,
+      "errores": 0,
+      "estados": {
+        "200": 90
+      }
+    },
+    {
+      "segundo": 34,
+      "total": 109,
+      "errores": 0,
+      "estados": {
+        "200": 109
+      }
+    },
+    {
+      "segundo": 35,
+      "total": 92,
+      "errores": 0,
+      "estados": {
+        "200": 92
+      }
+    },
+    {
+      "segundo": 36,
+      "total": 86,
+      "errores": 0,
+      "estados": {
+        "200": 86
+      }
+    },
+    {
+      "segundo": 37,
+      "total": 85,
+      "errores": 0,
+      "estados": {
+        "200": 85
+      }
+    },
+    {
+      "segundo": 38,
+      "total": 82,
+      "errores": 0,
+      "estados": {
+        "200": 82
+      }
+    },
+    {
+      "segundo": 39,
+      "total": 86,
+      "errores": 0,
+      "estados": {
+        "200": 86
+      }
+    },
+    {
+      "segundo": 40,
+      "total": 95,
+      "errores": 0,
+      "estados": {
+        "200": 95
+      }
+    },
+    {
+      "segundo": 41,
+      "total": 90,
+      "errores": 0,
+      "estados": {
+        "200": 90
+      }
+    },
+    {
+      "segundo": 42,
+      "total": 77,
+      "errores": 0,
+      "estados": {
+        "200": 77
+      }
+    },
+    {
+      "segundo": 43,
+      "total": 153,
+      "errores": 0,
+      "estados": {
+        "200": 153
+      }
+    },
+    {
+      "segundo": 44,
+      "total": 178,
+      "errores": 0,
+      "estados": {
+        "200": 178
+      }
+    },
+    {
+      "segundo": 45,
+      "total": 195,
+      "errores": 0,
+      "estados": {
+        "200": 195
+      }
+    },
+    {
+      "segundo": 46,
+      "total": 185,
+      "errores": 0,
+      "estados": {
+        "200": 185
+      }
+    },
+    {
+      "segundo": 47,
+      "total": 181,
+      "errores": 0,
+      "estados": {
+        "200": 181
+      }
+    },
+    {
+      "segundo": 48,
+      "total": 176,
+      "errores": 0,
+      "estados": {
+        "200": 176
+      }
+    },
+    {
+      "segundo": 49,
+      "total": 185,
+      "errores": 0,
+      "estados": {
+        "200": 185
+      }
+    },
+    {
+      "segundo": 50,
+      "total": 181,
+      "errores": 0,
+      "estados": {
+        "200": 181
+      }
+    },
+    {
+      "segundo": 51,
+      "total": 187,
+      "errores": 0,
+      "estados": {
+        "200": 187
+      }
+    },
+    {
+      "segundo": 52,
+      "total": 160,
+      "errores": 0,
+      "estados": {
+        "200": 160
+      }
+    },
+    {
+      "segundo": 53,
+      "total": 158,
+      "errores": 0,
+      "estados": {
+        "200": 158
+      }
+    },
+    {
+      "segundo": 54,
+      "total": 178,
+      "errores": 0,
+      "estados": {
+        "200": 178
+      }
+    },
+    {
+      "segundo": 55,
+      "total": 182,
+      "errores": 0,
+      "estados": {
+        "200": 182
+      }
+    },
+    {
+      "segundo": 56,
+      "total": 170,
+      "errores": 0,
+      "estados": {
+        "200": 170
+      }
+    },
+    {
+      "segundo": 57,
+      "total": 159,
+      "errores": 0,
+      "estados": {
+        "200": 159
+      }
+    },
+    {
+      "segundo": 58,
+      "total": 166,
+      "errores": 0,
+      "estados": {
+        "200": 166
+      }
+    },
+    {
+      "segundo": 59,
+      "total": 175,
+      "errores": 0,
+      "estados": {
+        "200": 175
+      }
+    },
+    {
+      "segundo": 60,
+      "total": 151,
+      "errores": 0,
+      "estados": {
+        "200": 151
+      }
+    },
+    {
+      "segundo": 61,
+      "total": 158,
+      "errores": 0,
+      "estados": {
+        "200": 158
+      }
+    },
+    {
+      "segundo": 62,
+      "total": 167,
+      "errores": 0,
+      "estados": {
+        "200": 167
+      }
+    },
+    {
+      "segundo": 63,
+      "total": 170,
+      "errores": 0,
+      "estados": {
+        "200": 170
+      }
+    },
+    {
+      "segundo": 64,
+      "total": 171,
+      "errores": 0,
+      "estados": {
+        "200": 171
+      }
+    },
+    {
+      "segundo": 65,
+      "total": 176,
+      "errores": 0,
+      "estados": {
+        "200": 176
+      }
+    },
+    {
+      "segundo": 66,
+      "total": 156,
+      "errores": 0,
+      "estados": {
+        "200": 156
+      }
+    },
+    {
+      "segundo": 67,
+      "total": 146,
+      "errores": 0,
+      "estados": {
+        "200": 146
+      }
+    },
+    {
+      "segundo": 68,
+      "total": 138,
+      "errores": 0,
+      "estados": {
+        "200": 138
+      }
+    },
+    {
+      "segundo": 69,
+      "total": 139,
+      "errores": 0,
+      "estados": {
+        "200": 139
+      }
+    },
+    {
+      "segundo": 70,
+      "total": 117,
+      "errores": 0,
+      "estados": {
+        "200": 117
+      }
+    },
+    {
+      "segundo": 71,
+      "total": 127,
+      "errores": 0,
+      "estados": {
+        "200": 127
+      }
+    },
+    {
+      "segundo": 72,
+      "total": 120,
+      "errores": 0,
+      "estados": {
+        "200": 120
+      }
+    },
+    {
+      "segundo": 73,
+      "total": 121,
+      "errores": 0,
+      "estados": {
+        "200": 121
+      }
+    },
+    {
+      "segundo": 74,
+      "total": 129,
+      "errores": 0,
+      "estados": {
+        "200": 129
+      }
+    }
+  ],
+  "fin": "2026-11-17T19:05:56.812466+00:00"
+}
