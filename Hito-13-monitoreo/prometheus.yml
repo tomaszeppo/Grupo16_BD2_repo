@@ -10,7 +10,7 @@ rule_files:
 
 scrape_configs:
   # Métricas de aplicación: pedidos, errores, duración por endpoint y por base, comentarios por país,
-  # y disponibilidad de las seis bases (ping de /health en cada recolección).
+  # y disponibilidad de las cinco bases (ping de /health en cada recolección).
   - job_name: api
     metrics_path: /metrics
     static_configs:

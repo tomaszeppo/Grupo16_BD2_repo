@@ -9,8 +9,8 @@ from prometheus_client.core import GaugeMetricFamily
 
 from api_instrumentada.metricas import BASE_DURACION, COMENTARIOS_CREADOS, HTTP_DURACION, HTTP_PEDIDOS
 
-ADAPTADORES = ("mongo", "neo4j", "cassandra", "redis", "influx", "iris")
-FUENTES = ("mongodb", "neo4j", "cassandra", "redis", "influxdb", "iris")
+ADAPTADORES = ("mongo", "neo4j", "cassandra", "redis", "influx")
+FUENTES = ("mongodb", "neo4j", "cassandra", "redis", "influxdb")
 _MARCA = "_fixture2030_instrumentado"
 
 

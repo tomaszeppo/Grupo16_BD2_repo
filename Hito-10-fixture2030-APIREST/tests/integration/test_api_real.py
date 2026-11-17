@@ -23,7 +23,7 @@ def test_health_todas_las_fuentes_ok(http):
     r = http.get("/health")
     assert r.status_code == 200, r.text
     assert {f["estado"] for f in r.json()["fuentes"].values()} == {"ok"}
-    assert set(r.json()["fuentes"]) == {"mongodb", "neo4j", "cassandra", "redis", "influxdb", "iris"}
+    assert set(r.json()["fuentes"]) == {"mongodb", "neo4j", "cassandra", "redis", "influxdb"}
 
 
 def test_correlacion_request_id(http):
@@ -133,14 +133,14 @@ def test_influx_sin_datos_es_200_vacio_y_ventana_invalida_422(http):
                     params={"desde": "2030-06-15T18:35:00Z", "hasta": V}).status_code == 422
 
 
-# --- IRIS
-def test_iris_detalle(http):
+# --- MongoDB: detalle persistente del partido
+def test_mongo_detalle_partido(http):
     r = http.get("/partidos/P-01/detalle")
     assert r.status_code == 200, r.text
     assert r.json()["estado"] == "En juego" and len(r.json()["eventos"]) == 2
 
 
-def test_iris_transiciones(http):
+def test_mongo_transiciones_partido(http):
     assert http.post("/partidos/P-03/estado", json={"estado": "Finalizado"}).status_code == 409  # salta "En juego"
     a = http.post("/partidos/P-08/estado", json={"estado": "En juego"})
     b = http.post("/partidos/P-08/estado", json={"estado": "En juego"})  # idempotente

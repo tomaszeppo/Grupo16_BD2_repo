@@ -41,7 +41,10 @@ def validar(folder: Path):
     for name,n in [('mongo_equipos_h10.jsonl',16),('mongo_jugadores_h10.jsonl',80)]:
         assert len([json.loads(s) for s in (folder/name).read_text(encoding='utf-8').splitlines()]) == n
     assert len((folder/'influx_muestra_h10.lp').read_text(encoding='utf-8').splitlines()) == 4800
-    assert len(json.loads((folder/'iris_partidos_h10.json').read_text(encoding='utf-8'))) == 8
+    partidos_h10 = folder/'mongo_partidos_h10.json'
+    if not partidos_h10.is_file():
+        partidos_h10 = folder/'iris_partidos_h10.json'  # compatibilidad con el lote histórico ya preparado
+    assert len(json.loads(partidos_h10.read_text(encoding='utf-8'))) == 8
     print(json.dumps({'estado':'ARCHIVOS_VALIDOS_NO_INSERTADOS','archivos_con_hash':len(manifest['archivos']),'partidos_h5':32,'comentarios_propuestos':1920,'particiones_propuestas':128},indent=2))
 
 

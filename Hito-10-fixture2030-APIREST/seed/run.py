@@ -3,7 +3,7 @@ import importlib
 
 from app.config.settings import Settings
 
-ORDEN = ["mongo", "neo4j", "cassandra", "redis", "influx", "iris"]
+ORDEN = ["mongo", "neo4j", "cassandra", "redis", "influx"]
 
 
 def main() -> int:

@@ -1,0 +1,230 @@
+{
+  "commit": "9e3995e",
+  "contenedor": "fixture2030-api-redis-1",
+  "fases": {
+    "antes": {
+      "hora_utc": "2026-11-17T18:53:58.171313+00:00",
+      "health": {
+        "codigo": 200,
+        "cuerpo": {
+          "estado": "ok",
+          "fuentes": {
+            "mongodb": {
+              "estado": "ok",
+              "latencia_ms": 3.5
+            },
+            "neo4j": {
+              "estado": "ok",
+              "latencia_ms": 3.5
+            },
+            "cassandra": {
+              "estado": "ok",
+              "latencia_ms": 13.4
+            },
+            "redis": {
+              "estado": "ok",
+              "latencia_ms": 10.1
+            },
+            "influxdb": {
+              "estado": "ok",
+              "latencia_ms": 10.5
+            }
+          }
+        }
+      },
+      "sesion_U001": {
+        "codigo": 200,
+        "cuerpo": {
+          "usuario_id": "U001",
+          "session_id": "S-DEMO-001",
+          "rol": "fan",
+          "estado_acceso": "ACTIVA",
+          "creado_en": "2030-06-14T10:00:00-03:00",
+          "ultimo_acceso": "2030-06-14T10:05:00-03:00",
+          "acciones": 1,
+          "ttl_segundos": 957
+        }
+      },
+      "alertas_prometheus": []
+    },
+    "durante_15s": {
+      "hora_utc": "2026-11-17T18:54:13.682768+00:00",
+      "health": {
+        "codigo": 503,
+        "cuerpo": {
+          "estado": "degradado",
+          "fuentes": {
+            "mongodb": {
+              "estado": "ok",
+              "latencia_ms": 5.8
+            },
+            "neo4j": {
+              "estado": "ok",
+              "latencia_ms": 9.9
+            },
+            "cassandra": {
+              "estado": "ok",
+              "latencia_ms": 25.5
+            },
+            "redis": {
+              "estado": "caida",
+              "latencia_ms": 19.4
+            },
+            "influxdb": {
+              "estado": "ok",
+              "latencia_ms": 14.3
+            }
+          }
+        }
+      },
+      "sesion_U001": {
+        "codigo": 503,
+        "cuerpo": {
+          "error": {
+            "codigo": "DEPENDENCIA_NO_DISPONIBLE",
+            "mensaje": "La fuente 'redis' no está disponible en este momento.",
+            "request_id": "72b70490f4ac45f0bdb574a741f3767d"
+          }
+        }
+      },
+      "alertas_prometheus": [
+        {
+          "alerta": "BaseNoDisponible",
+          "estado": "pending",
+          "fuente": "redis",
+          "job": "api",
+          "desde": "2026-11-17T18:54:05.070422575Z"
+        },
+        {
+          "alerta": "ErroresServidorAltos",
+          "estado": "pending",
+          "fuente": null,
+          "job": null,
+          "desde": "2026-11-17T18:54:10.070422575Z"
+        }
+      ]
+    },
+    "durante_fin": {
+      "hora_utc": "2026-11-17T18:55:13.751171+00:00",
+      "health": {
+        "codigo": 503,
+        "cuerpo": {
+          "estado": "degradado",
+          "fuentes": {
+            "mongodb": {
+              "estado": "ok",
+              "latencia_ms": 3.5
+            },
+            "neo4j": {
+              "estado": "ok",
+              "latencia_ms": 2.6
+            },
+            "cassandra": {
+              "estado": "ok",
+              "latencia_ms": 14.4
+            },
+            "redis": {
+              "estado": "caida",
+              "latencia_ms": 13.6
+            },
+            "influxdb": {
+              "estado": "ok",
+              "latencia_ms": 8.3
+            }
+          }
+        }
+      },
+      "sesion_U001": {
+        "codigo": 503,
+        "cuerpo": {
+          "error": {
+            "codigo": "DEPENDENCIA_NO_DISPONIBLE",
+            "mensaje": "La fuente 'redis' no está disponible en este momento.",
+            "request_id": "94c014b080504fc48dc3d1d21eff8688"
+          }
+        }
+      },
+      "alertas_prometheus": [
+        {
+          "alerta": "BaseNoDisponible",
+          "estado": "firing",
+          "fuente": "redis",
+          "job": "api",
+          "desde": "2026-11-17T18:54:05.070422575Z"
+        },
+        {
+          "alerta": "ErroresServidorAltos",
+          "estado": "firing",
+          "fuente": null,
+          "job": null,
+          "desde": "2026-11-17T18:54:10.070422575Z"
+        }
+      ]
+    },
+    "despues": {
+      "hora_utc": "2026-11-17T18:55:59.138941+00:00",
+      "health": {
+        "codigo": 200,
+        "cuerpo": {
+          "estado": "ok",
+          "fuentes": {
+            "mongodb": {
+              "estado": "ok",
+              "latencia_ms": 8.1
+            },
+            "neo4j": {
+              "estado": "ok",
+              "latencia_ms": 6.2
+            },
+            "cassandra": {
+              "estado": "ok",
+              "latencia_ms": 9.1
+            },
+            "redis": {
+              "estado": "ok",
+              "latencia_ms": 1.6
+            },
+            "influxdb": {
+              "estado": "ok",
+              "latencia_ms": 7.7
+            }
+          }
+        }
+      },
+      "sesion_U001": {
+        "codigo": 200,
+        "cuerpo": {
+          "usuario_id": "U001",
+          "session_id": "S-DEMO-001",
+          "rol": "fan",
+          "estado_acceso": "ACTIVA",
+          "creado_en": "2030-06-14T10:00:00-03:00",
+          "ultimo_acceso": "2030-06-14T10:05:00-03:00",
+          "acciones": 1,
+          "ttl_segundos": 836
+        }
+      },
+      "alertas_prometheus": [
+        {
+          "alerta": "ErroresServidorAltos",
+          "estado": "firing",
+          "fuente": null,
+          "job": null,
+          "desde": "2026-11-17T18:54:10.070422575Z"
+        }
+      ]
+    }
+  },
+  "detenido_utc": "2026-11-17T18:53:58.200505+00:00",
+  "iniciado_utc": "2026-11-17T18:55:14.123199+00:00",
+  "ventana_utc": {
+    "desde": "2026-11-17T18:53:28.153394+00:00",
+    "hasta": "2026-11-17T18:55:59.389319+00:00"
+  },
+  "trafico_de_fondo": {
+    "GET partidos 200": 482,
+    "GET sesiones 200": 243,
+    "GET sesiones 503": 239,
+    "POST partidos 201": 482
+  }
+}

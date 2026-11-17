@@ -3,8 +3,8 @@ info:
   title: Fixture 2030 — API integrada
   description: API REST integrada del Fixture Mundial 2030. Cada endpoint resuelve
     un caso de uso concreto contra la fuente NoSQL que corresponde (MongoDB, Neo4j,
-    Cassandra, Redis, InfluxDB, IRIS). No acepta consultas libres. Todos los errores
-    usan el formato {error:{codigo,mensaje,request_id}}.
+    Cassandra, Redis e InfluxDB). No acepta consultas libres. Todos los errores usan
+    el formato {error:{codigo,mensaje,request_id}}.
   version: 1.0.0
 servers:
 - url: http://localhost:8000
@@ -693,10 +693,8 @@ paths:
   /partidos/{partido_id}/detalle:
     get:
       tags:
-      - IRIS · Partido (objetos)
-      summary: Detalle del partido con sus eventos (objetos IRIS)
-      description: 'Lee `Fixture.Partido` y sus `Fixture.Evento` hijos. El id interno
-        de IRIS no se expone: la clave pública es `codigo`.'
+      - MongoDB · Detalle del partido
+      summary: Detalle persistente del partido con sus eventos
       operationId: detalle_partido_partidos__partido_id__detalle_get
       parameters:
       - name: partido_id
@@ -716,7 +714,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PartidoIris'
+                $ref: '#/components/schemas/PartidoDetalle'
         '404':
           description: Recurso inexistente
           content:
@@ -751,12 +749,10 @@ paths:
   /partidos/{partido_id}/estado:
     post:
       tags:
-      - IRIS · Partido (objetos)
+      - MongoDB · Detalle del partido
       summary: Cambiar el estado del partido (transición validada)
-      description: 'Flujo permitido: Programado → En juego → Finalizado (regla `CambiarEstado`
-        de la clase). Transición inválida → 409.
-
-        Idempotente: pedir el estado en el que ya está devuelve 200 sin escribir.'
+      description: 'Transiciones: Programado → En juego → Finalizado. Repetir el estado
+        actual no escribe.'
       operationId: cambiar_estado_partidos__partido_id__estado_post
       parameters:
       - name: partido_id
@@ -782,7 +778,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PartidoIris'
+                $ref: '#/components/schemas/PartidoDetalle'
         '404':
           description: Recurso inexistente
           content:
@@ -1086,7 +1082,7 @@ components:
       - estado
       - latencia_ms
       title: EstadoFuente
-    EventoIris:
+    EventoDetalle:
       properties:
         tipo:
           type: string
@@ -1108,7 +1104,7 @@ components:
       required:
       - tipo
       - minuto
-      title: EventoIris
+      title: EventoDetalle
     EventoPartido:
       properties:
         id:
@@ -1294,6 +1290,47 @@ components:
       - offset
       - items
       title: PaginaJugadores
+    PartidoDetalle:
+      properties:
+        codigo:
+          type: string
+          title: Codigo
+          examples:
+          - P-01
+        equipo_local:
+          type: string
+          title: Equipo Local
+        equipo_visitante:
+          type: string
+          title: Equipo Visitante
+        fecha_hora:
+          type: string
+          title: Fecha Hora
+        sede:
+          type: string
+          title: Sede
+        estado:
+          type: string
+          enum:
+          - Programado
+          - En juego
+          - Finalizado
+          title: Estado
+        eventos:
+          items:
+            $ref: '#/components/schemas/EventoDetalle'
+          type: array
+          title: Eventos
+      type: object
+      required:
+      - codigo
+      - equipo_local
+      - equipo_visitante
+      - fecha_hora
+      - sede
+      - estado
+      - eventos
+      title: PartidoDetalle
     PartidoGrafo:
       properties:
         id:
@@ -1329,48 +1366,6 @@ components:
       - estadio
       - equipos
       title: PartidoGrafo
-    PartidoIris:
-      properties:
-        codigo:
-          type: string
-          title: Codigo
-          examples:
-          - P-01
-        equipo_local:
-          type: string
-          title: Equipo Local
-        equipo_visitante:
-          type: string
-          title: Equipo Visitante
-        fecha_hora:
-          type: string
-          title: Fecha Hora
-        sede:
-          type: string
-          title: Sede
-        estado:
-          type: string
-          enum:
-          - Programado
-          - En juego
-          - Finalizado
-          title: Estado
-        eventos:
-          items:
-            $ref: '#/components/schemas/EventoIris'
-          type: array
-          title: Eventos
-          description: Hijos de la relación padre-hijo Fixture.Partido → Fixture.Evento
-      type: object
-      required:
-      - codigo
-      - equipo_local
-      - equipo_visitante
-      - fecha_hora
-      - sede
-      - estado
-      - eventos
-      title: PartidoIris
     PuntoAgregado:
       properties:
         ventana:
@@ -1532,7 +1527,7 @@ tags:
   description: Estado temporal con TTL.
 - name: InfluxDB · Estadísticas
   description: Series temporales acotadas por ventana.
-- name: IRIS · Partido (objetos)
-  description: Entidad compleja y transición de estado validada.
+- name: MongoDB · Detalle del partido
+  description: Documento persistente, eventos y transición de estado.
 - name: Sistema
   description: Salud de la API y de sus dependencias.

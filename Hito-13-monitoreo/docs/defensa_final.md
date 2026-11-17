@@ -7,10 +7,10 @@ La defensa es sobre las bases y las decisiones de arquitectura. Swagger, Grafana
 | Bloque | Qué mostramos | Con qué |
 |---|---|---|
 | Problema y decisión general | Qué pide el Fixture 2030 y por qué no una sola base | [Decisiones de arquitectura](decisiones_de_arquitectura.md), primera sección |
-| Recorrido por las bases | Qué guarda cada una y por qué; cómo pasó del diseño del Hito 3 a lo construido | Swagger: un pedido por base (equipo en MongoDB, partido en Neo4j, sesión en Redis, estadísticas en InfluxDB, detalle en IRIS) |
+| Recorrido por las bases | Qué guarda cada una y por qué; cómo pasó del diseño del Hito 3 a lo construido | Swagger: un pedido por base (equipo y detalle persistente en MongoDB, fixture relacional en Neo4j, sesión en Redis, estadísticas en InfluxDB) |
 | Distribución y consistencia | Partición, réplicas propuestas y qué pasa si se cae cada una | Decisiones de arquitectura, tablas por base |
 | Demo 1: pico de comentarios | 3.000 comentarios de cuatro países, verificados en Cassandra sin faltantes ni duplicados | Script de la prueba controlada + Grafana (pedidos, comentarios por país, duración por base) |
-| Demo 2: estado del partido | Transición validada en IRIS, incluido el rechazo de volver atrás | Swagger o script, momento "estado" |
+| Demo 2: estado del partido | Transición validada en MongoDB, incluido el rechazo de volver atrás | Swagger o script, momento "estado" |
 | Demo 3: falla de Redis | Redis cae, las sesiones dan 503, el resto sigue andando; Grafana lo muestra y la alerta se dispara; Redis vuelve | Script, momento "falla" + panel de disponibilidad en el tiempo + http://127.0.0.1:9090/alerts |
 | Cierre | Qué medimos y qué no, la mejora que proponemos y qué haríamos en el TP final | [Limitaciones y evidencia](limitaciones_y_evidencia.md), [proyecto final planteado](proyecto_final_planteado.md) |
 

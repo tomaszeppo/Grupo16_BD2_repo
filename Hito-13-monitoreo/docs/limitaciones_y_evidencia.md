@@ -21,9 +21,9 @@ Archivos: [resumen](../evidencia/resultados_sin_secretos/pico_comentarios_202610
 
 Los percentiles del cliente los calculamos del campo `duracion_ms` de los 3.000 pedidos, por rango más cercano. Incluyen la red local entre la notebook y el contenedor.
 
-### 2. Cambio de estado del partido en IRIS
+### 2. Cambio de estado del partido (evidencia histórica)
 
-`P-05`: `Programado → En juego` (200), `En juego → Finalizado` (200), y `Finalizado → En juego` rechazado con 409 y el mensaje "El partido 'P-05' no puede pasar de 'Finalizado' a 'En juego'". Archivo: [`estado_partido_20261030_222740.json`](../evidencia/estado_partido_20261030_222740.json).
+La corrida guardada se ejecutó en la versión anterior del stack, cuando el estado se persistía en IRIS: `P-05` pasó de `Programado → En juego → Finalizado` y rechazó volver a `En juego` con 409. Archivo: [`estado_partido_20261030_222740.json`](../evidencia/estado_partido_20261030_222740.json). En la versión actual el estado se persiste en MongoDB; esta evidencia no valida el cambio actual.
 
 ### 3. Falla controlada de Redis
 
@@ -65,7 +65,7 @@ Lo cambiamos: ahora el colector hace el ping a cada base en paralelo y espera co
 
 **Mejora propuesta (no implementada en el hito):**
 1. **Fallar rápido:** si el último chequeo de disponibilidad marcó a una base como caída, la API responde 503 de inmediato durante unos segundos, sin intentar conectarse. Es el patrón de "disyuntor" (*circuit breaker*). La señal ya existe: es la que publica `fixture2030_dependencia_disponible`.
-2. **Timeout por base:** 3 s es razonable para Cassandra o IRIS, pero excesivo para Redis, que responde en milisegundos (su p95 antes de la caída fue de 7,25 ms como máximo en la primera corrida, [series](../evidencia/corridas_previas/demo_20261030_2159_todo/series_prometheus.json)). Un timeout de unos 200 ms para Redis acotaría la espera.
+2. **Timeout por base:** 3 s es razonable para Cassandra, pero excesivo para Redis, que responde en milisegundos (su p95 antes de la caída fue de 7,25 ms como máximo en la primera corrida, [series](../evidencia/corridas_previas/demo_20261030_2159_todo/series_prometheus.json)). Un timeout de unos 200 ms para Redis acotaría la espera.
 
 **Costo:** el disyuntor puede rechazar pedidos unos segundos de más cuando la base ya volvió (falso positivo), y un timeout corto puede cortar operaciones lentas pero válidas. Se probaría repitiendo esta misma prueba de falla y comparando cuántos 503 por segundo se obtienen y cuánto tarda cada uno.
 
@@ -92,10 +92,10 @@ Los objetivos son los del Hito 3: entre 2 y 3 millones de usuarios simultáneos,
 
 ## Limitaciones del monitoreo
 
-- **Sin métricas internas de Cassandra, Neo4j, InfluxDB ni IRIS.** De esas cuatro solo vemos lo que ve la API: disponibilidad y duración. Faltan compactaciones de Cassandra, caché de páginas de Neo4j, cantidad de series de InfluxDB y procesos de IRIS. Cassandra necesitaría un agente JMX; Neo4j, la edición Enterprise; IRIS, habilitar su endpoint de métricas.
+- **Sin métricas internas de Cassandra, Neo4j ni InfluxDB.** De esas tres solo vemos lo que ve la API: disponibilidad y duración. Faltan compactaciones de Cassandra, caché de páginas de Neo4j y cantidad de series de InfluxDB. Cassandra necesitaría un agente JMX; Neo4j, la edición Enterprise.
 - **Sin CPU ni memoria por contenedor de las bases.** Solo tenemos el proceso de la API y la memoria de Redis. cAdvisor no funciona bien en Docker Desktop sobre WSL2 y no lo sumamos.
 - **Una sola instancia de la API.** No se puede mostrar en la práctica que los histogramas se suman entre instancias, aunque las consultas están escritas para eso (`sum by (le, ...)`).
-- **La disponibilidad se mide desde la API.** Si la API cae, las seis bases aparecen en 0 aunque estén bien. Por eso también miramos `up{job="api"}` y los exportadores, que miden por otro camino.
+- **La disponibilidad se mide desde la API.** Si la API cae, las cinco bases aparecen en 0 aunque estén bien. Por eso también miramos `up{job="api"}` y los exportadores, que miden por otro camino.
 - **El p99 calculado desde el histograma se interpola dentro de cada rango.** En el pico, Prometheus marcó un p99 de hasta 0,242 s para crear comentarios, interpolado dentro del rango de 100 a 250 ms, mientras que el cliente midió 20,91 ms. Con poco tráfico en el minuto, unos pocos pedidos lentos lo empujan al borde del rango. Para afinarlo habría que agregar rangos entre 25 y 100 ms.
 - **La primera recolección después de reiniciar la API** tarda más, porque los drivers abren sus conexiones en el primer uso. En la segunda corrida previa eso hizo que una recolección superara los 4 s y que las demás bases marcaran 375 ms durante un minuto.
 - **Alertas sin notificación:** las reglas se evalúan y se ven en Prometheus, pero no avisan a nadie (no hay Alertmanager).

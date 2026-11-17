@@ -41,11 +41,11 @@ R = [
     ("InfluxDB", "Sin datos (200 vacío)", "GET", "/partidos/P-05/estadisticas", {"desde": V, "hasta": "2030-06-15T18:35:00Z"}, None, {}, 200),
     ("InfluxDB", "Fechas invertidas (422)", "GET", "/partidos/P-01/estadisticas", {"desde": "2030-06-15T18:35:00Z", "hasta": V}, None, {}, 422),
     ("InfluxDB", "Ventana demasiado ancha (422)", "GET", "/partidos/P-01/estadisticas", {"desde": V, "hasta": "2030-06-15T22:30:00Z"}, None, {}, 422),
-    ("IRIS", "Detalle del partido (200)", "GET", "/partidos/P-01/detalle", {}, None, {}, 200),
-    ("IRIS", "Detalle inexistente (404)", "GET", "/partidos/P-99/detalle", {}, None, {}, 404),
-    ("IRIS", "Transición válida (200)", "POST", "/partidos/P-08/estado", {}, {"estado": "En juego"}, {}, 200),
-    ("IRIS", "Transición inválida (409)", "POST", "/partidos/P-03/estado", {}, {"estado": "Finalizado"}, {}, 409),
-    ("IRIS", "Estado fuera del dominio (422)", "POST", "/partidos/P-01/estado", {}, {"estado": "Suspendido"}, {}, 422),
+    ("MongoDB", "Detalle del partido (200)", "GET", "/partidos/P-01/detalle", {}, None, {}, 200),
+    ("MongoDB", "Detalle inexistente (404)", "GET", "/partidos/P-99/detalle", {}, None, {}, 404),
+    ("MongoDB", "Transición válida (200)", "POST", "/partidos/P-08/estado", {}, {"estado": "En juego"}, {}, 200),
+    ("MongoDB", "Transición inválida (409)", "POST", "/partidos/P-03/estado", {}, {"estado": "Finalizado"}, {}, 409),
+    ("MongoDB", "Estado fuera del dominio (422)", "POST", "/partidos/P-01/estado", {}, {"estado": "Suspendido"}, {}, 422),
 ]
 
 
@@ -81,7 +81,7 @@ def main():
         "info": {
             "name": "Fixture 2030 — API integrada",
             "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-            "description": "Casos felices y escenarios de error de los seis módulos. Requiere la API levantada (README).",
+            "description": "Casos felices y escenarios de error de los cinco modelos. Requiere la API levantada (README).",
         },
         "variable": [
             {"key": "base_url", "value": "http://localhost:8000"},

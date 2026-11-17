@@ -2,7 +2,7 @@
   "info": {
     "name": "Fixture 2030 — API integrada",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Casos felices y escenarios de error de los seis módulos. Requiere la API levantada (README)."
+    "description": "Casos felices y escenarios de error de los cinco modelos. Requiere la API levantada (README)."
   },
   "variable": [
     {
@@ -242,6 +242,191 @@
               ]
             },
             "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', function () { pm.response.to.have.status(422); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle del partido (200)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/detalle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "detalle"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle inexistente (404)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-99/detalle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-99",
+                "detalle"
+              ],
+              "query": []
+            },
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transición válida (200)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-08/estado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-08",
+                "estado"
+              ],
+              "query": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estado\": \"En juego\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transición inválida (409)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-03/estado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-03",
+                "estado"
+              ],
+              "query": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estado\": \"Finalizado\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', function () { pm.response.to.have.status(409); });",
+                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
+                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Estado fuera del dominio (422)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/partidos/P-01/estado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "partidos",
+                "P-01",
+                "estado"
+              ],
+              "query": []
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"estado\": \"Suspendido\"}"
+            }
           },
           "event": [
             {
@@ -1222,196 +1407,6 @@
               ]
             },
             "header": []
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 422', function () { pm.response.to.have.status(422); });",
-                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
-                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
-                ]
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "IRIS",
-      "item": [
-        {
-          "name": "Detalle del partido (200)",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{base_url}}/partidos/P-01/detalle",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "partidos",
-                "P-01",
-                "detalle"
-              ],
-              "query": []
-            },
-            "header": []
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Detalle inexistente (404)",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{base_url}}/partidos/P-99/detalle",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "partidos",
-                "P-99",
-                "detalle"
-              ],
-              "query": []
-            },
-            "header": []
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 404', function () { pm.response.to.have.status(404); });",
-                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
-                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Transición válida (200)",
-          "request": {
-            "method": "POST",
-            "url": {
-              "raw": "{{base_url}}/partidos/P-08/estado",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "partidos",
-                "P-08",
-                "estado"
-              ],
-              "query": []
-            },
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"estado\": \"En juego\"}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Transición inválida (409)",
-          "request": {
-            "method": "POST",
-            "url": {
-              "raw": "{{base_url}}/partidos/P-03/estado",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "partidos",
-                "P-03",
-                "estado"
-              ],
-              "query": []
-            },
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"estado\": \"Finalizado\"}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status 409', function () { pm.response.to.have.status(409); });",
-                  "pm.test('X-Request-ID presente', function () { pm.response.to.have.header('X-Request-ID'); });",
-                  "pm.test('formato de error', function () { const e = pm.response.json().error; pm.expect(e).to.include.all.keys('codigo','mensaje','request_id'); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Estado fuera del dominio (422)",
-          "request": {
-            "method": "POST",
-            "url": {
-              "raw": "{{base_url}}/partidos/P-01/estado",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "partidos",
-                "P-01",
-                "estado"
-              ],
-              "query": []
-            },
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\"estado\": \"Suspendido\"}"
-            }
           },
           "event": [
             {

@@ -6,7 +6,9 @@
 
 El módulo modela las estadísticas que cambian durante los partidos del Fixture 2030 y mantiene una segunda serie para la métrica de usuarios conectados. InfluxDB queda dedicado al componente temporal: registrar cómo evolucionan las medidas y permitir consultas por partido, equipo, sede, fuente y rango temporal.
 
-La arquitectura anterior mantiene sus responsabilidades: Redis conserva el estado transitorio de los partidos, MongoDB la persistencia estática/finalizada, Cassandra los comentarios/logs de alto volumen, IRIS los grupos y puntajes e Neo4j las relaciones de usuarios, grupos y predicciones. InfluxDB agrega las métricas y estadísticas históricas temporales.
+**Nota de vigencia:** el párrafo siguiente documenta la asignación histórica de responsabilidades de los primeros hitos. La arquitectura vigente ya no utiliza IRIS: Redis gestiona sesiones, cálculo del prode y ranking en tiempo real; los resultados persistentes se guardan en MongoDB. Neo4j conserva el fixture y sus relaciones entre jugadores, partidos y jugadas. InfluxDB registra series temporales de actividad de la app y jugadas; Cassandra conserva comentarios en vivo.
+
+La arquitectura anterior mantenía sus responsabilidades: Redis conservaba el estado transitorio de los partidos, MongoDB la persistencia estática/finalizada, Cassandra los comentarios/logs de alto volumen, IRIS los grupos y puntajes y Neo4j las relaciones de usuarios, grupos y predicciones. InfluxDB agrega las métricas y estadísticas históricas temporales.
 
 La selección es consistente con las decisiones anteriores del grupo, donde InfluxDB fue elegido para métricas históricas, usuarios conectados, eventos por minuto y evolución de estadísticas. El Hito 3 también contempla a InfluxDB como uno de los subsistemas sensibles por el crecimiento de escrituras.
 

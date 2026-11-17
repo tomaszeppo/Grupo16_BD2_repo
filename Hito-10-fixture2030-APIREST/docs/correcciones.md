@@ -1,5 +1,7 @@
 # Correcciones del Hito 10
 
+> Nota de vigencia: esta devolución describe una versión anterior con seis bases. La arquitectura actual ya retiró IRIS y persiste el detalle del partido en MongoDB; se conserva el diagnóstico original como antecedente. del Hito 10
+
 ## Devolución del profesor
 
 > La entrega está muy completa y bien evidenciada, pero deben reducir la reingeniería de los datos previos: para integrar la API crean instancias nuevas de las seis bases, cambian identificadores de partido y agregan una tabla Cassandra de idempotencia. Eso dificulta demostrar integración real de los hitos existentes. Conviene consumir los modelos previos tal como fueron entregados y limitar los cambios al mínimo necesario para exponerlos por API.

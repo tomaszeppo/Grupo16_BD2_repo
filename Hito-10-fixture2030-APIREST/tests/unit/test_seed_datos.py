@@ -24,4 +24,4 @@ def test_jugadores_cumplen_el_esquema_de_main():
 def test_eventos_apuntan_a_partidos_existentes():
     ids = {p["id"] for p in datos.PARTIDOS}
     assert set(datos.EVENTOS) <= ids and "P-01" in datos.EVENTOS
-    assert set(datos.IRIS_EVENTOS) <= ids and set(datos.RESULTADOS) <= ids
+    assert set(datos.EVENTOS_DETALLE) <= ids and set(datos.RESULTADOS) <= ids

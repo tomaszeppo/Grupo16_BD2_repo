@@ -1,23 +1,22 @@
 # Cambios en las bases respecto de los hitos anteriores
 
-Documento para revisión. Registra todo lo que este hito **agregó o modificó** en cada base frente al esquema de la rama `main` (Hitos 4 a 9). Los esquemas de `main` son la referencia; lo que no figura acá se tomó tal cual.
+Documento para revisión. Registra lo que este hito **agregó o modificó** en cada base frente al esquema de la rama `main` (Hitos 4 a 8). Los esquemas de `main` son la referencia; lo que no figura acá se tomó tal cual.
 
 ## Resumen
 
 | Base | Esquema de `main` | Agregado o modificado | Impacto |
 |---|---|---|---|
-| MongoDB | Sin cambios | Solo datos de ejemplo | Bajo |
+| MongoDB | Colecciones de equipos y jugadores | Colección `partidos` para documentos persistentes, eventos y estado | Medio |
 | Neo4j | Sin cambios | Solo datos de ejemplo (ids `P-NN`) | Bajo |
 | Cassandra | Las dos tablas del PDF, sin cambios | **Una tabla nueva** (`comentarios_idempotencia`) | **Medio: revisar** |
 | Redis | Sin cambios | Contraseña del servidor; datos de ejemplo | Bajo |
 | InfluxDB | Sin cambios | Tabla creada por la primera escritura; datos de ejemplo | Bajo |
-| IRIS | Clases del Hito 9 sin modificar | **Usuario nuevo con rol `%All`**; datos de ejemplo | **Medio: revisar** |
 
-Las carpetas de los Hitos 4 a 9 no se tocaron. Este hito levanta sus **propias** instancias de las seis bases (proyecto Compose `fixture2030-api`, volúmenes `fixture2030-api_*`, red `fixture2030_net`). Los contenedores de los hitos anteriores que estuvieran corriendo no se detuvieron ni se modificaron.
+El proyecto usa cinco bases (proyecto Compose `fixture2030-api`, volúmenes `fixture2030-api_*`, red `fixture2030_net`). Los contenedores de hitos anteriores que estuvieran corriendo no se detienen ni se modifican. Los archivos y registros de hitos previos se conservan como material histórico, pero ya no forman parte del stack de esta API.
 
 ## Convención de identificadores
 
-Se unificó el partido como `P-01`…`P-08` en las cuatro fuentes que lo referencian. Es un cambio de **valores**, no de esquema:
+Se unificó el partido como `P-01`…`P-08` en las fuentes que lo referencian. Es un cambio de **valores**, no de esquema:
 
 | Fuente | En `main` | En este hito |
 |---|---|---|
@@ -25,15 +24,16 @@ Se unificó el partido como `P-01`…`P-08` en las cuatro fuentes que lo referen
 | Neo4j `Evento.id` | `EV-P001-INICIO` | `EV-P-01-INICIO` |
 | Cassandra `partido_id` | `ARG-FRA` (ejemplo del PDF) | `P-01` |
 | InfluxDB tag `partido_id` | `M001` | `P-01` |
-| IRIS `Fixture.Partido.Codigo` | código generado por la demo (`H9-M-<horolog>`) | `P-01` |
+| MongoDB `partidos.codigo` | — | `P-01`…`P-08` |
 | Redis | ids de usuario `U001`… (sin partido en las sesiones) | igual |
 
 Los códigos de equipo son los FIFA de tres letras en todas las fuentes, como en `main`.
 
 ## MongoDB
 
-- **Esquema:** igual a `main`. Colecciones `equipos{nombre,codigo}` y `jugadores{nombre,apellido,dorsal,equipo,posicion}`. Validación `$jsonSchema` equivalente a la del Hito 4 (dorsal entero 1–99, código de 3 letras mayúsculas, posición en `Portero|Defensa|Centrocampista|Delantero`). Índices iguales a los del Hito 4: único en `equipos.codigo`; `jugadores.equipo`, `jugadores.apellido`, `jugadores.posicion`.
-- **Agregado:** 16 equipos y 80 jugadores sintéticos (5 por equipo) cargados con `upsert` (clave `equipo` + `dorsal`), por lo que la carga es repetible. En `main` hay más equipos y jugadores; acá es un subconjunto.
+- **Esquema:** mantiene `equipos{nombre,codigo}` y `jugadores{nombre,apellido,dorsal,equipo,posicion}` y agrega `partidos{codigo,equipo_local,equipo_visitante,fecha_hora,sede,estado,eventos}`. La nueva colección valida el identificador, los estados admitidos y la forma documental. Índices: único en `equipos.codigo` y `partidos.codigo`; `jugadores.equipo`, `jugadores.apellido`, `jugadores.posicion`.
+- **Agregado:** 16 equipos, 80 jugadores sintéticos (5 por equipo) y 8 partidos. La carga de equipos y jugadores es repetible; los partidos se insertan solo si aún no existen para preservar los cambios de estado.
+- **Responsabilidad:** guarda el registro documental persistente de los partidos y sus eventos; Neo4j conserva el fixture y las relaciones entre equipos, sedes, partidos y jugadas.
 - **Instancia nueva:** `mongo:7.0` con usuario y contraseña propios (`.env`). No se tocó la base del Hito 4.
 - **A revisar:** la validación se reescribió siguiendo `validaciones.mongodb.js`; conviene compararla campo por campo si se quiere una réplica exacta.
 
@@ -79,21 +79,11 @@ Los códigos de equipo son los FIFA de tres letras en todas las fuentes, como en
 - **Token:** se genera en el primer arranque y se guarda solo en el `.env` local.
 - **A revisar:** los datos son de 2030 y la retención es de 90 días contados desde la fecha actual. Las escrituras y las consultas funcionan hoy porque la retención no descarta datos futuros; si se quisiera comprobar el comportamiento de retención, habría que probarlo aparte.
 
-## IRIS
-
-- **Clases:** las del Hito 9 (`Fixture.Persona`, `Jugador`, `Arbitro`, `Tecnico`, `Partido`, `Evento`), **sin ninguna modificación**. Se montan en lectura desde `../Hito-9-fixture2030-iris-objetos/clases` y se compilan en el namespace `USER`. No se usa `Fixture.Demo`.
-- **Usuario nuevo:** la imagen no crea el usuario indicado por `IRIS_USERNAME` y los usuarios de fábrica exigen cambiar la contraseña. Se agregó `seed/iris/crear_usuario.mac`, que crea el usuario `fixture` con rol **`%All`** y la contraseña del `.env`. **Es un cambio de seguridad de laboratorio**: `%All` es más permiso del que necesita la API (le alcanzaría con acceso a `Fixture.*` en `USER`).
-- **Permisos del volumen:** un contenedor efímero (`iris_permisos`, `alpine`) ajusta el dueño del volumen `iris_data` al uid de IRIS (51773) antes del arranque. Sin eso IRIS no puede escribir en `/durable`.
-- **Agregado:** 8 `Fixture.Partido` con `Codigo` `P-01`…`P-08`. `P-01` pasa a "En juego" mediante `CambiarEstado` y recibe dos eventos (minutos 32 y 61); el resto queda "Programado". No se cargaron `Jugador`, `Arbitro` ni `Tecnico`.
-- **Diferencias frente al Hito 9:** volumen nombrado en lugar de un directorio del equipo; credenciales por entorno.
-- **Efecto de las pruebas:** la prueba de integración mueve `P-08` a "En juego". La carga de IRIS no pisa partidos existentes, de modo que ese estado se conserva al re-sembrar.
-- **A revisar:** reducir los permisos de `fixture` y evaluar si conviene reutilizar el usuario `_SYSTEM` del Hito 9.
-
 ## Infraestructura
 
-- **Compose propio** con las seis bases, un servicio `api` (perfil `api`) y la red `fixture2030_net`.
+- **Compose propio** con las cinco bases, un servicio `api` (perfil `api`) y la red `fixture2030_net`.
 - **Puertos:** publicados en `127.0.0.1`. Son parametrizables (`*_HOST_PORT`) porque los puertos estándar pueden estar ocupados por los contenedores de otros hitos. En el equipo donde se desarrolló se usaron 27117 (MongoDB), 6479 (Redis) y 9142 (Cassandra) en el `.env` local, que no se versiona.
-- **Imágenes:** `mongo:7.0`, `neo4j:5`, `cassandra:4.1`, `redis:7`, `influxdb:3-core`, `intersystems/iris-community:latest-cd` y `alpine:3.20` (solo para los permisos de IRIS).
+- **Imágenes:** `mongo:7.0`, `neo4j:5`, `cassandra:4.1`, `redis:7` e `influxdb:3-core`.
 - **Datos:** volúmenes nombrados. `docker compose --profile api stop` los conserva; `down -v` los borra.
 
 ## Cómo repetir la revisión

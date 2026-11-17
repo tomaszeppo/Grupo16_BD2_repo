@@ -659,7 +659,7 @@
       "id": 7,
       "type": "timeseries",
       "title": "Duración p95 de cada base, vista desde la API",
-      "description": "Compara las seis bases con la misma medida: tiempo de cada operación del adaptador (fuente) en ventana de 1 minuto.",
+      "description": "Compara las cinco bases con la misma medida: tiempo de cada operación del adaptador (fuente) en ventana de 1 minuto.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus-fixture"

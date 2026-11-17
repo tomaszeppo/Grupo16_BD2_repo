@@ -1,8 +1,8 @@
 import pytest
 
-from app.deps import get_partidos_iris_service
+from app.deps import get_partidos_mongo_service
 from app.errors import Conflicto
-from app.services.partidos_iris import PartidosIrisService
+from app.services.partidos_mongo import PartidosMongoService
 
 
 class RepoFalso:
@@ -18,11 +18,11 @@ class RepoFalso:
                      "fecha_hora": "2030-06-15T18:30:00", "sede": "Camp Nou", "estado": "Programado", "eventos": []},
         }
 
-    def obtener_partido(self, codigo):
+    def obtener_partido_detalle(self, codigo):
         self.llamadas.append(("get", codigo))
         return self.partidos.get(codigo)
 
-    def cambiar_estado(self, codigo, nuevo):
+    def cambiar_estado_partido(self, codigo, nuevo):
         self.llamadas.append(("set", codigo, nuevo))
         actual = self.partidos[codigo]["estado"]
         if (actual, nuevo) not in self.TRANSICIONES:
@@ -33,7 +33,7 @@ class RepoFalso:
 @pytest.fixture
 def repo(app):
     r = RepoFalso()
-    app.dependency_overrides[get_partidos_iris_service] = lambda: PartidosIrisService(r)
+    app.dependency_overrides[get_partidos_mongo_service] = lambda: PartidosMongoService(r)
     return r
 
 

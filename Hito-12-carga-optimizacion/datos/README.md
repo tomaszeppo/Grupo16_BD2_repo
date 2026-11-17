@@ -8,7 +8,7 @@ Lote inicial: `preparados/lote_20261029_01/`. Ver `manifiesto.json` para cantida
 | correspondencias_documentales.csv | 8 coincidencias H5-main/H10-laboratorio | No trasladar a otras ramas ni motores sin comprobación |
 | comentarios_propuestos.jsonl | 1.920 comentarios, UUID5 reproducibles, 128 particiones propuestas | `partido_id_cassandra` es null intencional; completar solo tras validar correspondencia H6 |
 | datamart_conteos_esperados.csv | 15 comentarios por partido/país/ventana del lote | Expectativas de los archivos, no conteos de una base cargada |
-| mongo_*_h10.jsonl; iris_partidos_h10.json | Datos de apoyo del laboratorio ya activo | No resolver la integración histórica reemplazando los modelos previos por estas copias |
+| mongo_*_h10.jsonl; mongo_partidos_h10.json | Datos de apoyo del laboratorio actual | No resolver la integración histórica reemplazando los modelos previos por estas copias |
 | influx_muestra_h10.lp | 4.800 puntos, precisión segundos | Fechas sintéticas de 2030; no asumir datos actuales ni multiplicar cardinalidades dependientes |
 | redis_politica_propuesta.json | Namespace/TTL/fallback del diseño | La caché real debe reconstruirse desde Neo4j; este archivo no contiene respuestas a insertar |
 
@@ -18,4 +18,6 @@ Los IDs se conservan por fuente. No se atribuye a H6 una correspondencia no veri
 
 `plantillas/` contiene consultas para revisión. No hay script que las ejecute.
 No existe un proceso automático de limpieza o borrado.
+
+El lote anterior conserva el nombre histórico `iris_partidos_h10.json`; los lotes nuevos generan `mongo_partidos_h10.json`, que representa el detalle persistente del partido en el modelo actual.
 

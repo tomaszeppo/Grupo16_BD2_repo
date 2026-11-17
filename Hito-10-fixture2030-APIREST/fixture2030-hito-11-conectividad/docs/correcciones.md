@@ -1,5 +1,7 @@
 # Correcciones del Hito 11
 
+> La devolución siguiente y sus resultados corresponden a la versión previa con seis motores; se conservan como antecedente. El stack actual tiene cinco bases y ya no usa IRIS. del Hito 11
+
 ## Devolución del profesor
 
 > La entrega está muy completa y demuestra conectividad real de los seis motores, API y recuperación de Redis. Deben cerrar la evidencia de la falla controlada: la documentación indica conservar la captura redactada de esa prueba, pero docs/evidencia/capturas_redactadas/ está vacío salvo .gitkeep. Incorporen allí la evidencia ejecutada de caída→503→recuperación, vinculada al commit e5f3949.

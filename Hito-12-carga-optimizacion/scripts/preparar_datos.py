@@ -76,7 +76,14 @@ def generar(destino: Path):
     # Soporte H10: se mantiene separado del perfil H5 y no exige recargar lo existente.
     ndjson("mongo_equipos_h10.jsonl", [{"codigo": c, "nombre": n} for c,n in h10["EQUIPOS"]])
     ndjson("mongo_jugadores_h10.jsonl", h10["jugadores"]())
-    js("iris_partidos_h10.json", [{**p, "estado_inicial": h10["IRIS_ESTADO_INICIAL"].get(p["id"], "Programado"), "eventos": h10["IRIS_EVENTOS"].get(p["id"], [])} for p in h10["PARTIDOS"]])
+    js("mongo_partidos_h10.json", [
+        {
+            **p,
+            "estado_inicial": h10["ESTADOS_INICIALES"].get(p["id"], "Programado"),
+            "eventos": h10["EVENTOS_DETALLE"].get(p["id"], []),
+        }
+        for p in h10["PARTIDOS"]
+    ])
     base = int(datetime(2030,6,15,18,30,tzinfo=timezone.utc).timestamp())
     sede = {e[0]: e[1].replace(" ", "_") for e in h10["ESTADIOS"]}
     lines = []
@@ -94,7 +101,7 @@ def generar(destino: Path):
     fuente_paths = [src, ROOT / "Hito-10-fixture2030-APIREST/seed/datos.py", ROOT / "Hito-10-fixture2030-APIREST/seed/cargar_influx.py"]
     manifest = {"version":1, "estado":"PREPARADO_NO_INSERTADO", "commit_origen":commit, "sintetico":True,
         "limites": ["Horarios de comentarios sinteticos, no horarios oficiales", "Cassandra sin ID de destino hasta validar correspondencia", "Archivos H10 de apoyo, no reemplazan la reutilizacion de H4-H9", "IDs del perfil H5 aun no aceptados por la API actual"],
-        "cantidades":{"partidos_h5":32,"estadios_h5":10,"correspondencias_documentales":8,"comentarios_propuestos":1920,"particiones_propuestas":128,"mongo_equipos_h10":16,"mongo_jugadores_h10":80,"iris_partidos_h10":8,"influx_puntos_h10":4800},
+        "cantidades":{"partidos_h5":32,"estadios_h5":10,"correspondencias_documentales":8,"comentarios_propuestos":1920,"particiones_propuestas":128,"mongo_equipos_h10":16,"mongo_jugadores_h10":80,"mongo_partidos_h10":8,"influx_puntos_h10":4800},
         "fuentes": [{"ruta":str(p.relative_to(ROOT)).replace('\\','/'),"sha256":hashlib.sha256(p.read_bytes()).hexdigest()} for p in fuente_paths],
         "archivos": [{"ruta":p.name,"bytes":p.stat().st_size,"sha256":hashlib.sha256(p.read_bytes()).hexdigest()} for p in sorted(destino.iterdir())]}
     js("manifiesto.json", manifest)

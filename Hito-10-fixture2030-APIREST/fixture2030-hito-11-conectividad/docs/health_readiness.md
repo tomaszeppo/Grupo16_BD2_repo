@@ -2,13 +2,13 @@
 
 ## Comportamiento que ya implementa el Hito 10
 
-`GET /health` está implementado en `app/routes/health.py` y `app/services/health.py`. Llama a `ping()` de los seis adaptadores en paralelo y aplica los timeouts configurados por los drivers. Respuesta actual del contrato:
+`GET /health` está implementado en `app/routes/health.py` y `app/services/health.py`. Llama a `ping()` de los cinco adaptadores en paralelo y aplica los timeouts configurados por los drivers. Respuesta del contrato:
 
 - HTTP `200` y `{"estado":"ok","fuentes":{...}}` cuando todas las fuentes pasan la prueba.
 - HTTP `503` y `{"estado":"degradado","fuentes":{...}}` si una o más fallan; cada fuente muestra `estado` (`ok`/`caida`) y `latencia_ms`.
 - La ruta agrega `X-Request-ID` y el middleware registra status, duración y request ID. Los adaptadores registran dependencia, operación, resultado, tipo de excepción y duración, sin el texto del driver.
 
-El chequeo se ejecuta al invocar `/health`; no se ejecuta indiscriminadamente en cada endpoint de negocio. Las rutas de negocio contactan únicamente las fuentes que requieren. En el Hito 10 se midió `/health` con respuesta `200` y las seis dependencias `ok` el 16/10/2026. En una prueba posterior del mismo día, Redis detenido hizo que `/health` devolviera `503`, con Redis `caida` y las otras cinco fuentes `ok`; ambas evidencias se enlazan en `../../docs/evidencia/`.
+El chequeo se ejecuta al invocar `/health`; no se ejecuta indiscriminadamente en cada endpoint de negocio. Las rutas de negocio contactan únicamente las fuentes que requieren. Las mediciones del 16/10/2026 son históricas y pertenecen a la versión anterior con seis dependencias; volver a ejecutar Hito 11 para validar el contrato actual de cinco bases.
 
 ## Distinciones
 
@@ -16,7 +16,7 @@ El chequeo se ejecuta al invocar `/health`; no se ejecuta indiscriminadamente en
 |---|---|---|
 | Liveness (proceso vivo) | No existe endpoint separado | Un chequeo muy barato de que el proceso HTTP responde; no debe consultar todas las bases. Se propone como extensión futura, no es parte del contrato actual. |
 | Readiness (listo para tráfico) | No existe endpoint separado | Indicar si están disponibles las dependencias esenciales para las rutas que se habilitan. Se propone como extensión futura; documentar política antes de incorporarla. |
-| Health profundo por dependencia | `GET /health` implementado | Evaluación individual de las seis dependencias con resultado y latencia. El `503` representa degradación; consultar con frecuencia razonable y timeout controlado. |
+| Health profundo por dependencia | `GET /health` implementado | Evaluación individual de las cinco dependencias con resultado y latencia. El `503` representa degradación; consultar con frecuencia razonable y timeout controlado. |
 
 No se agrega un endpoint nuevo a la API heredada porque el alcance del Hito 11 es evaluar y documentar el comportamiento existente, no cambiar el contrato REST del compañero. Si más adelante se agregan liveness/readiness, deben documentarse, probarse y versionarse por separado.
 

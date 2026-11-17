@@ -32,9 +32,9 @@ EVENTOS = {  # Neo4j: Evento{id,tipo,minuto} -[:OCURRE_EN]-> Partido
 }
 RESULTADOS = {"P-01": ("ARG", "BRA", 2, 1), "P-02": ("FRA", "ESP", 1, 0)}  # marcadores simulados (origen SIMULADO)
 
-# IRIS: P-01 en juego con eventos; el resto programado. Minuto >= 1 (regla de Fixture.Partido.AgregarEvento).
-IRIS_EVENTOS = {"P-01": [("Gol", 32, "J-ARG-01"), ("Gol", 61, "J-BRA-04")]}
-IRIS_ESTADO_INICIAL = {"P-01": "En juego"}
+# Documento persistente en MongoDB: P-01 en juego con eventos; el resto programado.
+EVENTOS_DETALLE = {"P-01": [("Gol", 32, "J-ARG-01"), ("Gol", 61, "J-BRA-04")]}
+ESTADOS_INICIALES = {"P-01": "En juego"}
 
 SESIONES = [("U001", "ACTIVA"), ("U002", "CERRADA"), ("U003", "ACTIVA")]  # usuario, estado_acceso
 

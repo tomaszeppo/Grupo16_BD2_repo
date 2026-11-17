@@ -11,46 +11,45 @@
 | `SKIP` | La prueba no se ejecutó por falta de herramienta, configuración o contenedor; no significa que esté caído. |
 | `UNKNOWN` | No existe evidencia suficiente para determinar el estado. |
 
-## Mapa base y última evidencia histórica
+## Modelo vigente y evidencia histórica
 
-La evidencia histórica de Hito 10 se ejecutó el **16/10/2026** en un stack de Docker con la API y los seis productos. En `../../docs/evidencia/20261016_120555_endpoints.txt`, `GET /health` devolvió `200` y las seis fuentes (`mongodb`, `neo4j`, `cassandra`, `redis`, `influxdb`, `iris`) quedaron `ok`. El mismo archivo contiene lecturas `200` representativas de los seis módulos. Es una observación histórica del Hito 10, no una afirmación de estado actual permanente.
+La evidencia de esta tabla se ejecutó en 2026 con la versión anterior de seis productos. El stack actual tiene cinco: MongoDB, Neo4j, Cassandra, Redis e InfluxDB; IRIS ya no forma parte de la aplicación. Volver a ejecutar el Hito 11 para obtener estados vigentes. En `../../docs/evidencia/20261016_120555_endpoints.txt` se conserva `/health` y las lecturas históricas; no validan la configuración actual.
 
-| Producto | Host/puerto según entorno | Protocolo/contexto | Operación de API validada en evidencia anterior | Estado histórico (16/10/2026) | TCP Hito 11 |
+| Producto vigente | Host/puerto según entorno | Protocolo/contexto | Operación vigente | Evidencia previa | TCP Hito 11 histórico |
 |---|---|---|---|---|---|
-| MongoDB | Host: `localhost:27017`; Compose: `mongodb:27017` | MongoDB; database `fixture2030` | `GET /equipos/ARG` → `200` | `UP` en el momento de prueba | `OK` — 22/10/2026; TCP accesible desde notebook y api-container |
+| MongoDB | Host: `localhost:27017`; Compose: `mongodb:27017` | MongoDB; database `fixture2030` | `GET /equipos/ARG`, `/partidos/P-01/detalle`, `POST /partidos/P-01/estado` | Solo el endpoint anterior de equipos fue medido en la evidencia guardada | `OK` — 22/10/2026, solo para la versión previa |
 | Neo4j | Host: `localhost:7687`; Compose: `neo4j:7687`; Browser HTTP `7474` por separado | Bolt; database `neo4j` | `GET /partidos/P-01` → `200` | `UP` en el momento de prueba | `OK` — 22/10/2026; TCP accesible desde notebook y api-container |
 | Cassandra | Host: `localhost:9042`; Compose: `cassandra:9042` | CQL; keyspace `fixture2030` | `GET /partidos/P-01/comentarios?...` → `200` | `UP` en el momento de prueba | `OK` — 22/10/2026; TCP accesible desde notebook y api-container |
 | Redis | Host: `localhost:6379`; Compose: `redis:6379` | RESP; base lógica 0, clave de sesión | `GET /sesiones/U001` → `200` | `UP` en prueba normal; `DOWN` durante la prueba de caída controlada | `OK` — 22/10/2026; TCP accesible desde notebook y api-container |
 | InfluxDB | Host: `localhost:8181`; Compose: `influxdb:8181` | HTTP `/api/v3/query_sql`; `fixture2030_metrics` | `GET /partidos/P-01/estadisticas?...` → `200` | `UP` en el momento de prueba | `OK` — 22/10/2026; TCP accesible desde notebook y api-container |
-| IRIS | Host: `localhost:1972`; Compose: `iris:1972`; portal HTTP `52773` por separado | Superserver; namespace `USER` | `GET /partidos/P-01/detalle` → `200` | `UP` en el momento de prueba | `OK` — 22/10/2026; TCP accesible desde notebook y api-container |
 
 ## Falla y recuperación histórica
 
-El archivo `../../docs/evidencia/20261016_120557_dependencia_caida.txt` registra Redis detenido mediante `docker compose stop redis`: `GET /sesiones/U001` devolvió `503 DEPENDENCIA_NO_DISPONIBLE` y `/health` devolvió `503` con `estado=degradado`; las otras cinco fuentes continuaron en `ok`. `../../docs/evidencia/20261016_120557_logs_api.txt` relaciona la solicitud con `request_id=cec7beeeaf714c48b312d7747a224847` y muestra la causa de tipo `ConnectionError`, sin divulgar credenciales.
+El archivo `../../docs/evidencia/20261016_120557_dependencia_caida.txt` registra Redis detenido en la versión anterior: `GET /sesiones/U001` devolvió `503 DEPENDENCIA_NO_DISPONIBLE` y `/health` devolvió `503`; las otras cinco fuentes de esa versión continuaron en `ok`. `../../docs/evidencia/20261016_120557_logs_api.txt` conserva el request ID y la causa sin divulgar credenciales.
 
 ## Ejecuciones de Hito 11
 
 Al ejecutar los scripts, las salidas completas se guardan en `docs/evidencia/resultados_tcp.txt`, `docs/evidencia/resultados_clientes.txt` y `docs/evidencia/resultados_api.txt`. Actualizar esta matriz únicamente a partir de salidas reales y conservar fecha, origen, entorno y limitaciones. No convertir `SKIP`, `UNKNOWN` ni una evidencia histórica en un `UP` actual.
 
-**Ejecución real verificada el 22/10/2026** en macOS arm64, commit observado `e5f3949` (timestamps originales en UTC).
+**Ejecución histórica verificada el 22/10/2026** en macOS arm64, commit observado `e5f3949` (timestamps originales en UTC, versión anterior).
 
 - TCP: notebook 9/9 OK; contenedor API 9/9 OK. El endpoint HTTP de InfluxDB sin token respondió 401 y se clasificó como alcanzable con autenticación requerida; no se interpretó como fallo TCP.
-- Clientes nativos: 8 OK, 0 FAIL y 0 SKIP. Las seis bases permitieron sus lecturas mínimas.
-- API REST: 15 OK y 0 FAIL. `/health` devolvió 200 con las seis dependencias en estado OK. Se diferenciaron los 404, el 422 y las respuestas vacías válidas.
+- Clientes nativos: 8 OK, 0 FAIL y 0 SKIP. Las seis bases de esa versión permitieron sus lecturas mínimas.
+- API REST: 15 OK y 0 FAIL. `/health` devolvió 200 con las seis dependencias de esa versión.
 - Falla controlada de Redis: a las 19:26:34Z, `GET /sesiones/U001` devolvió 503 `DEPENDENCIA_NO_DISPONIBLE` con request ID correlacionado. Tras reiniciar Redis, respondió `PONG` y `/health` devolvió 200. Conservar la evidencia en `docs/evidencia/capturas_redactadas/`.
 
-Estos resultados describen las pruebas y el entorno observados; no constituyen una prueba de rendimiento o carga masiva.
+Estos resultados describen únicamente las pruebas y el entorno observados; no constituyen una prueba del stack actual ni una prueba de carga masiva.
 
 
 ## Trazabilidad de requisitos funcionales (RF)
 
 | Requisito | Implementación / evidencia en esta entrega |
 |---|---|
-| RF1 | `docs/mapa_de_dependencias.md`: seis productos, módulo, host, puerto, protocolo, contexto, driver, lectura y endpoint. |
+| RF1 | `docs/mapa_de_dependencias.md`: cinco productos vigentes, módulo, host, puerto, protocolo, contexto, driver, lectura y endpoint. |
 | RF2 | `docs/topologia_y_entornos.md`: notebook vs red Compose, hosts/puertos publicados e internos. |
 | RF3 | `config/configuracion-ejemplo.env`, `config/.gitignore` y scripts que no imprimen variables sensibles. |
 | RF4 | `scripts/prueba_tcp.sh`: DNS/resolución desde notebook y desde `api` cuando está en ejecución. |
-| RF5 | `scripts/prueba_tcp.sh`: TCP con timeout, resultado y próximo paso; incluye los seis puertos de datos. |
+| RF5 | `scripts/prueba_tcp.sh`: TCP con timeout, resultado y próximo paso; incluye los cinco puertos de datos. |
 | RF6 | `scripts/prueba_clientes_nativos.sh`: drivers reales del Hito 10, no un `curl` genérico contra puertos binarios. |
 | RF7 | Prueba por driver con identidad configurada y acceso al contexto; Cassandra se documenta sin autenticación CQL en el adaptador existente. |
 | RF8 | Las lecturas driver son limitadas y no escriben datos ni alteran el dominio. |
@@ -59,7 +58,7 @@ Estos resultados describen las pruebas y el entorno observados; no constituyen u
 | RF11 | Cassandra: puerto CQL `9042`, keyspace y `SELECT` limitado por la partición completa del módulo comentarios. |
 | RF12 | Redis: `PING` más lectura de sesión/TTL; la clave ausente se informa separada de un error de conexión. |
 | RF13 | InfluxDB: `ping` HTTP con cliente configurado y consulta temporal de 1 minuto, máximo 5 puntos, con database/token del entorno. |
-| RF14 | TCP/HTTP distingue portal IRIS `52773` de Superserver `1972`; el driver comprueba namespace y lectura de `Fixture.Partido`. |
+| RF14 | `MongoAdapter` prueba la lectura persistente del partido; `GET /partidos/{id}/detalle` y `POST /partidos/{id}/estado` usan MongoDB. |
 | RF15 | `scripts/prueba_api.sh` ejecuta rutas GET de todos los módulos y registra método, path, status, duración, request ID y resumen. |
 | RF16 | Esta matriz registra origen y estado histórico; los archivos `resultados_*.txt` conservan resultados fechados de cada ejecución. |
 | RF17 | `docs/diagnostico_de_fallas.md`, `/health` existente y modo `fallo-redis` documentan/ejercitan comportamiento ante dependencia caída. |

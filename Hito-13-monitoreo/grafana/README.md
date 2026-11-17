@@ -21,7 +21,7 @@ Acceso: http://127.0.0.1:3000, usuario `admin`, contraseña de `GRAFANA_ADMIN_PA
 | 4 | Duración p95 y p99 por endpoint | s | Tiempo de respuesta medido en la API |
 | 5 | Comentarios nuevos por segundo, por país | comentarios/s | El pico después de un gol, por audiencia |
 | 6 | p99 de crear comentario | s | Con la línea del umbral experimental (500 ms) |
-| 7 | Duración p95 de cada base, vista desde la API | s | Comparación entre las seis bases con la misma medida |
+| 7 | Duración p95 de cada base, vista desde la API | s | Comparación entre las cinco bases con la misma medida |
 | 10 | MongoDB: operaciones por segundo | ops/s | Exportador |
 | 8 | Redis: memoria usada frente al límite | bytes | Exportador; si llega al límite, se expulsan sesiones |
 | 11 | Redis: comandos, claves vencidas y expulsadas | ops/s | Exportador |

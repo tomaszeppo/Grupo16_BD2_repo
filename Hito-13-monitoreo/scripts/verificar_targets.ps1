@@ -17,7 +17,7 @@ $destinos | ForEach-Object {
     }
 } | Format-Table -AutoSize
 
-# Disponibilidad de las seis bases vista desde la API (ping de /health en cada recolección).
+# Disponibilidad de las cinco bases vista desde la API (ping de /health en cada recolección).
 $q = Invoke-RestMethod -TimeoutSec 10 'http://127.0.0.1:9090/api/v1/query?query=fixture2030_dependencia_disponible'
 Write-Host "Disponibilidad por base (1 = responde):"
 $q.data.result | ForEach-Object { Write-Host ("  {0,-10} {1}" -f $_.metric.fuente, $_.value[1]) }

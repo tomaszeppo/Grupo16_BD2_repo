@@ -1,22 +1,22 @@
 # Hito 10 — API REST integrada del Fixture 2030
 
-API REST (FastAPI) que expone los seis módulos NoSQL del Fixture 2030 —MongoDB, Neo4j, Cassandra, Redis, InfluxDB e IRIS— mediante adaptadores separados. Cada endpoint resuelve un caso de uso concreto contra la fuente que corresponde; no hay consultas libres ni endpoints genéricos.
+API REST (FastAPI) que expone cinco modelos de datos NoSQL del Fixture 2030 —MongoDB, Neo4j, Cassandra, Redis e InfluxDB— mediante adaptadores separados. MongoDB conserva equipos, jugadores y documentos persistentes de partidos; Neo4j representa el fixture y sus relaciones. Cada endpoint resuelve un caso de uso concreto; no hay consultas libres ni endpoints genéricos.
 
 - Contrato: [openapi/openapi.yaml](openapi/openapi.yaml) (generado desde el código) · Swagger UI en `http://localhost:8000/docs`.
-- Pruebas: 118 unitarias, 6 de dependencia inaccesible y 18 de integración contra las bases reales (ver [tests/README.md](tests/README.md)).
+- Pruebas: unitarias, de dependencia inaccesible y de integración contra las bases reales (ver [tests/README.md](tests/README.md)).
 - Colección Postman (38 requests, 95 aserciones; ejecutada con Newman sin fallos, ver `docs/evidencia/`): [postman/fixture2030_collection.json](postman/fixture2030_collection.json) · ejemplos cURL: [postman/ejemplos_curl.sh](postman/ejemplos_curl.sh).
 
 ## Requisitos
 
-- Docker Desktop con Docker Compose v2 (las seis bases corren en contenedores; IRIS usa imagen `linux/amd64`).
+- Docker Desktop con Docker Compose v2 (las cinco bases corren en contenedores).
 - Git Bash, WSL, macOS o Linux (los scripts son `bash`).
 - Python 3.12 o superior **solo** para correr las pruebas unitarias en el notebook (`pip install -r requirements.txt`). La API y los drivers corren dentro del contenedor.
-- Unos 4 GB de RAM libres para las seis bases.
+- Unos 3 GB de RAM libres para las cinco bases.
 
 ## Puesta en marcha (en este orden)
 
-1. **Configurar el entorno.** `cp .env.example .env` y completar las contraseñas (`MONGO_PASSWORD`, `NEO4J_PASSWORD` —mínimo 8 caracteres—, `REDIS_PASSWORD`, `IRIS_PASSWORD`). El `.env` no se versiona. Si algún puerto estándar ya está ocupado por otra base (por ejemplo, los contenedores de los Hitos 4 a 7), descomentar y cambiar los `*_HOST_PORT` y los `*_PORT` correspondientes (ver [docs/conectividad_y_configuracion.md](docs/conectividad_y_configuracion.md)).
-2. **Levantar las bases y sembrar datos.** `bash scripts/levantar_servicios.sh`. Espera los healthchecks (Cassandra e IRIS tardan 1–2 minutos), crea el token y la base de InfluxDB, crea el usuario de la API en IRIS, compila las clases del Hito 9 y siembra datos sintéticos (`P-01`…`P-08`). Es idempotente.
+1. **Configurar el entorno.** `cp .env.example .env` y completar las contraseñas (`MONGO_PASSWORD`, `NEO4J_PASSWORD` —mínimo 8 caracteres—, `REDIS_PASSWORD`). El `.env` no se versiona. Si algún puerto estándar ya está ocupado por otra base (por ejemplo, los contenedores de los Hitos 4 a 7), descomentar y cambiar los `*_HOST_PORT` y los `*_PORT` correspondientes (ver [docs/conectividad_y_configuracion.md](docs/conectividad_y_configuracion.md)).
+2. **Levantar las bases y sembrar datos.** `bash scripts/levantar_servicios.sh`. Espera los healthchecks (Cassandra puede tardar 1–2 minutos), crea el token y la base de InfluxDB y siembra datos sintéticos (`P-01`…`P-08`) en MongoDB y Neo4j. Es idempotente.
 3. **Iniciar la API.** `bash scripts/iniciar_api.sh` (contenedor, puerto 8000). Alternativa en el notebook: `bash scripts/iniciar_api.sh --local` (requiere instalar también `requirements-drivers.txt`).
 4. **Verificar conectividad.** `bash scripts/verificar_conectividad.sh` comprueba los puertos de cada base y `GET /health`.
 5. **Explorar.** Swagger UI: `http://localhost:8000/docs`.
@@ -37,9 +37,9 @@ API REST (FastAPI) que expone los seis módulos NoSQL del Fixture 2030 —MongoD
 | GET | `/sesiones/{usuario}` | Redis | Sesión vigente (404 si no existe, expiró o fue cerrada) |
 | DELETE | `/sesiones/{usuario}` | Redis | Invalidar la sesión (idempotente) |
 | GET | `/partidos/{id}/estadisticas` | InfluxDB | Estadísticas en una ventana acotada con agregación |
-| GET | `/partidos/{id}/detalle` | IRIS | Partido y eventos como objetos |
-| POST | `/partidos/{id}/estado` | IRIS | Transición validada del estado del partido |
-| GET | `/health` | Las seis | Estado de cada dependencia |
+| GET | `/partidos/{id}/detalle` | MongoDB | Documento persistente del partido y sus eventos |
+| POST | `/partidos/{id}/estado` | MongoDB | Transición validada del estado del partido |
+| GET | `/health` | Las cinco | Estado de cada dependencia |
 
 ## Documentación
 

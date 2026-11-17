@@ -1,0 +1,41 @@
+{
+  "commit": "9e3995e",
+  "ventana_utc": {
+    "desde": "2026-11-17T18:51:20.529085+00:00",
+    "hasta": "2026-11-17T18:52:00.744203+00:00"
+  },
+  "respuestas_por_base": {
+    "cassandra 200": 58,
+    "influxdb 200": 58,
+    "mongodb 200": 116,
+    "neo4j 200": 116,
+    "redis 200": 58
+  },
+  "tiempo_cliente_ms": {
+    "cassandra": {
+      "pedidos": 58,
+      "p50": 12.14,
+      "p95": 62.2
+    },
+    "influxdb": {
+      "pedidos": 58,
+      "p50": 35.59,
+      "p95": 94.07
+    },
+    "mongodb": {
+      "pedidos": 116,
+      "p50": 9.21,
+      "p95": 30.13
+    },
+    "neo4j": {
+      "pedidos": 116,
+      "p50": 22.14,
+      "p95": 102.31
+    },
+    "redis": {
+      "pedidos": 58,
+      "p50": 15.71,
+      "p95": 50.46
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Hito 13 - Monitoreo y defensa final del Fixture 2030
 
-Sumamos Prometheus y Grafana a la plataforma que ya teníamos: la API del Hito 10 y sus seis bases (MongoDB, Neo4j, Cassandra, Redis, InfluxDB e IRIS). No cambiamos ningún archivo de hitos anteriores. La API se usa tal cual y se le agregan las métricas desde este hito.
+Sumamos Prometheus y Grafana a la plataforma vigente: la API del Hito 10 y sus cinco bases (MongoDB, Neo4j, Cassandra, Redis e InfluxDB). MongoDB conserva el detalle persistente de partidos y Neo4j la estructura relacional del fixture. Las evidencias de fecha anterior se conservan como históricas; la instrumentación actual mide cinco bases.
 
 ## Qué hay y dónde
 
@@ -35,7 +35,7 @@ evidencia/               resultados de las pruebas, sin secretos
 
 ## Requisitos
 
-- Docker Desktop con Compose v2 (probado con v5.6.0) y unos 6 GB de RAM libres para las seis bases y el monitoreo.
+- Docker Desktop con Compose v2 (probado con v5.6.0) y unos 6 GB de RAM libres para las cinco bases y el monitoreo.
 - PowerShell (Windows) para los scripts del hito. El Hito 10 usa bash (Git Bash o WSL).
 - Python 3.12 en el host, solo para la prueba controlada y los tests. La API corre en su contenedor.
 
@@ -47,7 +47,7 @@ evidencia/               resultados de las pruebas, sin secretos
    bash scripts/levantar_servicios.sh
    ```
 
-   Levanta las seis bases en la red `fixture2030_net` y carga los datos de laboratorio (partidos `P-01` a `P-08`, sesiones `U001` a `U003`, etc.).
+   Levanta las cinco bases en la red `fixture2030_net` y carga los datos de laboratorio (partidos `P-01` a `P-08`, sesiones `U001` a `U003`, etc.).
 
 2. **Entorno de Python del hito** (una sola vez), desde esta carpeta:
 
@@ -67,7 +67,7 @@ evidencia/               resultados de las pruebas, sin secretos
 4. **Verificar destinos.**
 
    ```powershell
-   & .\scripts\verificar_targets.ps1            # tabla de destinos y disponibilidad de las seis bases
+   & .\scripts\verificar_targets.ps1            # tabla de destinos y disponibilidad de las cinco bases
    & .\scripts\verificar_targets.ps1 -Guardar   # además guarda la evidencia en evidencia/
    ```
 
@@ -102,7 +102,7 @@ El botón **Simular situaciones** corre seis situaciones seguidas, sin intervenc
 | Situación | Qué hace | Qué se mira |
 |---|---|---|
 | 0. Preparación | Vuelve a sembrar las sesiones de Redis si vencieron y elige un partido en "Programado" (P-08, P-06 o P-02) | Consola de actividad |
-| 1. Operación normal | 40 s de lecturas contra las seis bases: es la línea de base | Pedidos por segundo, latencia por base, exportadores |
+| 1. Operación normal | 40 s de lecturas contra las cinco bases: es la línea de base | Pedidos por segundo, latencia por base, exportadores |
 | 2. Pico de comentarios | El mismo momento `pico` de abajo | Tráfico, comentarios por país, p99 de crear comentarios frente al umbral de 500 ms |
 | 3. Cambio de estado | El momento `estado` sobre el partido elegido | Respuestas por código: aparece el 409 |
 | 4. Caída de Redis | El momento `falla` | Disponibilidad, 503, destinos y reglas de alerta |
@@ -120,12 +120,12 @@ Mientras corre, una barra indica la situación actual y qué mirar, y los gráfi
 ```
 
 1. **Pico de comentarios:** 3.000 comentarios a 50 por segundo, repartidos entre ARG, BRA, ESP y MAR, contra `POST /partidos/P-01/comentarios`. Cada corrida usa claves de idempotencia nuevas y al final verifica en Cassandra que estén todos y sin duplicados.
-2. **Estado del partido en IRIS:** `Programado → En juego → Finalizado`, y un intento de volver a `En juego` que debe ser rechazado (409).
+2. **Estado del partido en MongoDB:** `Programado → En juego → Finalizado`, y un intento de volver a `En juego` que debe ser rechazado (409).
 3. **Falla de Redis:** con tráfico de fondo, se detiene el contenedor de Redis 75 s y se vuelve a iniciar. No se borra su volumen.
 
 Al terminar se guardan en `evidencia/dashboards/` las capturas de los 15 paneles y las series de Prometheus de esa ventana.
 
-**Para repetir el momento de estado:** la transición no tiene vuelta atrás, así que cada ensayo necesita un partido en "Programado". En nuestras corridas ya se usaron `P-03`, `P-04` y `P-05`; quedan `P-06` y `P-07` (pasarlos con `-PartidoEstado`). La siembra de IRIS del Hito 10 no pisa partidos existentes, así que no los vuelve a "Programado".
+**Para repetir el momento de estado:** la transición no tiene vuelta atrás, así que cada ensayo necesita un partido en "Programado". En nuestras corridas ya se usaron `P-03`, `P-04` y `P-05`; quedan `P-06` y `P-07` (pasarlos con `-PartidoEstado`). La siembra de MongoDB del Hito 10 no pisa partidos existentes, así que no los vuelve a "Programado".
 
 **Antes del momento de falla:** las sesiones vencen a los 30 minutos sin uso. Si se sembraron hace más, volver a sembrarlas desde la carpeta del Hito 10 con `docker compose --profile api run --rm api python -m seed.run --solo redis`; si no, la sesión `U001` da 404 por vencimiento y no se puede ver que sobrevive a la caída.
 
@@ -135,7 +135,7 @@ Al terminar se guardan en `evidencia/dashboards/` las capturas de los 15 paneles
 .venv\Scripts\python -m pytest tests -q
 ```
 
-Prueban la instrumentación (plantilla de ruta como etiqueta, errores, reintentos de comentarios que no cuentan, base caída) y el generador de comentarios. No necesitan las bases. Los 118 tests unitarios del Hito 10 siguen pasando sin cambios.
+Prueban la instrumentación (plantilla de ruta como etiqueta, errores, reintentos de comentarios que no cuentan, base caída) y el generador de comentarios. No necesitan las bases. Los tests unitarios del Hito 10 incluyen el detalle y las transiciones en MongoDB.
 
 ## Limpieza segura
 

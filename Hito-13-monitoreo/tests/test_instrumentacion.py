@@ -100,7 +100,7 @@ def test_disponibilidad_si_la_fabrica_falla():
         raise RuntimeError("sin configuración")
 
     valores = [m.value for f in instrumentar.ColectorDisponibilidad(rota).collect() for m in f.samples]
-    assert len(valores) == 6 and all(v == 0 for v in valores)
+    assert len(valores) == 5 and all(v == 0 for v in valores)
 
 
 def test_disponibilidad_no_espera_a_una_base_colgada():

@@ -37,12 +37,6 @@ class Settings(BaseSettings):
     influx_db: str = "fixture2030_metrics"
     influx_token: str = ""
 
-    iris_host: str = "localhost"
-    iris_port: int = 1972
-    iris_namespace: str = "USER"
-    iris_user: str = "fixture"
-    iris_password: str = ""
-
 
 @lru_cache
 def get_settings() -> Settings:

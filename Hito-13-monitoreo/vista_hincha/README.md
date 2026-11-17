@@ -1,6 +1,6 @@
 # Fixture 2030 · Vista del hincha
 
-Recorrido separado en login, menú principal, historial y detalle del partido. El inicio muestra encuentros en juego y próximos; el historial incluye solo finalizados, según el estado consultado en IRIS. Al abrir un encuentro en juego se entra a su tribuna, con comentarios actualizados automáticamente por país. HTML, CSS y JavaScript sin framework; FastAPI sirve la vista y adapta el contrato del Hito 10 para usar un mismo origen.
+Recorrido separado en login, menú principal, historial y detalle del partido. El inicio muestra encuentros en juego y próximos; el historial incluye solo finalizados, según el estado persistido en MongoDB. Al abrir un encuentro en juego se entra a su tribuna, con comentarios actualizados automáticamente por país. HTML, CSS y JavaScript sin framework; FastAPI sirve la vista y adapta el contrato del Hito 10 para usar un mismo origen.
 
 La vista vive en `Hito-13-monitoreo/vista_hincha/`, al mismo nivel que el panel técnico `panel_web/`, en la rama `Hito-13-interfaz-visual`. No modifica la API, las bases, el panel de observabilidad ni su Compose. Cada vista se inicia por separado.
 
@@ -37,7 +37,7 @@ Por defecto usa `http://127.0.0.1:8001`, la API instrumentada. El panel administ
 |---|---|
 | Acceso / salida | GET y DELETE `/sesiones/{usuario_id}` |
 | Fixture | GET `/partidos/P-01` a `/partidos/P-08` (no hay listado general) |
-| Estado del encuentro | GET `/partidos/{id}/detalle` (IRIS) |
+| Estado del encuentro | GET `/partidos/{id}/detalle` (MongoDB) |
 | Jugadas | GET `/partidos/{id}/eventos` (Neo4j) |
 | Planteles | GET `/equipos/{codigo}/jugadores` (MongoDB) |
 | Números | GET `/partidos/{id}/estadisticas?desde=…&hasta=…&agregacion=1m` (InfluxDB) |
@@ -46,7 +46,7 @@ Por defecto usa `http://127.0.0.1:8001`, la API instrumentada. El panel administ
 
 El servidor toma usuario, nombre y país de la sesión de la vista para comentar. Conserva la misma clave en un reintento del mismo texto/partido para evitar duplicados. Solo se permite comentar si el estado consultado es “En juego”, tanto en la interfaz como en el servidor de esta vista. Al publicar, la tribuna pasa al directo: la API fija `ventana` y `creado_en` con la hora del servidor.
 
-Los comentarios sembrados están en `(P-01, ARG, 2030-06-15T18:30:00Z)`. Las estadísticas sembradas de P-01/P-02 están entre 18:30 y 18:40 UTC de ese día. Los controles muestran tu hora local. Posesión es el promedio de muestras agregadas; pases, tiros y recuperaciones se suman en diez minutos, no en todo el partido. Los marcadores son simulados. La muestra original tiene eventos de Neo4j que no siempre coinciden con el estado de IRIS: la vista conserva ambas fuentes y señala la diferencia.
+Los comentarios sembrados están en `(P-01, ARG, 2030-06-15T18:30:00Z)`. Las estadísticas sembradas de P-01/P-02 están entre 18:30 y 18:40 UTC de ese día. Los controles muestran tu hora local. Posesión es el promedio de muestras agregadas; pases, tiros y recuperaciones se suman en diez minutos, no en todo el partido. Los marcadores son simulados. La muestra original tiene eventos del grafo que no siempre coinciden con el estado documental del partido; la vista conserva ambas responsabilidades y señala la diferencia.
 
 ## Comentarios en directo
 

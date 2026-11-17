@@ -59,7 +59,7 @@ PY
   rm -f "$headerfile" "$bodyfile"
 }
 
-case_get "Health profundo de seis fuentes" "/health" "200" health
+case_get "Health profundo de cinco fuentes" "/health" "200" health
 case_get "MongoDB equipo conocido" "/equipos/ARG" "200"
 case_get "MongoDB jugadores paginados" "/equipos/ARG/jugadores?limit=2&offset=0" "200"
 case_get "Neo4j partido" "/partidos/P-01" "200"
@@ -67,7 +67,7 @@ case_get "Neo4j eventos limitados" "/partidos/P-01/eventos?limit=5" "200"
 case_get "Cassandra comentarios por partición completa" "/partidos/P-01/comentarios?pais=ARG&ventana=2030-06-15T18:30:00Z&limit=2" "200"
 case_get "Redis clave ausente: operación válida y diagnóstico 404" "/sesiones/U999" "404"
 case_get "InfluxDB consulta temporal acotada" "/partidos/P-01/estadisticas?desde=2030-06-15T18:30:00Z&hasta=2030-06-15T18:31:00Z&agregacion=1m&equipo=ARG" "200"
-case_get "IRIS detalle de partido" "/partidos/P-01/detalle" "200"
+case_get "MongoDB detalle persistente del partido" "/partidos/P-01/detalle" "200"
 case_get "Recurso Mongo inexistente" "/equipos/ZZZ" "404"
 case_get "Validación de código de equipo" "/equipos/arg" "422"
 case_get "Partido inexistente en grafo" "/partidos/P-99" "404"

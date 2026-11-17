@@ -263,7 +263,7 @@
         <div>
           <div class="breadcrumb">FIXTURE 2030 / DATA PLATFORM / HITO 13</div>
           <h1>Este es el estado del entorno.</h1>
-          <p class="topbar-sub">Observabilidad, rendimiento y validación de las seis bases de datos.</p>
+          <p class="topbar-sub">Observabilidad, rendimiento y validación de las cinco bases de datos.</p>
         </div>
       </div>
       <div class="top-actions">
@@ -283,7 +283,7 @@
         <div class="last-updated" id="last-update">Esperando métricas…</div>
       </div>
       <div class="kpi-grid">
-        <article class="metric-card" data-watch="falla"><div class="metric-top"><div class="metric-label">Bases disponibles</div><span class="metric-index">01 / 04</span></div><div class="metric-value green" id="kpi-dbs">— / 6</div><div class="metric-foot"><strong id="kpi-dbs-sub">Disponibilidad medida desde la API</strong><span>dependencias</span></div><canvas class="spark" id="spark-dbs" aria-label="Histórico de bases disponibles"></canvas></article>
+        <article class="metric-card" data-watch="falla"><div class="metric-top"><div class="metric-label">Bases disponibles</div><span class="metric-index">01 / 04</span></div><div class="metric-value green" id="kpi-dbs">— / 5</div><div class="metric-foot"><strong id="kpi-dbs-sub">Disponibilidad medida desde la API</strong><span>dependencias</span></div><canvas class="spark" id="spark-dbs" aria-label="Histórico de bases disponibles"></canvas></article>
         <article class="metric-card" data-watch="normal pico"><div class="metric-top"><div class="metric-label">Peticiones por segundo</div><span class="metric-index">02 / 04</span></div><div class="metric-value" id="kpi-rps">—</div><div class="metric-foot"><strong>Promedio móvil</strong><span>ventana 1 min</span></div><canvas class="spark" id="spark-rps" aria-label="Histórico de peticiones por segundo"></canvas></article>
         <article class="metric-card" data-watch="pico"><div class="metric-top"><div class="metric-label">Latencia p95 de la API</div><span class="metric-index">03 / 04</span></div><div class="metric-value blue" id="kpi-p95">—</div><div class="metric-foot"><strong>95% de respuestas</strong><span>milisegundos</span></div><canvas class="spark" id="spark-p95" aria-label="Histórico de latencia p95"></canvas></article>
         <article class="metric-card" data-watch="falla"><div class="metric-top"><div class="metric-label">Respuestas 5xx</div><span class="metric-index">04 / 04</span></div><div class="metric-value red" id="kpi-errors">—</div><div class="metric-foot"><strong>Errores del servidor</strong><span>porcentaje</span></div><canvas class="spark" id="spark-errors" aria-label="Histórico de errores 5xx"></canvas></article>
@@ -291,7 +291,7 @@
     </section>
 
     <section class="section" id="databases">
-      <div class="section-head"><div><div class="section-overline">02 — Persistencia</div><h2 class="section-title">Servicios conectados</h2><p class="section-desc">Disponibilidad y latencia p95 medidas desde la API instrumentada. MongoDB y Redis suman un exportador con datos internos. No se mide CPU, memoria ni disco de cada base: es una limitación documentada del laboratorio.</p></div><div class="section-kicker">6 motores · 1 plataforma</div></div>
+      <div class="section-head"><div><div class="section-overline">02 — Persistencia</div><h2 class="section-title">Servicios conectados</h2><p class="section-desc">Disponibilidad y latencia p95 medidas desde la API instrumentada. MongoDB y Redis suman un exportador con datos internos. No se mide CPU, memoria ni disco de cada base: es una limitación documentada del laboratorio.</p></div><div class="section-kicker">5 motores · 1 plataforma</div></div>
       <div class="db-grid" id="db-grid" data-watch="normal falla"><div class="db-card"><div class="db-symbol">M</div><div class="db-main"><div class="db-name">MongoDB</div><div class="db-type">Documentos</div><div class="db-meta">Esperando datos</div></div><span class="status">—</span></div></div>
     </section>
 
@@ -307,7 +307,7 @@
         <article class="panel" data-watch="pico"><div class="panel-head"><div><div class="panel-title">p99 de crear comentarios</div><div class="panel-note">Lo que vigila la alerta LatenciaComentariosAlta · se dispara sobre 500 ms · ms</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-p99-post"></canvas></article>
         <article class="panel" data-watch="pico"><div class="panel-head"><div><div class="panel-title">CPU de la API</div><div class="panel-note">Uso del proceso · porcentaje de un núcleo</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-cpu"></canvas></article>
         <article class="panel"><div class="panel-head"><div><div class="panel-title">Memoria residente</div><div class="panel-note">RSS del proceso de la API · MB</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart" id="chart-memory"></canvas></article>
-        <article class="panel full" data-watch="falla"><div class="panel-head"><div><div class="panel-title">Disponibilidad histórica de las seis bases</div><div class="panel-note">Cada tramo corresponde a una recolección de Prometheus. Verde = disponible · rojo = caída.</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart tall" id="chart-availability"></canvas></article>
+        <article class="panel full" data-watch="falla"><div class="panel-head"><div><div class="panel-title">Disponibilidad histórica de las cinco bases</div><div class="panel-note">Cada tramo corresponde a una recolección de Prometheus. Verde = disponible · rojo = caída.</div></div><span class="live-tag">EN VIVO</span></div><canvas class="chart tall" id="chart-availability"></canvas></article>
       </div>
     </section>
 
@@ -332,7 +332,7 @@
       <div class="section-head"><div><div class="section-overline">06 — Laboratorio</div><h2 class="section-title">Pruebas para la defensa</h2><p class="section-desc">Ejecutá los escenarios existentes y observá cómo cambian las métricas del entorno.</p></div><div class="section-kicker">Una ejecución a la vez</div></div>
       <div class="tour" id="recorrido">
         <div class="tour-head">
-          <div><h3>Simular todas las situaciones</h3><p>Corre las seis situaciones en orden, sin intervención: preparación, operación normal, pico de comentarios, cambio de estado en IRIS, caída de Redis y captura de evidencia. Mientras avanza, los gráficos que hay que mirar se marcan con <strong>MIRAR</strong>. Dura unos 6 minutos con los valores por defecto.</p></div>
+          <div><h3>Simular todas las situaciones</h3><p>Corre el recorrido en orden, sin intervención: preparación, operación normal, pico de comentarios, cambio de estado en MongoDB, caída de Redis y captura de evidencia. Mientras avanza, los gráficos que hay que mirar se marcan con <strong>MIRAR</strong>. Dura unos 6 minutos con los valores por defecto.</p></div>
           <div class="tour-controls">
             <div class="field"><label for="tour-count">Comentarios del pico</label><input id="tour-count" type="number" min="100" max="6000" step="100" value="3000"></div>
             <div class="field"><label for="tour-rate">Pedidos / s</label><input id="tour-rate" type="number" min="1" max="100" step="1" value="50"></div>
@@ -344,7 +344,7 @@
       </div>
       <div class="test-grid">
         <article class="test-card"><div class="test-card-top"><span class="test-number">ESCENARIO 01</span><span class="test-icon">↗</span></div><h3>Pico de comentarios</h3><p>Genera tráfico sostenido y verifica en Cassandra que no haya faltantes ni duplicados.</p><div class="field-row"><div class="field"><label for="load-count">Cantidad de comentarios</label><input id="load-count" type="number" min="100" max="6000" step="100" value="3000"></div><div class="field"><label for="load-rate">Peticiones / s</label><input id="load-rate" type="number" min="1" max="100" step="1" value="50"></div></div><button class="btn primary" id="run-pico" type="button">Ejecutar prueba ↗</button></article>
-        <article class="test-card"><div class="test-card-top"><span class="test-number">ESCENARIO 02</span><span class="test-icon">⇄</span></div><h3>Transición de estado en IRIS</h3><p>Prueba la máquina de estados y el rechazo de una transición inválida con HTTP 409.</p><div class="field-row"><div class="field"><label for="match-id">Partido de prueba</label><select id="match-id"><option value="P-06">P-06</option><option value="P-08">P-08</option><option value="P-02">P-02</option></select></div></div><div class="warning-copy">La transición es irreversible. Elegí un partido que siga en estado “Programado”.</div><button class="btn primary" id="run-estado" type="button">Ejecutar transición ↗</button></article>
+        <article class="test-card"><div class="test-card-top"><span class="test-number">ESCENARIO 02</span><span class="test-icon">⇄</span></div><h3>Transición de estado en MongoDB</h3><p>Prueba la máquina de estados y el rechazo de una transición inválida con HTTP 409.</p><div class="field-row"><div class="field"><label for="match-id">Partido de prueba</label><select id="match-id"><option value="P-06">P-06</option><option value="P-08">P-08</option><option value="P-02">P-02</option></select></div></div><div class="warning-copy">La transición es irreversible. Elegí un partido que siga en estado “Programado”.</div><button class="btn primary" id="run-estado" type="button">Ejecutar transición ↗</button></article>
         <article class="test-card danger-card"><div class="test-card-top"><span class="test-number">ESCENARIO 03</span><span class="test-icon">!</span></div><h3>Falla controlada de Redis</h3><p>Detiene Redis durante 75 segundos mientras genera tráfico de fondo y luego lo reinicia.</p><label class="confirm"><input type="checkbox" id="confirm-redis"><span>Confirmo que autorizo detener y reiniciar el contenedor Redis durante esta demostración.</span></label><button class="btn danger" id="run-falla" type="button" disabled>Simular caída de Redis</button></article>
       </div>
       <div class="job-panel"><div class="job-header"><strong>Consola de actividad</strong><span class="job-status" id="job-status">Sin pruebas en ejecución</span></div><pre class="job-logs" id="job-logs">Las ejecuciones y sus resultados aparecerán acá.</pre></div>
@@ -370,7 +370,6 @@
     {id:"cassandra", name:"Cassandra", type:"Columnas", symbol:"C", via:"Solo desde la API"},
     {id:"redis", name:"Redis", type:"Clave–valor", symbol:"R", via:"API + exportador"},
     {id:"influxdb", name:"InfluxDB", type:"Series temporales", symbol:"I", via:"Solo desde la API"},
-    {id:"iris", name:"IRIS", type:"Objetos", symbol:"O", via:"Solo desde la API"},
   ];
   let dashboardBusy = false;
   let currentJobStatus = "idle";
@@ -423,8 +422,9 @@
     const availability = metricByLabel(metrics.availability, "fuente");
     const available = DATABASES.filter((db) => availability[db.id] === 1).length;
     const known = DATABASES.filter((db) => availability[db.id] === 0 || availability[db.id] === 1).length;
-    $("kpi-dbs").textContent = `${available} / 6`;
-    $("kpi-dbs-sub").textContent = known === 6 ? (available === 6 ? "Todas las dependencias responden" : `${6 - available} dependencia(s) sin respuesta`) : "Esperando la primera recolección";
+    const total = DATABASES.length;
+    $("kpi-dbs").textContent = `${available} / ${total}`;
+    $("kpi-dbs-sub").textContent = known === total ? (available === total ? "Todas las dependencias responden" : `${total - available} dependencia(s) sin respuesta`) : "Esperando la primera recolección";
     const rps = lastValue(metrics.rps);
     const p95 = lastValue(metrics.p95, (v) => v * 1000);
     const errors = lastValue(metrics.error_rate);
@@ -677,10 +677,10 @@
   // Qué hace cada situación del recorrido y qué hay que mirar mientras corre.
   const STEPS = [
     {id:'preparacion', dur:'unos segundos', what:'Revisa que la sesión U001 siga vigente (vence a los 30 min) y elige un partido que siga en Programado.', look:['Consola de actividad'], proves:'Que el entorno está listo antes de medir.'},
-    {id:'normal', dur:'40 s', what:'Uso tranquilo: lee sesión, plantel, partido, jugadas, estado, estadísticas y comentarios. Una lectura por base, en bucle.', look:['Peticiones por segundo','Latencia por base: aparecen las seis','Pedidos por endpoint','MongoDB y Redis en exportadores'], proves:'La línea de base: así se ve el sistema sano.'},
+    {id:'normal', dur:'40 s', what:'Uso tranquilo: lee sesión, plantel, partido, jugadas, estado, estadísticas y comentarios. Una lectura por base, en bucle.', look:['Peticiones por segundo','Latencia por base: aparecen las cinco','Pedidos por endpoint','MongoDB y Redis en exportadores'], proves:'La línea de base: así se ve el sistema sano.'},
     {id:'pico', dur:'cantidad ÷ tasa, más 20 s de pausa', what:'El minuto después de un gol: comentarios de ARG, BRA, ESP y MAR a ritmo fijo contra P-01. Al final lee Cassandra y cuenta.', look:['Tráfico HTTP sube a la tasa elegida','Comentarios por país: cuatro líneas parejas','p99 de crear comentarios bajo 500 ms','Respuestas 5xx en 0'], proves:'Que aguanta el ritmo sin errores y no se pierde ni duplica nada.'},
-    {id:'estado', dur:'unos 10 s', what:'Lleva un partido de Programado a En juego y a Finalizado, y después intenta volverlo a En juego.', look:['Respuestas por código: aparece 409','Pedidos por endpoint: POST estado'], proves:'Que IRIS hace cumplir la regla: un partido finalizado no vuelve a jugarse.'},
-    {id:'falla', dur:'unos 2 min 30 s', what:'Con tráfico de fondo, detiene el contenedor de Redis 75 s y lo vuelve a iniciar sin borrar sus datos.', look:['Bases disponibles: 5 / 6','Disponibilidad histórica: tramo rojo en Redis','Respuestas por código: aparece 503','Reglas de alerta: pendiente y disparada','Targets: redis DOWN'], proves:'Que la caída afecta solo a las sesiones, que el monitoreo la detecta y avisa, y que todo vuelve al reiniciar.'},
+    {id:'estado', dur:'unos 10 s', what:'Lleva un partido de Programado a En juego y a Finalizado, y después intenta volverlo a En juego.', look:['Respuestas por código: aparece 409','Pedidos por endpoint: POST estado'], proves:'Que MongoDB persiste la transición válida y rechaza volver a jugar un partido finalizado.'},
+    {id:'falla', dur:'unos 2 min 30 s', what:'Con tráfico de fondo, detiene el contenedor de Redis 75 s y lo vuelve a iniciar sin borrar sus datos.', look:['Bases disponibles: 5 / 5','Disponibilidad histórica: tramo rojo en Redis','Respuestas por código: aparece 503','Reglas de alerta: pendiente y disparada','Targets: redis DOWN'], proves:'Que la caída afecta solo a las sesiones, que el monitoreo la detecta y avisa, y que todo vuelve al reiniciar.'},
     {id:'captura', dur:'1 min aprox.', what:'Guarda los 15 paneles de Grafana como imagen y las series de Prometheus de todo el recorrido.', look:['Consola de actividad'], proves:'Deja evidencia con fecha y commit.'},
   ];
   const STATUS_LABEL = {pending:['En espera',''], running:['En curso','up'], done:['Listo','up'], failed:['Con error','down'], skipped:['Salteado','warn']};
@@ -689,7 +689,7 @@
     const tour = job && job.mode === 'recorrido' ? job : null;
     $("steps").innerHTML = STEPS.map((s, i) => {
       const st = tour ? tour.steps[i] : {status:'pending', summary:'', title:''};
-      const title = (tour && st.title) || ['Preparación','Operación normal','Pico de comentarios','Cambio de estado en IRIS','Caída de Redis','Captura de evidencia'][i];
+      const title = (tour && st.title) || ['Preparación','Operación normal','Pico de comentarios','Cambio de estado en MongoDB','Caída de Redis','Captura de evidencia'][i];
       const [label, cls] = STATUS_LABEL[st.status] || [st.status, ''];
       return `<article class="step ${st.status}"><div class="step-top"><span class="step-num">SITUACIÓN ${i}</span><span class="status ${cls}">${label}</span></div><h4>${escapeHtml(title)}</h4><div class="dur">${escapeHtml(s.dur)}</div><div class="what">${escapeHtml(s.what)}</div><ul class="look">${s.look.map(l=>`<li>${escapeHtml(l)}</li>`).join('')}</ul><div class="proves">${escapeHtml(s.proves)}</div><div class="result">${escapeHtml(st.summary||'')}</div></article>`;
     }).join('');

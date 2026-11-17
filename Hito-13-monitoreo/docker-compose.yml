@@ -22,11 +22,9 @@ services:
       CASSANDRA_HOST: cassandra
       REDIS_HOST: redis
       INFLUX_URL: http://influxdb:8181
-      IRIS_HOST: iris
       MONGO_PORT: "27017"
       CASSANDRA_PORT: "9042"
       REDIS_PORT: "6379"
-      IRIS_PORT: "1972"
     volumes:
       - ../Hito-10-fixture2030-APIREST/app:/srv/h10/app:ro
       - ./api_instrumentada:/srv/h13/api_instrumentada:ro

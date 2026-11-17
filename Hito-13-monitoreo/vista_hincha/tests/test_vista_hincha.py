@@ -15,7 +15,7 @@ RAIZ = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(RAIZ), str(RAIZ.parents[1] / "Hito-10-fixture2030-APIREST")]
 import server
 from app.schemas.partidos import PartidoGrafo, EventosPartido
-from app.schemas.iris import PartidoIris
+from app.schemas.partido_detalle import PartidoDetalle
 from app.schemas.estadisticas import Estadisticas
 from app.schemas.comentarios import PaginaComentarios, ComentarioCreado
 from app.schemas.equipos import PaginaJugadores
@@ -45,7 +45,7 @@ def test_no_hay_acceso_sin_sesion(client):
 def test_demo_cumple_los_contratos_originales(client):
     assert entrar(client).status_code == 200
     modelos = [
-        ("partidos/P-01", PartidoGrafo), ("partidos/P-01/detalle", PartidoIris),
+        ("partidos/P-01", PartidoGrafo), ("partidos/P-01/detalle", PartidoDetalle),
         ("partidos/P-01/eventos", EventosPartido), ("equipos/ARG/jugadores", PaginaJugadores),
         ("partidos/P-01/comentarios?ventana=2030-06-15T18:30:00Z", PaginaComentarios),
         ("partidos/P-01/estadisticas?desde=2030-06-15T18:30:00Z&hasta=2030-06-15T18:40:00Z", Estadisticas),
@@ -153,7 +153,7 @@ def test_no_expone_controles_tecnicos_y_rechaza_otro_origen(client):
     assert client.post("/api/sesion", headers={"Origin": "https://otro.test"}, json={}).status_code == 403
 
 
-def test_catalogo_clasifica_con_estado_de_iris(client):
+def test_catalogo_clasifica_con_estado_persistido_en_mongo(client):
     entrar(client)
     items = client.get("/api/partidos").json()["items"]
     assert [m["partido"]["id"] for m in items if m["estado"] == "En juego"] == ["P-01"]

@@ -18,7 +18,7 @@ def create_app() -> FastAPI:
     if _colector is None:
         _colector = instrumentar.ColectorDisponibilidad(lambda: {
             "mongodb": deps.get_mongo(), "neo4j": deps.get_neo4j(), "cassandra": deps.get_cassandra(),
-            "redis": deps.get_redis(), "influxdb": deps.get_influx(), "iris": deps.get_iris(),
+            "redis": deps.get_redis(), "influxdb": deps.get_influx(),
         })
         REGISTRO.register(_colector)
 

@@ -17,8 +17,6 @@ Todo valor de conexión llega por variables de entorno o por un `.env` local exc
 | `REDIS_PASSWORD` | — | **sí** |
 | `INFLUX_URL`, `INFLUX_DB` | `http://localhost:8181`, `fixture2030_metrics` | no |
 | `INFLUX_TOKEN` | lo genera `levantar_servicios.sh` | **sí** |
-| `IRIS_HOST`, `IRIS_PORT`, `IRIS_NAMESPACE`, `IRIS_USER` | `localhost`, 1972, `USER`, `fixture` | no |
-| `IRIS_PASSWORD` | — | **sí** |
 | `*_HOST_PORT` (opcionales) | puerto estándar de cada base | no |
 
 ## Notebook frente a Docker
@@ -30,7 +28,6 @@ Todo valor de conexión llega por variables de entorno o por un `.env` local exc
 | Cassandra | `localhost:9042` | `cassandra:9042` |
 | Redis | `localhost:6379` | `redis:6379` |
 | InfluxDB | `localhost:8181` | `influxdb:8181` |
-| IRIS | `localhost:1972` | `iris:1972` |
 | API | `localhost:8000` | `api:8000` |
 
 El servicio `api` de Docker Compose sobrescribe los hosts con los nombres de servicio. Para correr la API en el notebook (`scripts/iniciar_api.sh --local`) se usan los valores de `localhost` del `.env`.
@@ -50,7 +47,7 @@ La API en contenedor no se ve afectada: siempre usa el puerto interno estándar.
 
 | Límite | Valor | Dónde se aplica |
 |---|---|---|
-| `TIMEOUT_SEGUNDOS` | 3 s | Cada operación de red: `serverSelection`/`connect`/`socket` (pymongo), `connection_timeout` y `unit_of_work(timeout)` (neo4j), `connect_timeout` y `default_timeout` (cassandra), `socket_timeout` y `socket_connect_timeout` (redis), `httpx.Timeout` (InfluxDB), `timeout` de `connect` (IRIS) |
+| `TIMEOUT_SEGUNDOS` | 3 s | Cada operación de red: `serverSelection`/`connect`/`socket` (pymongo), `connection_timeout` y `unit_of_work(timeout)` (neo4j), `connect_timeout` y `default_timeout` (cassandra), `socket_timeout` y `socket_connect_timeout` (redis), `httpx.Timeout` (InfluxDB) |
 | `DEADLINE_SEGUNDOS` | 10 s | Toda la request: al vencer responde 504 sin esperar al driver |
 
 ## Cómo verificar cada dependencia
@@ -60,10 +57,10 @@ La API en contenedor no se ve afectada: siempre usa el puerto interno estándar.
 
 ## Orden de arranque y detención
 
-1. `bash scripts/levantar_servicios.sh` (bases, token de InfluxDB, usuario y clases de IRIS, siembra).
+1. `bash scripts/levantar_servicios.sh` (bases, token de InfluxDB y siembra).
 2. `bash scripts/iniciar_api.sh`.
 3. Detener: `docker compose --profile api stop`. Los datos persisten en los volúmenes nombrados (`fixture2030-api_*`). **No usar `down -v`.**
 
 ## Relación con los hitos anteriores
 
-Este compose es independiente de los de los Hitos 4 a 9. Usa su propio nombre de proyecto (`fixture2030-api`), sus propios volúmenes y la red `fixture2030_net`. Solo monta en lectura las clases del Hito 9 (`../Hito-9-fixture2030-iris-objetos/clases`). No modifica ninguna carpeta de otro hito ni los contenedores de esos hitos que estén corriendo. Qué se agregó en cada base está en [cambios_en_las_bases.md](cambios_en_las_bases.md).
+Este compose es independiente de los de los Hitos 4 a 8. Usa su propio nombre de proyecto (`fixture2030-api`), sus propios volúmenes y la red `fixture2030_net`; no modifica las carpetas ni los contenedores de otros hitos. Qué se agregó en cada base está en [cambios_en_las_bases.md](cambios_en_las_bases.md).

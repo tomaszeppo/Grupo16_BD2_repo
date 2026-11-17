@@ -28,7 +28,6 @@ from app.adapters.neo4j import Neo4jAdapter
 from app.adapters.cassandra import CassandraAdapter
 from app.adapters.redis import RedisAdapter, clave_sesion
 from app.adapters.influx import InfluxAdapter
-from app.adapters.iris import IrisAdapter
 s = get_settings()
 def mongo_check():
     adapter = MongoAdapter(s)
@@ -37,9 +36,11 @@ def mongo_check():
     if not db_exists:
         return {"diagnostico_mongo": True, "database_exists": False, "collection_exists": False, "document_exists": False}
     collections = adapter._db().list_collection_names()
-    collection_exists = "equipos" in collections
+    collection_exists = {"equipos", "partidos"} <= set(collections)
     team = adapter.obtener_equipo("ARG") if collection_exists else None
-    return {"diagnostico_mongo": True, "database_exists": True, "collection_exists": collection_exists, "document_exists": team is not None}
+    partido = adapter.obtener_partido_detalle("P-01") if collection_exists else None
+    return {"diagnostico_mongo": True, "database_exists": True, "collection_exists": collection_exists,
+            "document_exists": team is not None, "partido_exists": partido is not None}
 def redis_check():
     adapter = RedisAdapter(s)
     adapter.ping()
@@ -56,7 +57,6 @@ checks = [
     ("cassandra", "cassandra", lambda: (lambda a: (a.ping(), a.listar("P-01", "ARG", datetime(2030,6,15,18,30), 2, None))[1])(CassandraAdapter(s)), "SELECT limitado por partición P-01/ARG/18:30"),
     ("redis", "redis", redis_check, "PING + lectura U001 + EXISTS/TTL de la clave de demostración"),
     ("influxdb", "httpx", lambda: (lambda a: (a.ping(), a.consultar_estadisticas("P-01", datetime(2030,6,15,18,30,tzinfo=timezone.utc), datetime(2030,6,15,18,31,tzinfo=timezone.utc), "ARG", "1m", 5))[1])(InfluxAdapter(s)), "consulta temporal P-01, 1 minuto, máximo 5 puntos"),
-    ("iris", "iris", lambda: (lambda a: (a.ping(), a.obtener_partido("P-01"))[1])(IrisAdapter(s)), "lectura parametrizada Fixture.Partido P-01"),
 ]
 failed = 0; skipped = 0
 for name, module, fn, detail in checks:
@@ -72,7 +72,12 @@ for name, module, fn, detail in checks:
                 print(f"[FAIL] dependencia=mongodb prueba=contexto diagnostico={layer} duracion_ms={ms:.1f} siguiente=verificar_MONGO_DB_y_seed_sin_crear_ni_borrar_datos")
                 failed += 1
                 continue
-            summary = "database=presente coleccion_equipos=presente documento_ARG=" + ("presente" if result["document_exists"] else "ausente; consulta_valida_sin_documento")
+            summary = (
+                "database=presente colecciones_requeridas=presentes equipo_ARG="
+                + ("presente" if result["document_exists"] else "ausente")
+                + " detalle_P-01="
+                + ("presente" if result["partido_exists"] else "ausente")
+            )
         elif name == "cassandra": summary = f"filas={len(result[0])}"
         elif name == "influxdb": summary = f"puntos={len(result)}"
         elif result is None: summary = "lectura_ejecutada=si recurso_en_contexto_no_encontrado"
@@ -173,7 +178,6 @@ from app.adapters.neo4j import Neo4jAdapter
 from app.adapters.cassandra import CassandraAdapter
 from app.adapters.redis import RedisAdapter, clave_sesion
 from app.adapters.influx import InfluxAdapter
-from app.adapters.iris import IrisAdapter
 s = get_settings()
 def mongo_check():
     adapter = MongoAdapter(s)
@@ -182,9 +186,11 @@ def mongo_check():
     if not db_exists:
         return {"diagnostico_mongo": True, "database_exists": False, "collection_exists": False, "document_exists": False}
     collections = adapter._db().list_collection_names()
-    collection_exists = "equipos" in collections
+    collection_exists = {"equipos", "partidos"} <= set(collections)
     team = adapter.obtener_equipo("ARG") if collection_exists else None
-    return {"diagnostico_mongo": True, "database_exists": True, "collection_exists": collection_exists, "document_exists": team is not None}
+    partido = adapter.obtener_partido_detalle("P-01") if collection_exists else None
+    return {"diagnostico_mongo": True, "database_exists": True, "collection_exists": collection_exists,
+            "document_exists": team is not None, "partido_exists": partido is not None}
 def redis_check():
     adapter = RedisAdapter(s)
     adapter.ping()
@@ -201,7 +207,6 @@ checks = [
     ("cassandra", "cassandra", lambda: (lambda a: (a.ping(), a.listar("P-01", "ARG", datetime(2030,6,15,18,30), 2, None))[1])(CassandraAdapter(s)), "SELECT por partición P-01/ARG/18:30"),
     ("redis", "redis", redis_check, "PING + lectura U001 + EXISTS/TTL de la clave de demostración"),
     ("influxdb", "httpx", lambda: (lambda a: (a.ping(), a.consultar_estadisticas("P-01", datetime(2030,6,15,18,30,tzinfo=timezone.utc), datetime(2030,6,15,18,31,tzinfo=timezone.utc), "ARG", "1m", 5))[1])(InfluxAdapter(s)), "consulta P-01 acotada a 1 minuto/5 puntos"),
-    ("iris", "iris", lambda: (lambda a: (a.ping(), a.obtener_partido("P-01"))[1])(IrisAdapter(s)), "lectura Fixture.Partido P-01"),
 ]
 failed = 0; skipped = 0
 for name, module, fn, detail in checks:
@@ -217,7 +222,9 @@ for name, module, fn, detail in checks:
                 print(f"[FAIL] dependencia=mongodb prueba=contexto diagnostico={layer} duracion_ms={ms:.1f} siguiente=verificar_MONGO_DB_y_seed_sin_crear_ni_borrar_datos")
                 failed+=1
                 continue
-            summary="database=presente coleccion_equipos=presente documento_ARG=" + ("presente" if result["document_exists"] else "ausente; consulta_valida_sin_documento")
+            summary=("database=presente colecciones_requeridas=presentes equipo_ARG="
+                     + ("presente" if result["document_exists"] else "ausente")
+                     + " detalle_P-01=" + ("presente" if result["partido_exists"] else "ausente"))
         elif name == "cassandra": summary=f"filas={len(result[0])}"
         elif name == "influxdb": summary=f"puntos={len(result)}"
         elif result is None: summary="lectura_ejecutada=si recurso_en_contexto_no_encontrado"

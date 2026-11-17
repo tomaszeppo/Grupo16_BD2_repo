@@ -1,6 +1,6 @@
 from app.adapters.base import operacion
 from app.config.settings import Settings
-from app.errors import ApiError, DependenciaNoDisponible, DependenciaTimeout
+from app.errors import ApiError, Conflicto, DependenciaNoDisponible, DependenciaTimeout, NoEncontrado
 
 FUENTE = "mongodb"
 _PROYECCION_JUGADOR = {"_id": 0, "nombre": 1, "apellido": 1, "dorsal": 1, "posicion": 1, "equipo": 1}
@@ -19,7 +19,7 @@ def _traducir(exc: Exception) -> ApiError | None:
 
 
 class MongoAdapter:
-    """Colecciones `equipos` y `jugadores` de la base `fixture2030` (patrones del Hito 4)."""
+    """Colecciones documentales `equipos`, `jugadores` y `partidos` de `fixture2030`."""
 
     fuente = FUENTE
 
@@ -63,6 +63,37 @@ class MongoAdapter:
                 .limit(limit)
             )
             return list(cursor)
+
+    def obtener_partido_detalle(self, codigo: str) -> dict | None:
+        with operacion(FUENTE, "obtener_partido_detalle", _traducir):
+            return self._db().partidos.find_one({"codigo": codigo}, {"_id": 0})
+
+    def cambiar_estado_partido(self, codigo: str, nuevo: str) -> None:
+        transiciones = {("Programado", "En juego"), ("En juego", "Finalizado")}
+        with operacion(FUENTE, "cambiar_estado_partido", _traducir):
+            partidos = self._db().partidos
+            actual = partidos.find_one({"codigo": codigo}, {"_id": 0, "estado": 1})
+            if actual is None:
+                raise NoEncontrado(f"No existe el partido '{codigo}'.")
+            estado_actual = actual["estado"]
+            if estado_actual == nuevo:
+                return
+            if (estado_actual, nuevo) not in transiciones:
+                raise Conflicto(f"El partido '{codigo}' no puede pasar de '{estado_actual}' a '{nuevo}'.")
+
+            resultado = partidos.update_one(
+                {"codigo": codigo, "estado": estado_actual},
+                {"$set": {"estado": nuevo}},
+            )
+            if resultado.modified_count:
+                return
+
+            actual = partidos.find_one({"codigo": codigo}, {"_id": 0, "estado": 1})
+            if actual is None:
+                raise NoEncontrado(f"No existe el partido '{codigo}'.")
+            if actual["estado"] == nuevo:
+                return
+            raise Conflicto(f"El partido '{codigo}' cambió de estado antes de guardar la transición.")
 
     def ping(self) -> None:
         with operacion(FUENTE, "ping", _traducir):

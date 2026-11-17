@@ -22,24 +22,23 @@ flowchart LR
     end
 
     subgraph bases["Fuentes operacionales"]
-        mongo[("MongoDB<br/>equipos y jugadores<br/>Hito 4")]
-        neo4j[("Neo4j<br/>partidos, eventos, estadios<br/>Hito 5")]
+        mongo[("MongoDB<br/>datos persistentes e historial<br/>equipos, jugadores y detalle de partidos")]
+        neo4j[("Neo4j<br/>estructura del fixture y relaciones<br/>jugadores, partidos y jugadas<br/>Hito 5")]
         cassandra[("Cassandra<br/>comentarios<br/>Hito 6")]
-        redis[("Redis<br/>sesiones con TTL<br/>Hito 7")]
-        influx[("InfluxDB<br/>estadísticas en el tiempo<br/>Hito 8")]
-        iris[("IRIS<br/>partido como objeto<br/>Hito 9")]
+        redis[("Redis<br/>sesiones, prode y ranking en tiempo real<br/>resultados durables → MongoDB")]
+        influx[("InfluxDB<br/>actividad de app y jugadas<br/>series temporales")]
     end
 
     datamart[("Data Mart · SQLite<br/>actividad de comentarios<br/>Hito 12")]
 
     postman --> rutas
     swagger --> rutas
-    adaptadores -- "/equipos" --> mongo
-    adaptadores -- "/partidos, /eventos" --> neo4j
+    adaptadores -- "/equipos, detalle y estado" --> mongo
+    adaptadores -- "/fixture, relaciones y eventos" --> neo4j
     adaptadores -- "/comentarios" --> cassandra
     adaptadores -- "/sesiones" --> redis
     adaptadores -- "/estadisticas" --> influx
-    adaptadores -- "/detalle, /estado" --> iris
+    adaptadores -- "/detalle, /estado" --> mongo
     carga -- "50.000 INSERT directos<br/>(sin pasar por la API)" --> cassandra
     cassandra -. "extracción por lotes" .-> datamart
 ```

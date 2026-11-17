@@ -14,7 +14,7 @@ CASOS = {
     "cassandra GET comentarios": f"/partidos/P-01/comentarios?pais=ARG&ventana={V}&limit=20",
     "redis     GET /sesiones/U001": "/sesiones/U001",
     "influxdb  GET estadisticas 5min/1m": f"/partidos/P-01/estadisticas?desde={V}&hasta=2030-06-15T18:35:00Z&agregacion=1m",
-    "iris      GET detalle": "/partidos/P-01/detalle",
+    "mongo     GET detalle": "/partidos/P-01/detalle",
 }
 
 

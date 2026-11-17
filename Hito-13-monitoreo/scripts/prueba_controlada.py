@@ -1,8 +1,8 @@
 """Los tres momentos de la demo y la captura de evidencia. Lo invoca ejecutar_prueba_controlada.ps1.
 
-  normal  lecturas moderadas contra las seis bases: la línea de base para comparar
+  normal  lecturas moderadas contra las cinco bases: la línea de base para comparar
   pico    ráfaga de comentarios por país (scripts/carga_comentarios.py) contra la API instrumentada
-  estado  transición Programado -> En juego -> Finalizado de un partido en IRIS
+  estado  transición Programado -> En juego -> Finalizado de un partido en MongoDB
   falla   docker stop / start del contenedor de Redis con tráfico de fondo; registra antes, durante y después
   capturar  renderiza los paneles de Grafana y exporta las series de Prometheus de una ventana de tiempo
 
@@ -75,7 +75,7 @@ LECTURAS_NORMALES = (
     ("mongodb", "/equipos/ARG/jugadores", {}),
     ("neo4j", "/partidos/P-01", {}),
     ("neo4j", "/partidos/P-01/eventos", {}),
-    ("iris", "/partidos/P-01/detalle", {}),
+    ("mongodb", "/partidos/P-01/detalle", {}),
     ("influxdb", "/partidos/P-01/estadisticas",
      {"desde": "2030-06-15T18:30:00Z", "hasta": "2030-06-15T18:40:00Z", "agregacion": "1m"}),
     ("cassandra", "/partidos/P-01/comentarios", {"pais": "ARG", "ventana": "2030-06-15T18:30:00Z"}),
@@ -91,8 +91,8 @@ def percentil(valores, p):
 
 
 def momento_normal(args):
-    """Tráfico de lectura moderado contra las seis bases: es la línea de base con la que se comparan las demás situaciones."""
-    print(f"Operación normal: {args.duracion} s de lecturas contra las seis bases")
+    """Tráfico de lectura moderado contra las cinco bases: es la línea de base con la que se comparan las demás situaciones."""
+    print(f"Operación normal: {args.duracion} s de lecturas contra las cinco bases")
     codigos = Counter()
     duraciones = {}
     fin = time.monotonic() + args.duracion

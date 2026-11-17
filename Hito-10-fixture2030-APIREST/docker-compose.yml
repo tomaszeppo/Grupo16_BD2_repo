@@ -80,38 +80,6 @@ services:
     volumes: [influx_data:/var/lib/influxdb3]
     networks: [fixture2030]
 
-  iris_permisos:
-    # IRIS corre como irisowner (uid 51773); el volumen nuevo nace como root y IRIS no podría escribir en /durable.
-    image: alpine:3.20
-    user: root
-    command: chown -R 51773:51773 /durable
-    volumes: [iris_data:/durable]
-    restart: "no"
-
-  iris:
-    image: intersystems/iris-community:latest-cd
-    platform: linux/amd64
-    restart: unless-stopped
-    depends_on:
-      iris_permisos:
-        condition: service_completed_successfully
-    environment:
-      ISC_DATA_DIRECTORY: /durable
-      IRIS_USERNAME: ${IRIS_USER:-fixture}
-      IRIS_PASSWORD: ${IRIS_PASSWORD:?definir IRIS_PASSWORD en .env}
-    ports: ["127.0.0.1:${IRIS_HOST_PORT:-1972}:1972", "127.0.0.1:${IRIS_PORTAL_HOST_PORT:-52773}:52773"]
-    volumes:
-      - iris_data:/durable
-      - ../Hito-9-fixture2030-iris-objetos/clases:/clases:ro   # clases del Hito 9, sin copiarlas
-      - ./seed/iris:/seed:ro
-    healthcheck:
-      test: ["CMD-SHELL", "iris qlist | grep -q running"]
-      interval: 15s
-      timeout: 10s
-      retries: 20
-      start_period: 30s
-    networks: [fixture2030]
-
   api:
     profiles: ["api"]
     build: .
@@ -122,11 +90,9 @@ services:
       CASSANDRA_HOST: cassandra
       REDIS_HOST: redis
       INFLUX_URL: http://influxdb:8181
-      IRIS_HOST: iris
       MONGO_PORT: "27017"
       CASSANDRA_PORT: "9042"
       REDIS_PORT: "6379"
-      IRIS_PORT: "1972"
     ports: ["127.0.0.1:8000:8000"]
     volumes: [".:/srv"]
     networks: [fixture2030]
@@ -137,7 +103,6 @@ volumes:
   cassandra_data:
   redis_data:
   influx_data:
-  iris_data:
 
 networks:
   fixture2030:

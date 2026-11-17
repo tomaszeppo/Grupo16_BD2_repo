@@ -300,7 +300,7 @@ def run_test(payload: RunRequest):
         kind = f"Pico de comentarios · {payload.cantidad:,} a {payload.tasa:g}/s".replace(",", ".")
     elif payload.scenario == "estado":
         argv = [sys.executable, str(SCRIPT_CONTROLADO), "estado", "--partido-estado", payload.partido]
-        kind = f"Transición IRIS · {payload.partido}"
+        kind = f"Transición MongoDB · {payload.partido}"
     else:
         _ensure_redis_container()
         argv = [sys.executable, str(SCRIPT_CONTROLADO), "falla", "--partido", "P-01"]
@@ -347,7 +347,7 @@ SITUACIONES = (
     ("preparacion", "Preparación"),
     ("normal", "Operación normal"),
     ("pico", "Pico de comentarios"),
-    ("estado", "Cambio de estado en IRIS"),
+    ("estado", "Cambio de estado en MongoDB"),
     ("falla", "Caída de Redis"),
     ("captura", "Captura de evidencia"),
 )
@@ -481,7 +481,7 @@ def _correr_recorrido(cantidad: int, tasa: float) -> None:
             respuestas = datos.get("respuestas_por_base", {})
             total = sum(respuestas.values())
             errores = sum(v for k, v in respuestas.items() if not k.endswith(" 200"))
-            listo(1, f"{total} lecturas contra las seis bases · {errores} con error")
+            listo(1, f"{total} lecturas contra las cinco bases · {errores} con error")
 
         # 2. Pico de comentarios.
         t = empezar(2)
@@ -503,7 +503,7 @@ def _correr_recorrido(cantidad: int, tasa: float) -> None:
             listo(2, " · ".join(partes))
         _esperar(PAUSA_ENTRE_SITUACIONES, "Pausa para que el tráfico vuelva a la normalidad")
 
-        # 3. Cambio de estado en IRIS.
+        # 3. Cambio de estado en MongoDB.
         t = empezar(3)
         if not partido:
             listo(3, "Se saltea: no queda ningún partido en Programado (la transición no tiene vuelta atrás).", "skipped")

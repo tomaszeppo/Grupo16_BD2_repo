@@ -1,6 +1,6 @@
 # Hito 11 — Evaluación de conectividad · Fixture Mundial 2030
 
-Este hito se integra al proyecto del Hito 10 sin reemplazar su API REST. Implementa una secuencia repetible para diagnosticar las seis dependencias que utiliza la aplicación: MongoDB, Neo4j, Cassandra, Redis, InfluxDB 3 Core e InterSystems IRIS.
+Este hito se integra al proyecto del Hito 10 sin reemplazar su API REST. Implementa una secuencia repetible para diagnosticar las cinco dependencias actuales: MongoDB, Neo4j, Cassandra, Redis e InfluxDB 3 Core. MongoDB también guarda el detalle persistente del partido; Neo4j conserva sus relaciones del fixture.
 
 ## Qué cubre
 
@@ -9,7 +9,7 @@ Este hito se integra al proyecto del Hito 10 sin reemplazar su API REST. Impleme
 - Pruebas de protocolo, autenticación/contexto y lectura mínima a través de los mismos drivers que usa la API; InfluxDB incluye además `/health` HTTP y una consulta temporal para diferenciar autorización de rechazo de database/tabla/consulta sin mostrar el cuerpo ni el token.
 - Pruebas HTTP seguras de rutas representativas, clasificación de códigos HTTP, `X-Request-ID`, duración y estado de `/health`.
 - Matriz por dependencia, diagnóstico y documentación del escenario reversible de caída de Redis.
-- Evidencia histórica del Hito 10, identificada por su fecha de ejecución. Las ejecuciones del Hito 11 actualizan los tres archivos `docs/evidencia/resultados_*.txt`.
+- Evidencia histórica del Hito 10, identificada por su fecha de ejecución. Los resultados con seis fuentes corresponden a la versión anterior; las ejecuciones nuevas del Hito 11 actualizan los tres archivos `docs/evidencia/resultados_*.txt`.
 
 ## Requisitos
 
@@ -73,7 +73,7 @@ Un `OK` TCP solo acredita un listener accesible. El `ping` del driver comprueba 
 
 ## Evidencia disponible y limitaciones
 
-El Hito 10 ya contiene evidencia histórica real, fechada el 16/10/2026, de `/health` con seis fuentes en estado `ok`, lecturas por las rutas de los seis módulos y una caída controlada de Redis que generó `503 DEPENDENCIA_NO_DISPONIBLE`. Las rutas originales están en `../docs/evidencia/20261016_120555_endpoints.txt`, `../docs/evidencia/20261016_120557_dependencia_caida.txt` y `../docs/evidencia/20261016_120557_logs_api.txt`.
+El Hito 10 conserva evidencia histórica real, fechada el 16/10/2026, de `/health` con seis fuentes en estado `ok`, lecturas de la versión anterior y una caída controlada de Redis. Esa evidencia no valida el stack actual de cinco bases. Las rutas originales están en `../docs/evidencia/20261016_120555_endpoints.txt`, `../docs/evidencia/20261016_120557_dependencia_caida.txt` y `../docs/evidencia/20261016_120557_logs_api.txt`.
 
 **Evidencia real de la notebook del equipo, 22/10/2026:** TCP terminó con 0 fallos desde la notebook y desde el contenedor API; las pruebas de clientes terminaron con 8 OK, 0 FAIL y 0 SKIP; la API terminó con 15 OK y 0 FAIL. La prueba controlada de Redis produjo 503 `DEPENDENCIA_NO_DISPONIBLE` durante la caída y confirmó la recuperación mediante `PONG` y `/health` 200. Los detalles y timestamps se encuentran en los archivos `docs/evidencia/resultados_*.txt`; la captura redactada de la caída debe conservarse en `docs/evidencia/capturas_redactadas/`.
 

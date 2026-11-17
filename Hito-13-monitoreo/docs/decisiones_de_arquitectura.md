@@ -1,6 +1,6 @@
 # Decisiones de arquitectura
 
-Defendemos el sistema que está construido en el repositorio: la API del Hito 10 con seis bases, cada una con el módulo que pidió su hito. Para cada base, este documento dice qué guarda, por qué esa base, cómo está armada, cómo escalaría, qué consistencia necesita, qué pasa si se cae y qué evidencia lo respalda. Lo que es diseño para producción y no corre en el laboratorio está marcado como **propuesta**.
+Defendemos la arquitectura vigente: la API del Hito 10 con cinco bases. MongoDB conserva documentos persistentes e historial; Redis resuelve estado efímero y cálculos en tiempo real; Neo4j representa la estructura del fixture; InfluxDB registra series temporales; Cassandra guarda comentarios en vivo. Las funciones de prode/ranking descritas como objetivo no están implementadas en los endpoints actuales.
 
 ## El diseño del Hito 3 frente a lo construido
 
@@ -8,12 +8,12 @@ En el Hito 3 propusimos un reparto por necesidad de datos. Después, cada hito p
 
 | Base | Hito 3 (diseño) | Construido (Hitos 4 a 10) |
 |---|---|---|
-| MongoDB | Partidos finalizados y datos estáticos | Equipos y jugadores (Hito 4) |
-| Neo4j | Predicciones de usuarios | Partidos, equipos, estadios y eventos (Hito 5, con la corrección de dejar usuarios y predicciones para más adelante) |
+| MongoDB | Partidos finalizados y datos estáticos | Equipos y jugadores (Hito 4); documentos persistentes del partido (Hito 10) |
+| Neo4j | Predicciones de usuarios | Estructura del fixture y relaciones entre partidos, equipos, estadios y eventos (Hito 5) |
 | Cassandra | Logs de partidos | Comentarios masivos por partido y país (Hito 6) |
-| Redis | Estado de partidos en vivo | Sesiones y caché de usuarios (Hito 7) |
-| InfluxDB | Métricas y estadísticas históricas | Estadísticas de partido por ventana (Hito 8) |
-| IRIS | Grupos y puntajes | Partido como entidad compleja con su máquina de estados (Hito 9) |
+| Redis | Estado de partidos en vivo | Sesiones con TTL (Hito 7); prode y ranking en tiempo real son responsabilidades previstas |
+| InfluxDB | Métricas y estadísticas históricas | Estadísticas de partido por ventana (Hito 8); series de actividad y jugadas |
+| — | — | IRIS retirado; sus datos persistentes de partido pasan a MongoDB |
 
 El criterio de fondo es el mismo: elegir la base por el patrón de acceso. Lo que cambió es el dato concreto de cada una. Las decisiones de distribución y consistencia del Hito 3 se reinterpretan abajo para el dato que cada base guarda hoy.
 
@@ -21,39 +21,38 @@ El criterio de fondo es el mismo: elegir la base por el patrón de acceso. Lo qu
 
 Cada módulo tiene un patrón de acceso distinto, y forzarlos a una sola estructura vuelve caro justo lo que más se usa:
 
-- Los comentarios son muchas escrituras pequeñas, concentradas después de un gol, que se leen por partido, país y ventana: una tabla ancha particionada (Cassandra) escribe sin coordinar entre nodos.
-- La sesión de un usuario se lee en cada pedido y vence sola: clave-valor en memoria con TTL (Redis).
-- Recorrer partido → equipos → estadio → eventos son relaciones: en un grafo es seguir aristas; en tablas, varios joins.
-- Las estadísticas son mediciones con fecha que se consultan por ventana y se agregan: una base de series temporales (InfluxDB).
-- La ficha de un equipo con su plantel es un documento que se lee entero (MongoDB).
-- El partido como objeto con reglas de transición se modela mejor con clases y métodos (IRIS).
+- Los comentarios en vivo son muchas escrituras pequeñas, concentradas después de un gol, que se leen por partido, país y ventana: Cassandra los particiona por patrón de acceso.
+- Las sesiones, el prode y el ranking requieren acceso rápido a estado temporal: Redis; las puntuaciones que deban perdurar se guardan en MongoDB.
+- Recorrer partido → equipos → estadio → jugadas son relaciones: en un grafo es seguir aristas; Neo4j conserva esa estructura del fixture.
+- La actividad de la aplicación y las jugadas con fecha se consultan por ventana: InfluxDB almacena esas series temporales.
+- Equipos, jugadores y registros detallados/históricos de partidos son documentos persistentes en MongoDB, con eventos embebidos y transición condicional del estado.
 
-**El costo:** seis productos para operar, seis formas de respaldo, seis lenguajes de consulta y más superficie de monitoreo. En este hito se nota: solo dos tienen exportador funcionando. La API es lo que las une. Cada endpoint consulta una sola base, salvo crear comentario (Neo4j + Cassandra), y ningún pedido de usuario consulta las seis en serie.
+**El costo:** cinco productos para operar, cinco estrategias de respaldo y más superficie de monitoreo. La API los integra. Cada endpoint consulta una sola base, salvo crear comentario (Neo4j + Cassandra), y ningún pedido consulta todas las fuentes en serie.
 
-## MongoDB: equipos y jugadores
+## MongoDB: documentos persistentes
 
 | Punto | Respuesta |
 |---|---|
-| Qué dato guarda | Fichas de selecciones (`equipos`) y planteles (`jugadores`) |
-| Qué acceso motivó la elección | Leer la ficha de un equipo y su plantel filtrado por posición, muchas veces y casi sin cambios durante el torneo |
+| Qué dato guarda | Fichas y planteles (`equipos`, `jugadores`), más documentos persistentes de partidos con eventos y estado |
+| Qué acceso motivó la elección | Leer documentos completos y conservar historial que debe sobrevivir a la expiración de estado temporal |
 | Modelo | Documental |
-| Estructura implementada | Colecciones `equipos{nombre, codigo}` y `jugadores{nombre, apellido, dorsal, equipo, posicion}`, con validación `$jsonSchema`. Índice único en `equipos.codigo`; índices en `jugadores.equipo`, `apellido` y `posicion` |
-| Carga y recuperación | Carga con `upsert` por equipo y dorsal, repetible. Lectura por `GET /equipos/{codigo}` y `/equipos/{codigo}/jugadores` (paginado) |
-| Escala y distribución | Laboratorio: un nodo. **Propuesta:** réplica de 3 nodos y lecturas desde secundarios, porque es dato casi estático; el sharding no hace falta con unos 1.250 jugadores |
-| Consistencia necesaria | Baja: una ficha desactualizada unos segundos no rompe nada |
-| Si se cae | `/equipos` responde 503. El resto de la API sigue funcionando |
-| Costo que introduce | Un producto más. La validación del esquema hay que mantenerla a mano |
+| Estructura implementada | `equipos`, `jugadores` y `partidos{codigo,equipo_local,equipo_visitante,fecha_hora,sede,estado,eventos}`; índice único por código del partido |
+| Carga y recuperación | Documentos de partidos insertados solo si no existen para preservar el estado ya actualizado; consulta por `GET /partidos/{id}/detalle`; transición mediante actualización atómica condicionada por el estado previo. Los resultados del prode que deban perdurar también se guardarán aquí |
+| Escala y distribución | Laboratorio: un nodo. **Propuesta:** réplica de 3 nodos; evaluar sharding solo si el volumen de registros históricos lo requiere |
+| Consistencia necesaria | Fuerte para estado persistente y resultados consolidados; el detalle no debe perderse al expirar Redis |
+| Si se cae | Los endpoints documentales y el detalle/estado del partido responden 503. Neo4j y las demás bases siguen funcionando |
+| Costo que introduce | Validar e indexar la colección histórica; el estado temporal no debe duplicarse como autoridad en Redis |
 | Evidencia | Exportador con operaciones y conexiones en el panel; p95 desde la API de 9,4 ms como máximo en la ventana de la demo ([series](../evidencia/dashboards/demo_20261030_223042_todo/series_prometheus.json)) |
 
 ## Neo4j: partidos, equipos, estadios y eventos
 
 | Punto | Respuesta |
 |---|---|
-| Qué dato guarda | El fixture como red: equipos que participan en partidos que se juegan en estadios, y eventos que ocurren en un partido |
-| Qué acceso motivó la elección | Recorrer relaciones: un partido con sus equipos, su estadio y sus eventos en una sola consulta |
+| Qué dato guarda | La estructura del fixture y sus relaciones: equipos, partidos, estadios y jugadas/eventos |
+| Qué acceso motivó la elección | Recorrer relaciones del fixture sin duplicar la autoridad de los documentos persistentes de partido |
 | Modelo | Grafo de propiedades |
 | Estructura implementada | Nodos `Equipo`, `Partido`, `Estadio`, `Evento`; relaciones `PARTICIPA_EN`, `SE_JUEGA_EN`, `OCURRE_EN`. Restricciones de unicidad en los cuatro identificadores |
-| Carga y recuperación | `MERGE` (repetible). `GET /partidos/{id}` y `/partidos/{id}/eventos`. Además, el alta de un comentario consulta acá si el partido existe |
+| Carga y recuperación | `MERGE` (repetible). `GET /partidos/{id}` y `/partidos/{id}/eventos`. El detalle persistente y el estado del partido se leen/escriben en MongoDB |
 | Escala y distribución | Laboratorio: un nodo Community. **Propuesta:** el grafo del fixture es chico (104 partidos); alcanza con una instancia y copias de solo lectura cerca de cada región. El clúster con réplicas es de la edición Enterprise: es un costo de licencia a decidir |
 | Consistencia necesaria | Media: un partido recién cargado tiene que existir antes de aceptar comentarios sobre él |
 | Si se cae | `/partidos` y **también crear comentarios** responden 503, porque el alta valida el partido en Neo4j. Es la dependencia más delicada del flujo de comentarios |
@@ -79,14 +78,14 @@ Cada módulo tiene un patrón de acceso distinto, y forzarlos a una sola estruct
 
 | Punto | Respuesta |
 |---|---|
-| Qué dato guarda | La sesión de cada usuario conectado: estado de acceso, rol, último acceso, acciones |
-| Qué acceso motivó la elección | Se lee en cada pedido del usuario y tiene que vencer sola por inactividad |
+| Qué dato guarda | Sesiones con TTL y, como responsabilidad de tiempo real, prode y ranking |
+| Qué acceso motivó la elección | Estado efímero de acceso, cálculos repetidos y consultas frecuentes de ranking; los resultados finales se persisten en MongoDB |
 | Modelo | Clave-valor en memoria |
 | Estructura implementada | Hash `f2030:sesion:{usuario}` con TTL de 1.800 s; `maxmemory 128mb` con política `volatile-lru`; persistencia `appendonly yes` |
-| Carga y recuperación | `GET /sesiones/{usuario}` lee el hash; `DELETE` lo invalida. El TTL lo maneja Redis |
-| Escala y distribución | Laboratorio: un nodo. **Propuesta (Hito 3):** activo con réplica de respaldo; para 3 millones de sesiones, partición por usuario (Redis Cluster). Estimamos entre 3 y 6 GB solo de datos con 1 a 2 KB por sesión (estimación, no medición) |
+| Carga y recuperación | Implementado: `GET /sesiones/{usuario}` lee el hash y `DELETE` lo invalida; Redis maneja el TTL. Prode/ranking son responsabilidades previstas, todavía sin endpoints |
+| Escala y distribución | Laboratorio: un nodo. **Propuesta:** réplica de respaldo; particionar por usuario en Redis Cluster si el volumen de sesiones/ranking lo requiere |
 | Consistencia necesaria | Leer la propia escritura: si cierro sesión, no puede seguir válida. La réplica asíncrona puede perder la última escritura al cambiar de nodo; el costo es que algunos usuarios vuelvan a iniciar sesión |
-| Si se cae | `/sesiones` responde 503; comentarios, partidos y estadísticas siguen funcionando. **Probado:** Redis detenido 91 s; la sesión de `U001` volvió a responder 200 al reiniciar, gracias a la persistencia en disco ([evidencia](../evidencia/prueba_de_falla_20261030_223027.json)) |
+| Si se cae | `/sesiones` responde 503; comentarios, consultas de grafo y estadísticas siguen funcionando. Los resultados persistidos en MongoDB no dependen de Redis |
 | Costo que introduce | Todo está en memoria: si se llena, expulsa sesiones con TTL. Por eso el panel muestra la memoria usada frente al límite |
 | Evidencia | Prueba de falla y panel de memoria y comandos del exportador |
 
@@ -94,7 +93,7 @@ Cada módulo tiene un patrón de acceso distinto, y forzarlos a una sola estruct
 
 | Punto | Respuesta |
 |---|---|
-| Qué dato guarda | Mediciones con fecha: posesión, pases, tiros, recuperaciones y velocidad, por partido, equipo y fuente |
+| Qué dato guarda | Series temporales de actividad de la aplicación y jugadas; además, estadísticas con fecha por partido, equipo y fuente |
 | Qué acceso motivó la elección | Consultar una ventana de tiempo acotada y agregarla (promedio, máximo) |
 | Modelo | Series temporales |
 | Estructura implementada | Base `fixture2030_metrics` (retención 90 días), tabla `estadisticas_partido` con tags `partido_id, equipo_id, sede, fuente, fase` y cinco campos numéricos |
@@ -105,24 +104,13 @@ Cada módulo tiene un patrón de acceso distinto, y forzarlos a una sola estruct
 | Costo que introduce | Un producto con su propio lenguaje de consulta; cada combinación de tags crea series, así que hay que cuidar no agregar tags de mucha variedad |
 | Evidencia | 4.800 puntos sembrados; p95 desde la API de 9,1 ms como máximo en la ventana de la demo |
 
-## IRIS: el partido como objeto
+## Retiro de IRIS
 
-| Punto | Respuesta |
-|---|---|
-| Qué dato guarda | El partido como entidad compleja con sus eventos hijos y su estado |
-| Qué acceso motivó la elección | Encapsular reglas: un partido no puede pasar de "Programado" a "Finalizado" sin jugarse, ni recibir eventos una vez terminado |
-| Modelo | Objetos (multimodelo) |
-| Estructura implementada | Clases del Hito 9 (`Fixture.Partido`, `Fixture.Evento`, etc.) con `CambiarEstado()` y `AgregarEvento()` |
-| Carga y recuperación | `GET /partidos/{id}/detalle` y `POST /partidos/{id}/estado` |
-| Escala y distribución | Laboratorio: un nodo. **Propuesta (Hito 3):** activo con réplicas sincronizadas (mirroring), porque el estado oficial del partido no admite dos versiones |
-| Consistencia necesaria | Fuerte: todos tienen que ver el mismo estado del partido |
-| Si se cae | No se puede consultar el detalle ni cambiar el estado (503). Ante una partición de red, preferimos rechazar el cambio antes que tener dos estados distintos |
-| Costo que introduce | Producto comercial (la edición Community tiene límites); en el laboratorio el usuario de la API tiene más permisos de los necesarios (`%All`) |
-| Evidencia | `P-05`: `Programado → En juego` (200), `→ Finalizado` (200), volver a `En juego` rechazado con 409 ([evidencia](../evidencia/estado_partido_20261030_222740.json)) |
+Se eliminó IRIS del stack y sus dependencias. El detalle persistente del partido, sus eventos y la validación del cambio de estado pasan a documentos MongoDB; Neo4j mantiene las relaciones y recorridos del fixture. Las evidencias de fecha anterior conservan los resultados del diseño previo y no representan el estado actual.
 
 ## Preguntas transversales
 
-**¿Qué datos son operacionales y cuáles podrían ir a una vista analítica?** Los seis módulos son operacionales: atienden pedidos de usuarios. La actividad de comentarios por partido y minuto ya la proyectamos en el Data Mart del Hito 12, fuera del camino de la API. Las métricas de Prometheus también son analíticas, pero sobre la plataforma, no sobre el torneo.
+**¿Qué datos son operacionales y cuáles podrían ir a una vista analítica?** Los cinco módulos son operacionales: atienden pedidos de usuarios. La actividad de comentarios por partido y minuto ya la proyectamos en el Data Mart del Hito 12, fuera del camino de la API. Las métricas de Prometheus también son analíticas, pero sobre la plataforma, no sobre el torneo.
 
 **¿Dónde hay caché y cómo vence?** En Redis: las sesiones vencen por TTL (30 minutos de inactividad). La API no tiene otra caché hoy. La marca de "partido abierto a comentarios" es una propuesta.
 
@@ -133,6 +121,6 @@ Cada módulo tiene un patrón de acceso distinto, y forzarlos a una sola estruct
 
 **¿Qué haríamos si una base queda indisponible?** Seguir atendiendo lo que no depende de ella (la API ya lo hace), avisar con la alerta `BaseNoDisponible` y recuperar la base. Si es Neo4j, también se cortan los comentarios, y por eso proponemos desacoplar esa validación.
 
-**¿Qué costo operativo agrega mantener seis productos?** Seis configuraciones, seis estrategias de respaldo, seis lenguajes de consulta, más superficie de seguridad, y monitoreo desparejo: solo Redis y MongoDB tienen exportador acá. Lo compensamos con la API como punto único de entrada y con métricas medidas desde la API, que tratan a las seis bases con la misma vara.
+**¿Qué costo operativo agrega mantener cinco productos?** Cinco configuraciones, cinco estrategias de respaldo, cinco lenguajes de consulta y más superficie de seguridad. Lo compensamos con la API como punto único de entrada y métricas medidas desde la API para todas las bases.
 
 **¿Qué parte de la escalabilidad está medida y qué parte es proyección?** Ver [limitaciones y evidencia](limitaciones_y_evidencia.md#medido-frente-a-proyectado).

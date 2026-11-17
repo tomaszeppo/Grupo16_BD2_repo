@@ -15,7 +15,7 @@ mkdir -p docs/evidencia
     curl -s -i "$@" | tr -d '\r' | grep -v -i -E '^(set-cookie|server|date):' | head -n 40
     echo
   }
-  caso "Salud de las seis dependencias" "$BASE/health"
+  caso "Salud de las cinco dependencias" "$BASE/health"
   caso "MongoDB · equipo (200)" "$BASE/equipos/ARG"
   caso "MongoDB · equipo inexistente (404)" "$BASE/equipos/ZZZ"
   caso "MongoDB · validación (422)" "$BASE/equipos/arg"
@@ -33,7 +33,7 @@ mkdir -p docs/evidencia
   caso "Redis · sesión inexistente o expirada (404)" "$BASE/sesiones/U999"
   caso "InfluxDB · ventana agregada (200)" "$BASE/partidos/P-01/estadisticas?desde=$V&hasta=2030-06-15T18:33:00Z&agregacion=1m&equipo=ARG"
   caso "InfluxDB · fechas invertidas (422)" "$BASE/partidos/P-01/estadisticas?desde=2030-06-15T18:35:00Z&hasta=$V"
-  caso "IRIS · detalle (200)" "$BASE/partidos/P-01/detalle"
-  caso "IRIS · transición inválida (409)" -X POST "$BASE/partidos/P-03/estado" -H 'Content-Type: application/json' -d '{"estado":"Finalizado"}'
+  caso "MongoDB · detalle del partido (200)" "$BASE/partidos/P-01/detalle"
+  caso "MongoDB · transición inválida (409)" -X POST "$BASE/partidos/P-03/estado" -H 'Content-Type: application/json' -d '{"estado":"Finalizado"}'
 } > "$SALIDA"
 echo "Evidencia escrita en $SALIDA"

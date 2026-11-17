@@ -13,9 +13,9 @@ Cada endpoint responde a un caso de uso del Fixture 2030. Consumidores: la app d
 | CU7 | Consultar mi sesión | App | `usuario` | Redis | Sesión sin datos internos y TTL restante | 404 `SESION_NO_VIGENTE` | 503/504 | Lectura | 200 con TTL > 0 |
 | CU8 | Cerrar sesión | App | `usuario` | Redis | 204 | 204 (idempotente) | 503/504 | Invalidación | Clave eliminada |
 | CU9 | Ver estadísticas del partido | Analista / app | `id`, `desde`, `hasta`, `equipo?`, `agregacion` | InfluxDB | Puntos agregados o crudos, `truncado` | Sin puntos: 200 vacío | 503/504 | Lectura | 200 dentro de la ventana y del tope de puntos |
-| CU10 | Ver el detalle del partido (objetos) | Back-office | `id` | IRIS | Partido con sus eventos hijos | 404 | 503/504 | Lectura | 200 con `estado` y `eventos` |
-| CU11 | Avanzar el estado del partido | Operador | `id`, `estado` | IRIS | Partido actualizado | 404 | 503/504 | Actualización | Transición permitida o 409 |
-| CU12 | Verificar la salud | Operación | — | Las seis | Estado por fuente | — | 503 con detalle por fuente | Lectura | 200 si todas responden |
+| CU10 | Ver el detalle persistente del partido | Back-office | `id` | MongoDB | Documento del partido con sus eventos | 404 | 503/504 | Lectura | 200 con `estado` y `eventos` |
+| CU11 | Avanzar el estado del partido | Operador | `id`, `estado` | MongoDB | Documento actualizado | 404 | 503/504 | Actualización | Transición permitida o 409 |
+| CU12 | Verificar la salud | Operación | — | Las cinco | Estado por fuente | — | 503 con detalle por fuente | Lectura | 200 si todas responden |
 
 ## Por qué CU6 usa dos fuentes
 

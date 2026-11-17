@@ -13,7 +13,7 @@
 
 | Job | Destino | Componente observado | Etiquetas fijas | Tipo |
 |---|---|---|---|---|
-| `api` | `api_metricas:8001/metrics` | API integrada y, a través de ella, las seis bases | `componente=api-fixture`, `tipo=aplicacion` | aplicación |
+| `api` | `api_metricas:8001/metrics` | API integrada y, a través de ella, las cinco bases | `componente=api-fixture`, `tipo=aplicacion` | aplicación |
 | `redis` | `redis_exporter:9121` | Redis (sesiones) | `componente=redis`, `tipo=infraestructura` | infraestructura |
 | `mongodb` | `mongodb_exporter:9216` | MongoDB (equipos y jugadores) | `componente=mongodb`, `tipo=infraestructura` | infraestructura |
 | `prometheus` | `localhost:9090` | El propio Prometheus | `componente=prometheus`, `tipo=monitoreo` | monitoreo |
@@ -35,7 +35,7 @@ Resultado esperado: `SUCCESS` para el archivo y `SUCCESS: 4 rules found` para la
 | **Medido en la API** (aplicación) | `fixture2030_http_requests_total{endpoint, metodo, codigo}`, `fixture2030_http_request_duration_seconds{endpoint, metodo}`, `fixture2030_dependencia_duracion_seconds{fuente, operacion, resultado}`, `fixture2030_comentarios_creados_total{pais}`, `fixture2030_dependencia_disponible{fuente}` | Código propio en [`api_instrumentada/`](../api_instrumentada). Envuelve funciones del Hito 10 al arrancar, sin editarlas |
 | **Medido en la API** (infraestructura del proceso) | `process_cpu_seconds_total`, `process_resident_memory_bytes` con `job="api"` | Colector de proceso de `prometheus_client` (lee `/proc` dentro del contenedor) |
 | **Exportador** | `redis_*` (memoria, límite, comandos, claves vencidas y expulsadas), `mongodb_*` (operaciones por tipo, conexiones) | `redis_exporter` y `mongodb_exporter` |
-| **Propuesto, no implementado** | Métricas internas de Cassandra (JMX), Neo4j (edición Enterprise), InfluxDB e IRIS; CPU y memoria por contenedor (cAdvisor) | Ver [limitaciones](limitaciones_y_evidencia.md) |
+| **Propuesto, no implementado** | Métricas internas de Cassandra (JMX), Neo4j (edición Enterprise) e InfluxDB; CPU y memoria por contenedor (cAdvisor) | Ver [limitaciones](limitaciones_y_evidencia.md) |
 | **Inferido** | Que un 503 en `/sesiones` se debe a Redis | Se cruza la subida de 503 con `fixture2030_dependencia_disponible{fuente="redis"} == 0` en el mismo período |
 
 ### Cómo se instrumentó sin tocar el Hito 10
@@ -91,7 +91,7 @@ histogram_quantile(0.99, sum by (le) (
 histogram_quantile(0.95, sum by (le, fuente) (rate(fixture2030_dependencia_duracion_seconds_bucket[1m])))
 ```
 
-- **Qué mide:** el tiempo de cada operación del adaptador contra cada base, con la misma vara para las seis.
+- **Qué mide:** el tiempo de cada operación del adaptador contra cada base, con la misma vara para las cinco.
 - **Unidad:** segundos.
 - **Período:** último minuto.
 - **Para qué sirve:** responde "¿el problema está en la API o en la base?". Si sube la duración HTTP y una base también sube, la demora está en esa base; si sube la duración HTTP y ninguna base sube, está en la API.

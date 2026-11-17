@@ -6,7 +6,7 @@ from app.observability import configurar_logging, crear_middleware
 
 DESCRIPCION = (
     "API REST integrada del Fixture Mundial 2030. Cada endpoint resuelve un caso de uso concreto contra "
-    "la fuente NoSQL que corresponde (MongoDB, Neo4j, Cassandra, Redis, InfluxDB, IRIS). "
+    "la fuente NoSQL que corresponde (MongoDB, Neo4j, Cassandra, Redis e InfluxDB). "
     "No acepta consultas libres. Todos los errores usan el formato {error:{codigo,mensaje,request_id}}."
 )
 
@@ -16,7 +16,7 @@ TAGS = [
     {"name": "Cassandra · Comentarios", "description": "Lectura por partición y alta idempotente."},
     {"name": "Redis · Sesiones", "description": "Estado temporal con TTL."},
     {"name": "InfluxDB · Estadísticas", "description": "Series temporales acotadas por ventana."},
-    {"name": "IRIS · Partido (objetos)", "description": "Entidad compleja y transición de estado validada."},
+    {"name": "MongoDB · Detalle del partido", "description": "Documento persistente, eventos y transición de estado."},
     {"name": "Sistema", "description": "Salud de la API y de sus dependencias."},
 ]
 
@@ -34,13 +34,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.middleware("http")(crear_middleware(settings.deadline_segundos))
     registrar_manejadores(app)
 
-    from app.routes import comentarios, equipos, estadisticas, health, partidos_grafo, partidos_iris, sesiones
+    from app.routes import comentarios, equipos, estadisticas, health, partidos_grafo, partidos_mongo, sesiones
 
     app.include_router(equipos.router)
     app.include_router(partidos_grafo.router)
     app.include_router(comentarios.router)
     app.include_router(sesiones.router)
     app.include_router(estadisticas.router)
-    app.include_router(partidos_iris.router)
+    app.include_router(partidos_mongo.router)
     app.include_router(health.router)
     return app

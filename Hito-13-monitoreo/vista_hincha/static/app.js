@@ -242,7 +242,7 @@
     loading = false;
   }
   function renderEvents(events, detail) {
-    // IRIS aporta contexto; el recorrido de eventos de Neo4j conserva su propia fuente.
+    // MongoDB aporta contexto; el recorrido relacional de eventos sigue en Neo4j.
     if (events.status !== 'fulfilled') { $('event-list').innerHTML = `<div class="empty">${esc(events.reason.message)}</div>`; return; }
     const items = [...events.value.items].sort((a,b)=>b.minuto-a.minuto);
     if (!items.length) { $('event-list').innerHTML = '<div class="empty">Todavía no hay jugadas registradas para este encuentro.</div>'; return; }
@@ -251,7 +251,7 @@
       return `<div class="event"><span class="event-minute">${esc(e.minuto)}′</span><span class="event-icon" aria-hidden="true">${e.tipo === 'Gol' ? '⚽' : e.tipo === 'Final' ? '⚑' : '↗'}</span><div><strong>${esc(e.tipo)}</strong><p>${esc(extra || 'Evento registrado del partido')}</p></div></div>`;
     }).join('');
     if (detail.status === 'fulfilled' && detail.value.estado === 'En juego' && items.some(e=>e.tipo === 'Final')) {
-      $('event-list').insertAdjacentHTML('beforeend','<p class="subtle" style="padding:12px 18px;margin:0">La muestra contiene un evento de final en el grafo; el estado del partido en IRIS sigue “En juego”.</p>');
+      $('event-list').insertAdjacentHTML('beforeend','<p class="subtle" style="padding:12px 18px;margin:0">La muestra contiene un evento de final en el grafo; el estado persistido del partido en MongoDB sigue “En juego”.</p>');
     }
   }
   function renderStats(data) {

@@ -33,7 +33,7 @@ Con 3 millones de usuarios y como mucho 312 puntos (104 partidos × 3), empatar 
 - **Al terminar un partido:** se recalcula el total de cada usuario que lo pronosticó y se escribe con `ZADD`. No usamos `ZINCRBY` (sumar) porque si el proceso se corta y se reintenta, a algunos les sumaría dos veces. Escribiendo el total, repetirlo no cambia nada, y si Redis se pierde se reconstruye desde Neo4j.
 - **Grupos privados:** no tendrían su propio *sorted set*. La tabla de un grupo se arma al pedirla, trayendo los puntajes de sus integrantes del ranking público (`ZMSCORE`) y ordenándolos. Así, al terminar un partido hay una escritura por usuario y no una por cada grupo de cada usuario. Para eso los grupos tendrían un tamaño máximo (por ejemplo, 100 personas).
 
-Esto cambia algo del Hito 3, donde habíamos puesto grupos y puntajes en IRIS. Lo cambiamos porque lo que más se consulta es "top N" y "en qué puesto estoy", y eso Redis lo resuelve directo.
+Esto cambia la propuesta original del Hito 3, donde los grupos y puntajes se habían asignado a IRIS. La responsabilidad de prode/ranking en tiempo real se asigna a Redis porque lo más consultado es "top N" y "en qué puesto estoy"; los resultados que deban perdurar se guardan en MongoDB.
 
 En Grafana mediríamos cuánto tarda la tabla en quedar actualizada después de cada partido, que es lo que más le importa al usuario del prode.
 
@@ -43,4 +43,4 @@ Hoy la API acepta comentarios sobre un partido en cualquier momento, aunque falt
 
 - **Abrir los comentarios 1 hora antes** del partido, que es cuando salen las formaciones y empieza la previa.
 - **Cerrarlos unas horas después del final**, porque los comentarios de después del partido también son parte de lo que se analiza (como el Data Mart del Hito 12).
-- **No consultar Neo4j ni IRIS en cada comentario** para saber si el partido está abierto: en un pico serían miles de consultas por segundo. Guardaríamos en Redis una marca de "partido abierto a comentarios" que vence sola al cerrar la ventana. Además, eso resuelve un problema que vimos en este hito: hoy, si Neo4j se cae, tampoco se puede comentar.
+- **No consultar Neo4j en cada comentario** para saber si el partido está abierto: en un pico serían miles de consultas por segundo. Guardaríamos en Redis una marca de "partido abierto a comentarios" que vence sola al cerrar la ventana. Además, eso resuelve un problema que vimos en este hito: hoy, si Neo4j se cae, tampoco se puede comentar.

@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# Levanta las seis bases, crea el token y la base de InfluxDB, compila las clases de IRIS y siembra datos.
+# Levanta las cinco bases, crea el token y la base de InfluxDB y siembra datos.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 if [[ ! -f .env ]]; then
   cp .env.example .env
-  echo "Se creó .env desde .env.example. Completá las contraseñas (MONGO, NEO4J, REDIS, IRIS) y volvé a ejecutar." >&2
+  echo "Se creó .env desde .env.example. Completá las contraseñas (MONGO, NEO4J, REDIS) y volvé a ejecutar." >&2
   exit 1
 fi
 set -a; source .env; set +a
-for v in MONGO_PASSWORD NEO4J_PASSWORD REDIS_PASSWORD IRIS_PASSWORD; do
+for v in MONGO_PASSWORD NEO4J_PASSWORD REDIS_PASSWORD; do
   [[ -n "${!v:-}" ]] || { echo "Falta $v en .env" >&2; exit 1; }
 done
 
 echo "== Levantando contenedores =="
-docker compose up -d mongodb neo4j cassandra redis influxdb iris
+docker compose up -d mongodb neo4j cassandra redis influxdb
 
-echo "== Esperando healthchecks (Cassandra e IRIS pueden tardar 1-2 min) =="
-for s in mongodb neo4j cassandra redis iris; do
+echo "== Esperando healthchecks (Cassandra puede tardar 1-2 min) =="
+for s in mongodb neo4j cassandra redis; do
   estado=starting
   for _ in $(seq 1 60); do
     estado="$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q "$s")" 2>/dev/null || echo starting)"
@@ -45,10 +45,6 @@ fi
 if ! docker compose exec -T influxdb influxdb3 show databases --token "$INFLUX_TOKEN" --format csv | grep -q fixture2030_metrics; then
   docker compose exec -T influxdb influxdb3 create database --retention-period 90d --token "$INFLUX_TOKEN" fixture2030_metrics
 fi
-
-echo "== IRIS: usuario de la API y clases del Hito 9 =="
-docker compose exec -T iris iris session IRIS -U %SYS < seed/iris/crear_usuario.mac
-docker compose exec -T iris iris session IRIS -U USER < seed/iris/cargar_clases.mac
 
 echo "== Sembrando datos (P-01..P-08) =="
 docker compose --profile api build api

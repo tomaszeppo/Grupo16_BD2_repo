@@ -19,7 +19,7 @@ if [[ -f "$ROOT/.env" ]]; then
     key="${line%%=*}"; value="${line#*=}"
     key="${key//[[:space:]]/}"
     case "$key" in
-      MONGO_HOST|MONGO_PORT|MONGO_HOST_PORT|MONGO_USER|MONGO_PASSWORD|MONGO_DB|NEO4J_URI|NEO4J_USER|NEO4J_PASSWORD|NEO4J_DB|NEO4J_HTTP_HOST_PORT|NEO4J_HOST_PORT|CASSANDRA_HOST|CASSANDRA_PORT|CASSANDRA_HOST_PORT|CASSANDRA_KEYSPACE|REDIS_HOST|REDIS_PORT|REDIS_HOST_PORT|REDIS_PASSWORD|INFLUX_URL|INFLUX_HOST_PORT|INFLUX_DB|INFLUX_TOKEN|IRIS_HOST|IRIS_PORT|IRIS_HOST_PORT|IRIS_PORTAL_HOST_PORT|IRIS_NAMESPACE|IRIS_USER|IRIS_PASSWORD) ;;
+      MONGO_HOST|MONGO_PORT|MONGO_HOST_PORT|MONGO_USER|MONGO_PASSWORD|MONGO_DB|NEO4J_URI|NEO4J_USER|NEO4J_PASSWORD|NEO4J_DB|NEO4J_HTTP_HOST_PORT|NEO4J_HOST_PORT|CASSANDRA_HOST|CASSANDRA_PORT|CASSANDRA_HOST_PORT|CASSANDRA_KEYSPACE|REDIS_HOST|REDIS_PORT|REDIS_HOST_PORT|REDIS_PASSWORD|INFLUX_URL|INFLUX_HOST_PORT|INFLUX_DB|INFLUX_TOKEN) ;;
       *) continue ;;
     esac
     if [[ "$value" == \"*\" || "$value" == \'*\' ]]; then value="${value:1:${#value}-2}"; fi
@@ -33,10 +33,10 @@ fi
 export TIMEOUT_PRUEBA_SEGUNDOS="${TIMEOUT_PRUEBA_SEGUNDOS:-2}"
 
 echo "HITO 11 — PRUEBA TCP"
-for variable in MONGO_HOST MONGO_DB NEO4J_URI NEO4J_DB CASSANDRA_HOST CASSANDRA_KEYSPACE REDIS_HOST INFLUX_URL INFLUX_DB IRIS_HOST IRIS_NAMESPACE; do
+for variable in MONGO_HOST MONGO_DB NEO4J_URI NEO4J_DB CASSANDRA_HOST CASSANDRA_KEYSPACE REDIS_HOST INFLUX_URL INFLUX_DB; do
   if [[ -n "${!variable:-}" ]]; then echo "config_$variable=CONFIGURADA (valor omitido)"; else echo "[WARN] config_$variable=VACIA (valor omitido)"; fi
 done
-for variable in MONGO_PASSWORD NEO4J_PASSWORD REDIS_PASSWORD INFLUX_TOKEN IRIS_PASSWORD; do
+for variable in MONGO_PASSWORD NEO4J_PASSWORD REDIS_PASSWORD INFLUX_TOKEN; do
   if [[ -n "${!variable:-}" ]]; then echo "config_$variable=CONFIGURADA (valor omitido)"; else echo "[WARN] config_$variable=VACIA (valor omitido; driver puede rechazar autenticación)"; fi
 done
 echo "timestamp_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -58,9 +58,9 @@ if origin == "api-container":
     targets = [
         ("mongodb", "mongodb", 27017), ("neo4j-bolt", "neo4j", 7687),
         ("cassandra-cql", "cassandra", 9042), ("redis-resp", "redis", 6379),
-        ("influx-http-listener", "influxdb", 8181), ("iris-superserver", "iris", 1972),
+        ("influx-http-listener", "influxdb", 8181),
     ]
-    http_targets = [("neo4j-browser-http", "neo4j", 7474, "/", "portal"), ("iris-portal-http", "iris", 52773, "/", "portal"), ("influxdb-health-http", "influxdb", 8181, "/health", "health")]
+    http_targets = [("neo4j-browser-http", "neo4j", 7474, "/", "portal"), ("influxdb-health-http", "influxdb", 8181, "/health", "health")]
 else:
     def integer(name, default):
         try: return int(os.environ.get(name, str(default)))
@@ -81,12 +81,9 @@ else:
     rp = integer("REDIS_HOST_PORT", integer("REDIS_PORT", 6379))
     ih, uri_ip = uri_host_port("INFLUX_URL", 8181)
     ip = integer("INFLUX_HOST_PORT", uri_ip)
-    irh = os.environ.get("IRIS_HOST", "localhost")
-    irp = integer("IRIS_HOST_PORT", integer("IRIS_PORT", 1972))
     targets = [("mongodb", mh, mp), ("neo4j-bolt", nh, np), ("cassandra-cql", ch, cp),
-               ("redis-resp", rh, rp), ("influx-http-listener", ih, ip), ("iris-superserver", irh, irp)]
+               ("redis-resp", rh, rp), ("influx-http-listener", ih, ip)]
     http_targets = [("neo4j-browser-http", nh, integer("NEO4J_HTTP_HOST_PORT", 7474), "/", "portal"),
-                    ("iris-portal-http", irh, integer("IRIS_PORTAL_HOST_PORT", 52773), "/", "portal"),
                     ("influxdb-health-http", ih, ip, "/health", "health")]
 
 failed = 0
@@ -174,8 +171,8 @@ if [[ "$ORIGEN" == "auto" || "$ORIGEN" == "api-container" ]]; then
 import os, socket, time, http.client
 origin = "api-container"
 timeout = float(os.environ.get("TIMEOUT_PRUEBA_SEGUNDOS", "2"))
-targets = [("mongodb", "mongodb", 27017), ("neo4j-bolt", "neo4j", 7687), ("cassandra-cql", "cassandra", 9042), ("redis-resp", "redis", 6379), ("influx-http-listener", "influxdb", 8181), ("iris-superserver", "iris", 1972)]
-http_targets = [("neo4j-browser-http", "neo4j", 7474, "/", "portal"), ("iris-portal-http", "iris", 52773, "/", "portal"), ("influxdb-health-http", "influxdb", 8181, "/health", "health")]
+targets = [("mongodb", "mongodb", 27017), ("neo4j-bolt", "neo4j", 7687), ("cassandra-cql", "cassandra", 9042), ("redis-resp", "redis", 6379), ("influx-http-listener", "influxdb", 8181)]
+http_targets = [("neo4j-browser-http", "neo4j", 7474, "/", "portal"), ("influxdb-health-http", "influxdb", 8181, "/health", "health")]
 failed = 0
 for name, host, port in targets:
     t = time.monotonic()
