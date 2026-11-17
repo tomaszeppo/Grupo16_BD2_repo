@@ -1,0 +1,60 @@
+{
+  "commit": "37d96a8",
+  "partido": "P-08",
+  "pasos": [
+    {
+      "accion": "GET detalle (antes)",
+      "hora_utc": "2026-11-07T00:13:27.566295+00:00",
+      "codigo": 200,
+      "cuerpo": {
+        "codigo": "P-08",
+        "equipo_local": "CAN",
+        "equipo_visitante": "JPN",
+        "fecha_hora": "2030-06-16T18:30:00",
+        "sede": "Lusail Stadium",
+        "estado": "Programado",
+        "eventos": []
+      }
+    },
+    {
+      "accion": "POST estado = En juego",
+      "hora_utc": "2026-11-07T00:13:27.597515+00:00",
+      "codigo": 200,
+      "cuerpo": {
+        "codigo": "P-08",
+        "equipo_local": "CAN",
+        "equipo_visitante": "JPN",
+        "fecha_hora": "2030-06-16T18:30:00",
+        "sede": "Lusail Stadium",
+        "estado": "En juego",
+        "eventos": []
+      }
+    },
+    {
+      "accion": "POST estado = Finalizado",
+      "hora_utc": "2026-11-07T00:13:29.605368+00:00",
+      "codigo": 200,
+      "cuerpo": {
+        "codigo": "P-08",
+        "equipo_local": "CAN",
+        "equipo_visitante": "JPN",
+        "fecha_hora": "2030-06-16T18:30:00",
+        "sede": "Lusail Stadium",
+        "estado": "Finalizado",
+        "eventos": []
+      }
+    },
+    {
+      "accion": "POST estado = En juego",
+      "hora_utc": "2026-11-07T00:13:31.615054+00:00",
+      "codigo": 409,
+      "cuerpo": {
+        "error": {
+          "codigo": "CONFLICTO",
+          "mensaje": "El partido 'P-08' no puede pasar de 'Finalizado' a 'En juego'.",
+          "request_id": "7071603385c94321953b24db11d96aa1"
+        }
+      }
+    }
+  ]
+}
