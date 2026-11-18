@@ -249,6 +249,7 @@
       <a href="#databases" title="Bases de datos" aria-label="Bases de datos"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg></a>
       <a href="#performance" title="Rendimiento" aria-label="Rendimiento"><svg viewBox="0 0 24 24"><path d="M3 18.5h18M5 15l4-4 3 2 6-7 2 2"/><path d="M17 6h3v3"/></svg></a>
       <a href="#infrastructure" title="Infraestructura" aria-label="Infraestructura"><svg viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="5" rx="1.2"/><rect x="4" y="10" width="16" height="5" rx="1.2"/><rect x="4" y="16.5" width="16" height="4" rx="1.2"/><path d="M7 6h.01M7 12.5h.01M7 18.5h.01"/></svg></a>
+      <a href="#simulaciones" title="Simulaciones" aria-label="Simulaciones">▶</a>
       <a href="#tests" title="Pruebas" aria-label="Pruebas"><svg viewBox="0 0 24 24"><path d="M8 5.5 18.5 12 8 18.5z"/><path d="M4 4v16"/></svg></a>
     </nav>
     <div class="rail-spacer"></div>
@@ -326,6 +327,11 @@
         <article class="panel" data-watch="falla"><div class="panel-head"><div><div class="panel-title">Targets de Prometheus</div><div class="panel-note">Estado del último scrape</div></div><span class="live-tag">EN VIVO</span></div><div class="table-wrap"><table><thead><tr><th>Job</th><th>Estado</th><th>Última recolección</th></tr></thead><tbody id="targets-body"><tr><td colspan="3" class="small-muted">Esperando datos de Prometheus…</td></tr></tbody></table></div></article>
         <article class="panel" data-watch="falla"><div class="panel-head"><div><div class="panel-title">Reglas de alerta</div><div class="panel-note">Las cuatro reglas del Hito 13 y su estado: en reposo, pendiente o disparada</div></div><span class="live-tag">EN VIVO</span></div><div class="alert-list" id="alerts-list"><div class="alert-empty">Esperando datos de Prometheus…</div></div></article>
       </div>
+    </section>
+
+    <section class="section" id="simulaciones">
+      <div class="section-head"><div><div class="section-overline">SIMULACIONES</div><h2 class="section-title">Simular partido</h2><p class="section-desc">Crea comentarios por región y simula 90 minutos en 90 segundos. El partido debe estar programado.</p></div></div>
+      <div class="test-card"><div class="field-row"><div class="field"><label for="sim-partido">Partido</label><select id="sim-partido"><option>P-01</option><option>P-02</option><option>P-03</option><option>P-04</option><option>P-05</option><option>P-06</option><option>P-07</option><option>P-08</option></select></div><button class="btn primary" id="sim-iniciar" type="button">Iniciar simulación</button></div><p id="sim-estado" role="status">El progreso aparece en la consola de actividad.</p></div>
     </section>
 
     <section class="section" id="tests">
@@ -764,6 +770,18 @@
       await refreshJob();
     } catch(error) { showToast(error.message); }
   });
+  $("sim-iniciar").addEventListener("click", async () => {
+    const button = $("sim-iniciar"); button.disabled = true;
+    try {
+      const response = await fetch("/api/simulaciones", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({partido:$("sim-partido").value})});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "No se pudo iniciar la simulación.");
+      $("sim-estado").textContent = "Simulación iniciada. Consultá la consola de actividad.";
+      refreshJob();
+    } catch (error) { $("sim-estado").textContent = error.message; }
+    finally { button.disabled = false; }
+  });
+
   async function startTest(payload) {
     try {
       const response=await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});

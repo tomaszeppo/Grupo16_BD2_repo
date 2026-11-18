@@ -104,3 +104,8 @@ Los pedidos que escriben se pueden repetir sin efectos de más:
 `ruta` es siempre la plantilla (`/partidos/{partido_id}`), nunca la ruta con el identificador. Comparar `prode_api_duracion_segundos` con `prode_base_duracion_segundos` es la forma de saber si un pedido lento se debe a la API o a la base.
 
 Son métricas de aplicación. Las internas de cada base salen de sus exportadores.
+
+
+## Histórico de una simulación
+
+`GET /partidos/{id}/historico` consulta Neo4j y devuelve estadísticas agregadas por equipo, muestras por minuto y jugadas con sus protagonistas. `GET /partidos/{id}/eventos/{evento_id}/cadena` recorre las jugadas previas. Si falta archivar un partido finalizado, `POST /administracion/simulaciones/{id}/archivar` permite reintentar con `X-Admin-Clave`; no crea duplicados al repetirse. El proceso requiere el guion de MongoDB y las muestras completas de InfluxDB.

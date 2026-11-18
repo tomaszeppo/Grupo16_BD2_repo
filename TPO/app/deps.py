@@ -9,6 +9,7 @@ from functools import lru_cache
 from fastapi import Depends, Header
 
 from app.adapters.mongo import MongoAdapter
+from app.adapters.influx import InfluxAdapter
 from app.adapters.neo4j import Neo4jAdapter
 from app.config.settings import Settings
 from app.config.settings import get_settings as _settings
@@ -41,6 +42,11 @@ def _mongo() -> MongoAdapter:
 
 
 @lru_cache
+def _influx() -> InfluxAdapter:
+    return InfluxAdapter(_settings())
+
+
+@lru_cache
 def _neo4j() -> Neo4jAdapter:
     return Neo4jAdapter(_settings())
 
@@ -61,6 +67,10 @@ async def get_reloj() -> Reloj:
 
 async def get_mongo() -> MongoAdapter:
     return _mongo()
+
+
+async def get_influx() -> InfluxAdapter:
+    return _influx()
 
 
 async def get_neo4j() -> Neo4jAdapter:

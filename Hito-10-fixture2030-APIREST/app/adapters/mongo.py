@@ -95,6 +95,16 @@ class MongoAdapter:
                 return
             raise Conflicto(f"El partido '{codigo}' cambió de estado antes de guardar la transición.")
 
+    def avance_simulacion(self, codigo: str, minuto: int, local: int, visitante: int) -> None:
+        with operacion(FUENTE, "avance_simulacion", _traducir):
+            resultado = self._db().partidos.update_one(
+                {"codigo": codigo, "estado": "En juego", "$or": [
+                    {"minuto": {"$exists": False}}, {"minuto": {"$lte": minuto}}]},
+                {"$set": {"minuto": minuto, "marcador": {"local": local, "visitante": visitante}}},
+            )
+            if not resultado.matched_count:
+                raise Conflicto("El partido no está en juego o el minuto retrocede.")
+
     def ping(self) -> None:
         with operacion(FUENTE, "ping", _traducir):
             self._db().command("ping")

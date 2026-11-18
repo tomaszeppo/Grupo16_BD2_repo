@@ -1,5 +1,5 @@
 # Prode Mundial 2030 — proyecto final. Se levanta solo: no depende de las carpetas de los hitos.
-# Los compañeros agregan acá sus servicios (Redis, Cassandra, InfluxDB, Prometheus, Grafana): ver docs/como_sumar_una_base.md
+# Cassandra e InfluxDB forman parte del TPO; Redis y monitoreo son puntos de extensión.
 name: fixture2030-tpo
 
 x-mongo: &mongo
@@ -96,12 +96,60 @@ services:
     cpus: ${NEO4J_CPUS:-1.0}
     networks: [tpo]
 
+  cassandra:
+    image: cassandra:4.1
+    cpus: ${CASSANDRA_CPUS:-0.75}
+    restart: unless-stopped
+    environment:
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 128M
+    ports: ["127.0.0.1:${CASSANDRA_PUERTO:-9043}:9042"]
+    volumes: ["cassandra_datos:/var/lib/cassandra"]
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'SELECT now() FROM system.local' >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+    networks: [tpo]
+
+  cassandra_inicio:
+    image: cassandra:4.1
+    depends_on:
+      cassandra: {condition: service_healthy}
+    volumes: ["./cassandra/esquema.cql:/esquema.cql:ro"]
+    entrypoint: ["cqlsh", "cassandra", "-f", "/esquema.cql"]
+    networks: [tpo]
+
+  influxdb:
+    image: influxdb:3-core
+    restart: unless-stopped
+    cpus: ${INFLUX_CPUS:-0.5}
+    mem_limit: ${INFLUX_MEMORIA:-1g}
+    command: ["influxdb3", "serve", "--node-id=tpo", "--object-store=file", "--data-dir=/var/lib/influxdb3/data", "--http-bind=0.0.0.0:8181", "--without-auth"]
+    volumes: ["influx_datos:/var/lib/influxdb3"]
+    networks: [tpo]
+
+  influx_inicio:
+    image: influxdb:3-core
+    depends_on: [influxdb]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        for i in $$(seq 1 60); do
+          influxdb3 show databases --host http://influxdb:8181 --format csv > /tmp/bases 2>/dev/null && break;
+          sleep 2;
+        done;
+        grep -qx fixture2030_metrics /tmp/bases || influxdb3 create database fixture2030_metrics --host http://influxdb:8181
+    networks: [tpo]
+
   api:
     build: .
     restart: unless-stopped
     depends_on:
       mongo_inicio: {condition: service_completed_successfully}
       neo4j: {condition: service_healthy}
+      cassandra_inicio: {condition: service_completed_successfully}
+      influx_inicio: {condition: service_completed_successfully}
     environment:
       <<: *api_entorno
       PROMETHEUS_MULTIPROC_DIR: /tmp/metricas
@@ -131,6 +179,8 @@ volumes:
   mongo2_datos:
   mongo3_datos:
   neo4j_datos:
+  cassandra_datos:
+  influx_datos:
 
 networks:
   tpo:

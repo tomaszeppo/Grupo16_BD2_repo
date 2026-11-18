@@ -154,3 +154,9 @@ docker compose --env-file .env --env-file ..\Hito-10-fixture2030-APIREST\.env ps
 ## Seguridad
 
 No se versionan `.env`, contraseñas ni tokens. La contraseña de MongoDB llega al exportador como variable de entorno, no dentro de una URI escrita en el repo. Las capturas y los registros de `evidencia/` se revisaron antes de subirlos.
+
+## Simulación de partido
+
+En el panel web (puerto 8085), la sección **Simulaciones** permite elegir un partido `P-01` a `P-08` que esté en `Programado`. Primero escribe un comentario inicial para ARG, BRA, ESP y URU en Cassandra mediante la API; luego pasa el partido a `En juego` en MongoDB. Avanza hasta el minuto 90 aproximadamente en 90 segundos, publica comentarios sintéticos y actualiza minuto y marcador (goles simulados en 23 y 75). Finalmente pasa a `Finalizado`. La consola de actividad muestra el progreso y los errores. El panel permite un solo trabajo a la vez.
+
+Hay que reconstruir y reiniciar la API instrumentada para incorporar la ruta y el esquema nuevos, y reiniciar el servidor del panel. Si una dependencia falla o se interrumpe el proceso, la simulación se detiene y puede quedar un partido en juego; no hay reanudación automática. Las escrituras previas no se revierten. Esta primera versión no genera estadísticas ni jugadas en InfluxDB y no actualiza el TPO independiente.

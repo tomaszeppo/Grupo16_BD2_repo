@@ -12,8 +12,8 @@ Esta carpeta es independiente de los hitos: se levanta sola y no usa nada de las
 | Fixture, partidos, jugadas y sus cadenas | Neo4j | Construido |
 | API y interfaz de demostración | — | Construido |
 | Sesiones y ranking en vivo | Redis | Punto de enganche listo |
-| Comentarios | Cassandra | Lugar reservado |
-| Series temporales | InfluxDB | Punto de enganche listo |
+| Comentarios por partido y región | Cassandra | Lectura reciente y publicación |
+| Series temporales de simulación | InfluxDB | Posesión, tiros, pases, faltas y córners por equipo |
 | Monitoreo | Prometheus y Grafana | La API ya expone `/metrics` |
 
 IRIS no forma parte del proyecto final: [por qué](docs/por_que_no_iris.md).
@@ -38,7 +38,7 @@ Hace falta Docker Desktop. Todos los comandos se corren desde esta carpeta (`TPO
 
 La primera vez crea el archivo `.env` y se detiene: hay que completar ahí `MONGO_PASSWORD`, `NEO4J_PASSWORD` (8 caracteres o más) y `ADMIN_CLAVE` con valores propios, y volver a correr el script. El archivo `.env` no se versiona.
 
-Levanta tres nodos de MongoDB, Neo4j y la API. Cuando termina:
+Levanta tres nodos de MongoDB, Neo4j, Cassandra, InfluxDB y la API. El chequeo de salud del TPO informa MongoDB y Neo4j; Cassandra e InfluxDB todavía no aparecen allí. Cuando termina:
 
 - Interfaz de demostración: http://127.0.0.1:8010/demo/
 - Contrato de la API: http://127.0.0.1:8010/docs
@@ -56,7 +56,7 @@ Carga 48 equipos, sus planteles y los 104 partidos, con el primer partido sin ju
 docker compose run --rm herramientas python -m seed.run --verificar
 ```
 
-Puertos que usa en el equipo: 8010 (API), 27217 a 27219 (MongoDB), 7475 y 7688 (Neo4j). Son distintos de los de los hitos, así que pueden estar levantados a la vez. Si alguno está ocupado, se cambia en `.env`.
+Puertos en el equipo: 8010 (API), 27217 a 27219 (MongoDB), 7475 y 7688 (Neo4j) y 9043 (Cassandra). InfluxDB no publica puerto al equipo. Si alguno está ocupado, cambiarlo en `.env`; los hitos pueden usar algunos de los mismos puertos.
 
 ## Recorrer la demostración
 
@@ -146,3 +146,30 @@ TPO/
 ├── evidencia/    resultados de las mediciones
 └── mongo/        arranque del conjunto de réplicas
 ```
+
+
+## Estadísticas de la simulación (InfluxDB)
+
+La simulación registra cada minuto una muestra sintética por equipo: posesión instantánea, tiros, tiros al arco, pases, faltas y córners de ese minuto. La pantalla muestra el promedio de posesión, suma las acciones y calcula la precisión de pases. El marcador sigue en MongoDB y el estado en Neo4j. Las simulaciones anteriores no contienen las nuevas métricas y se muestran con un guion. Si una escritura falla se marca la información como incompleta; no hay reintentos automáticos.
+
+Compose inicia InfluxDB 3 y crea la base `fixture2030_metrics`. El contenedor está limitado por defecto a 0,5 CPU y 1 GB y usa un volumen propio. Para este laboratorio funciona sin autenticación, accesible solo desde la red interna de Docker y sin puerto publicado; no usar esta configuración para un despliegue compartido. Se puede ajustar `INFLUX_CPUS` e `INFLUX_MEMORIA` en `.env`.
+
+
+## Histórico en Neo4j
+
+Al finalizar una simulación, el TPO consulta las muestras por equipo y minuto de InfluxDB y sus resúmenes. Si están las 91 muestras de ambos equipos y los goles coinciden con el marcador, las guarda en Neo4j como relaciones `ESTADISTICA_MINUTO` y `RESUMEN_ESTADISTICO` entre el partido y sus equipos. El guardado usa claves estables y se puede repetir sin duplicar. `GET /partidos/{id}/historico` devuelve el resumen y los 182 puntos archivados; después del archivo, el bloque de estadísticas consulta Neo4j.
+
+Cada simulación usa un guion de jugadas de MongoDB y, al terminar, lo cruza con las muestras de InfluxDB. Neo4j conserva los eventos, sus jugadores y las relaciones entre jugadas, además de los totales y las muestras por minuto. Las acciones estadísticas sintéticas que no están en el guion siguen siendo contadores, no jugadas individuales. Si faltan muestras o falla el traspaso, el partido puede quedar finalizado con `archivo_estado=pendiente`. Un administrador puede reintentar con `POST /administracion/simulaciones/{id}/archivar` y el encabezado `X-Admin-Clave`. Las simulaciones antiguas sin muestras completas o sin goles por minuto no pueden archivarse como completas.
+
+
+## Preparar jugadas simuladas
+
+La plantilla editable es [`seed/guion_simulacion.json`](seed/guion_simulacion.json): cada entrada indica tipo, minuto, equipo (`local` o `visitante`), dorsal y, opcionalmente, el número de una jugada anterior en `previa`. Los dorsales se resuelven contra los jugadores ya cargados en MongoDB y se usan los mismos IDs del grafo.
+
+Con el entorno levantado y el fixture cargado, ejecutar desde `TPO` en PowerShell:
+
+```powershell
+.\scripts\cargar_guion.ps1 -Partido P-12
+```
+
+Se puede repetir sin borrar ni sobrescribir el guion ya guardado. Al iniciar una simulación sin guion, se crea automáticamente desde la plantilla. La plantilla se aplica solamente a nuevos guiones; editarla no modifica los que ya se guardaron. No usar `seed.run --reiniciar` para este procedimiento.

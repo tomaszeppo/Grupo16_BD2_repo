@@ -42,12 +42,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     registrar_manejadores(app)
     instrumentar(app)
 
-    from app.routes import admin, fixture, health, prode, ranking
+    from app.routes import admin, fixture, health, prode, ranking, simulaciones
 
     app.include_router(fixture.router)
     app.include_router(prode.router)
     app.include_router(ranking.router)
     app.include_router(admin.router)
+    app.include_router(simulaciones.router)
     app.include_router(prode.equipos_router)
     app.include_router(health.router)
 

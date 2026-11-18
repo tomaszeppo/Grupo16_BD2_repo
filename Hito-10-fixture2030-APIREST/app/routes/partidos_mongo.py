@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 
-from app.deps import get_partidos_mongo_service
+from app.deps import get_partidos_mongo_service, get_mongo
 from app.schemas.comunes import IdPartido
 from app.schemas.errores import respuestas
-from app.schemas.partido_detalle import CambioEstado, PartidoDetalle
+from app.schemas.partido_detalle import AvanceSimulacion, CambioEstado, PartidoDetalle
 from app.services.partidos_mongo import PartidosMongoService
 
 router = APIRouter(tags=["MongoDB · Detalle del partido"])
@@ -30,3 +30,11 @@ def cambiar_estado(
 ):
     """Transiciones: Programado → En juego → Finalizado. Repetir el estado actual no escribe."""
     return svc.cambiar_estado(partido_id, cuerpo.estado)
+
+
+@router.put("/partidos/{partido_id}/simulacion", response_model=PartidoDetalle)
+def avance_simulacion(partido_id: IdPartido, cuerpo: AvanceSimulacion,
+                      mongo=Depends(get_mongo), svc: PartidosMongoService = Depends(get_partidos_mongo_service)):
+    """Actualiza minuto y marcador de un partido en juego."""
+    mongo.avance_simulacion(partido_id, cuerpo.minuto, cuerpo.local, cuerpo.visitante)
+    return svc.detalle(partido_id)

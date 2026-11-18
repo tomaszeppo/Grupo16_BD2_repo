@@ -309,6 +309,18 @@ def run_test(payload: RunRequest):
     return _launch_job(kind, argv)
 
 
+class SimulacionRequest(BaseModel):
+    partido: str = Field(pattern=r"^P-0[1-8]$")
+
+
+@app.post("/api/simulaciones")
+def iniciar_simulacion(payload: SimulacionRequest):
+    _check_api_ready()
+    script = HITO13_DIR / "scripts" / "simular_partido.py"
+    return _launch_job(f"Simulación de partido · {payload.partido}",
+                       [sys.executable, "-u", str(script), "--api", API_URL, "--partido", payload.partido])
+
+
 @app.post("/api/capture")
 def capture_evidence():
     if not SCRIPT_CONTROLADO.exists():

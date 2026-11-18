@@ -288,6 +288,82 @@ class Neo4jAdapter:
         with operacion(FUENTE, "finalizar_partido", _traducir):
             self._escribir(CYPHER_FINALIZAR, id=partido_id, goles_local=goles_local, goles_visitante=goles_visitante)
 
+    def archivar_estadisticas(self, partido_id: str, resumen: list[dict], muestras: list[dict], jugadas: list[dict]) -> None:
+        """Guarda una versión completa e idempotente en una sola transacción."""
+        cypher = """
+        MATCH (p:Partido {id: $partido, estado: 'Finalizado'})
+        MATCH (equipo:Equipo)-[:PARTICIPA_EN]->(p)
+        WHERE equipo.codigo IN $codigos
+        WITH p, count(DISTINCT equipo) AS cantidad
+        WHERE cantidad = 2
+        SET p.id = p.id
+        WITH p
+        CALL (p) {
+            UNWIND $jugadas AS fila
+            OPTIONAL MATCH (j:Jugador {id: fila.jugador})-[:PERTENECE_A]->(:Equipo {codigo: fila.equipo_id})-[:PARTICIPA_EN]->(p)
+            OPTIONAL MATCH (existente:Evento {id: fila.id})
+            OPTIONAL MATCH (existente)-[:OCURRE_EN]->(de:Partido)
+            OPTIONAL MATCH (autor:Jugador)-[:PROTAGONIZA]->(existente)
+            WITH fila, j, existente, de, autor, p
+            RETURN count(DISTINCT CASE WHEN j IS NOT NULL AND
+                (existente IS NULL OR (de = p AND autor = j AND existente.tipo = fila.tipo
+                AND existente.minuto = fila.minuto AND existente.orden = fila.orden))
+                THEN fila.id ELSE null END) AS validas
+        }
+        WITH p, validas WHERE validas = size($jugadas)
+        SET p.archivo_estadisticas_version = 1
+        WITH p
+        CALL (p) {
+            UNWIND $resumen AS fila
+            MATCH (e:Equipo {codigo: fila.equipo_id})-[:PARTICIPA_EN]->(p)
+            MERGE (p)-[r:RESUMEN_ESTADISTICO]->(e)
+            SET r += fila
+            RETURN count(r) AS resumenes
+        }
+        CALL (p) {
+            UNWIND $muestras AS fila
+            MATCH (e:Equipo {codigo: fila.equipo_id})-[:PARTICIPA_EN]->(p)
+            MERGE (p)-[r:ESTADISTICA_MINUTO {minuto: fila.minuto}]->(e)
+            SET r += fila
+            RETURN count(r) AS puntos
+        }
+        CALL (p) {
+            UNWIND $jugadas AS fila
+            MATCH (j:Jugador {id: fila.jugador})-[:PERTENECE_A]->(:Equipo {codigo: fila.equipo_id})-[:PARTICIPA_EN]->(p)
+            MERGE (ev:Evento {id: fila.id})
+            ON CREATE SET ev.tipo = fila.tipo, ev.minuto = fila.minuto, ev.orden = fila.orden
+            MERGE (ev)-[:OCURRE_EN]->(p)
+            MERGE (j)-[:PROTAGONIZA]->(ev)
+            RETURN count(DISTINCT ev) AS eventos
+        }
+        CALL (p) {
+            UNWIND $enlaces AS enlace
+            MATCH (anterior:Evento {id: enlace.anterior})-[:OCURRE_EN]->(p)
+            MATCH (siguiente:Evento {id: enlace.siguiente})-[:OCURRE_EN]->(p)
+            MERGE (anterior)-[r:INFLUYE_EN]->(siguiente)
+            RETURN count(r) AS relaciones
+        }
+        RETURN resumenes, puntos, eventos, relaciones
+        """
+        enlaces = [{"anterior": previa, "siguiente": j["id"]} for j in jugadas for previa in j.get("influido_por", [])]
+        with operacion(FUENTE, "archivar_estadisticas", _traducir):
+            filas = self._escribir(cypher, partido=partido_id, codigos=[r["equipo_id"] for r in resumen], resumen=resumen, muestras=muestras, jugadas=jugadas, enlaces=enlaces)
+            if not filas or filas[0]["resumenes"] != len(resumen) or filas[0]["puntos"] != len(muestras) or filas[0]["eventos"] != len(jugadas) or filas[0]["relaciones"] != len(enlaces):
+                from app.errors import Conflicto
+                raise Conflicto("No se pudo archivar: revisá los equipos, jugadores y conflictos de IDs en Neo4j.")
+
+    def leer_estadisticas_archivadas(self, partido_id: str) -> dict | None:
+        cypher = """
+        MATCH (p:Partido {id: $partido})-[r:RESUMEN_ESTADISTICO]->(e:Equipo)
+        WITH p, collect(properties(r)) AS equipos
+        OPTIONAL MATCH (p)-[m:ESTADISTICA_MINUTO]->(equipo:Equipo)
+        WITH equipos, m ORDER BY m.minuto, m.equipo_id
+        RETURN equipos, collect(properties(m)) AS muestras
+        """
+        with operacion(FUENTE, "leer_estadisticas_archivadas", _traducir):
+            filas = self._leer(cypher, partido=partido_id)
+            return filas[0] if filas else None
+
     def preparar_consultas(self) -> int:
         """Hace que Neo4j planifique todas las consultas de la API sin ejecutarlas (EXPLAIN).
 

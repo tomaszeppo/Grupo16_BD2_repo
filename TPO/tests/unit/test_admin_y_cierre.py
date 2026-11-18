@@ -255,3 +255,11 @@ def test_dos_partidos_acumulan(cliente, reloj):
         cerrar(cliente, partido, gl, gv)
     fila = cliente.get("/ranking").json()["ranking"][0]
     assert (fila["puntos"], fila["exactos"]) == (4, 1)
+
+
+def test_acceso_valida_clave_antes_de_abrir_panel(cliente):
+    assert cliente.get("/administracion/acceso").status_code == 401
+    assert cliente.get("/administracion/acceso", headers={"X-Admin-Clave": "incorrecta"}).status_code == 401
+    respuesta = cliente.get("/administracion/acceso", headers=ADMIN)
+    assert respuesta.status_code == 200
+    assert respuesta.json() == {"autorizado": True}

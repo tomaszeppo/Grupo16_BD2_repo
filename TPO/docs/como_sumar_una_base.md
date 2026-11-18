@@ -72,32 +72,17 @@ Por qué vale la pena está medido: con 100.000 usuarios, saber el puesto de uno
 
 Hoy cada proceso de la API guarda su copia del calendario ([`app/services/calendario.py`](../app/services/calendario.py)) y un cambio tarda hasta 30 segundos en llegar a todos. Con la copia en Redis sería una sola para todos los procesos. Los servicios usan dos métodos, `partido(id)` y `listar(fase, fecha, estado)`, más `invalidar()`; una clase con esos métodos puede reemplazarla en `get_calendario`.
 
-## InfluxDB: series de lo que pasa en el partido
+## InfluxDB: series de la simulación
 
-El punto de enganche es [`app/puertos/eventos.py`](../app/puertos/eventos.py):
+El TPO ya incluye InfluxDB 3. [`app/adapters/influx.py`](../app/adapters/influx.py) escribe muestras sintéticas por equipo y minuto; la ruta de estadísticas consulta los agregados durante el vivo. Al terminar, el servicio cruza las muestras con el guion de MongoDB y archiva los resultados y jugadas en Neo4j. Ver [README](../README.md#estadísticas-de-la-simulación-influxdb) y [modelo de datos](modelo_de_datos.md#histórico-de-simulaciones).
 
-```python
-class PublicadorEventos(Protocol):
-    def publicar(self, partido_id: str, evento: dict) -> None: ...
-```
-
-La API llama a `publicar` cada vez que se carga una jugada nueva, después de guardarla en Neo4j. El `evento` trae `id`, `tipo`, `minuto`, `orden`, `jugador` e `influido_por`.
-
-1. Escribir una clase que transforme la jugada en un punto de la serie y lo escriba en InfluxDB.
-2. En `deps.py`, hacer que `get_publicador_eventos` la devuelva.
-
-Si `publicar` falla, la jugada queda guardada igual y el error se anota en el registro. InfluxDB es una vista derivada: Neo4j manda sobre las jugadas. Para mostrar las series hace falta además un endpoint propio, con su servicio y su ruta.
+El puerto [`app/puertos/eventos.py`](../app/puertos/eventos.py) para publicar jugadas registradas manualmente sigue sin implementación InfluxDB: no confundirlo con el flujo de simulación. Si falla una muestra no hay reintento automático; se marca el histórico incompleto.
 
 ## Cassandra: comentarios
 
-No hay un puerto, porque los comentarios son una parte nueva y no reemplazan nada.
+El TPO ya incluye Cassandra y su esquema en [`cassandra/esquema.cql`](../cassandra/esquema.cql). Las rutas y la conexión están en [`app/routes/simulaciones.py`](../app/routes/simulaciones.py): `GET /partidos/{id}/comentarios/recientes?pais=ARG` y `POST /partidos/{id}/comentarios`. El POST comprueba el estado en Neo4j y usa el usuario de laboratorio y su país. La tabla particiona por partido, país y ventana de 30 minutos.
 
-1. Adaptador `app/adapters/cassandra.py`, servicio `app/services/comentarios.py` y rutas `app/routes/comentarios.py`. Registrar las rutas en `app/main.py`.
-2. Para saber si un partido admite comentarios, usar la copia del calendario (`get_calendario`): tiene el estado, el horario y el momento real de inicio de cada partido, y no consulta a Neo4j en cada comentario.
-3. El usuario sale de `usuario_actual`, igual que en los pronósticos.
-4. En la interfaz ya hay un bloque reservado: en [`ui/app.js`](../ui/app.js), la función `vistaPartido` dibuja "Comentarios: se conectan con Cassandra". Ahí va la lista y el formulario.
-
-El endpoint que planteamos en la documentación del grupo es `GET /partidos/{id}/comentarios/recientes?pais=ARG`.
+Pendientes: separar adaptador, servicio y rutas; definir idempotencia de publicación, retención e historial; e incluir Cassandra en el estado de salud. El TPO no implementa la tabla auxiliar de idempotencia del Hito 10.
 
 ## Prometheus y Grafana
 

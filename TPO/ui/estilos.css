@@ -166,3 +166,17 @@ tr.yo td { background: var(--amarilla-fondo); font-weight: 700; }
   .tablero .equipo { font-size: 1.25rem; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* Comparación de estadísticas del partido */
+#estadisticas { margin-bottom: 22px; }
+.estadistica-equipos, .estadistica-valores { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 1.4fr) minmax(0, 1fr); gap: 12px; align-items: center; }
+.estadistica-equipos { padding: 3px 0 14px; border-bottom: 1px solid var(--linea); }
+.estadistica-equipos span, .estadistica-valores span { text-align: center; color: var(--apagado); font-size: .82rem; }
+.estadistica-equipos strong:last-child, .estadistica-valores strong:last-child { text-align: right; }
+.estadistica-equipos strong { overflow-wrap: anywhere; }
+.estadistica-fila { padding: 12px 0; border-bottom: 1px solid var(--linea); }
+.estadistica-valores strong { font-variant-numeric: tabular-nums; }
+.estadistica-barra { display: flex; height: 5px; border-radius: 4px; background: #8aa8c3; overflow: hidden; margin-top: 8px; }
+.estadistica-barra span { display: block; height: 100%; background: var(--cesped); }
+.estadistica-nota { margin-top: 16px; }
+@media (max-width: 500px) { .estadistica-equipos, .estadistica-valores { grid-template-columns: minmax(0, 1fr) minmax(96px, 1.2fr) minmax(0, 1fr); gap: 6px; } }

@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     neo4j_password: str = ""
     neo4j_db: str = "neo4j"
 
+    influx_url: str = "http://influxdb:8181"
+    influx_db: str = "fixture2030_metrics"
+    influx_token: str = ""
+
     calendario_ttl_segundos: float = 30.0  # 0 = consultar Neo4j en cada pronóstico (solo para comparar en las pruebas)
     prode_max_integrantes: int = 100
     admin_clave: str = ""  # vacía = administración deshabilitada

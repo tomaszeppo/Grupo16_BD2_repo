@@ -1,0 +1,8 @@
+[
+  {"tipo":"Pase", "minuto":21, "equipo":"local", "dorsal":8},
+  {"tipo":"Tiro", "minuto":22, "equipo":"local", "dorsal":9, "previa":1},
+  {"tipo":"Gol",  "minuto":23, "equipo":"local", "dorsal":9, "previa":2},
+  {"tipo":"Pase", "minuto":73, "equipo":"visitante", "dorsal":8},
+  {"tipo":"Tiro", "minuto":74, "equipo":"visitante", "dorsal":9, "previa":4},
+  {"tipo":"Gol",  "minuto":75, "equipo":"visitante", "dorsal":9, "previa":5}
+]

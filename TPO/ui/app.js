@@ -8,6 +8,7 @@ const sesion = {
   set usuario(u) { u ? sessionStorage.setItem("usuario", JSON.stringify(u)) : sessionStorage.removeItem("usuario"); },
 };
 let claveAdmin = "";      // solo en memoria: se pierde al recargar la página
+let comentariosTimers = [];
 let sondeo = null;        // consulta periódica del avance de la puntuación
 
 // ---------- utilidades ----------
@@ -151,6 +152,56 @@ async function vistaFixture() {
   } catch (e) { lista.innerHTML = cajaDeError(e); }
 }
 
+function iniciarComentarios(id, estadoPartido) {
+  comentariosTimers.forEach(clearInterval); comentariosTimers = [];
+  const caja = document.getElementById("comentarios");
+  const usuario = sesion.usuario, pais = usuario?.pais || "ARG";
+  const formulario = usuario ? `<form id="comentario-form" style="margin-top:16px"><label for="comentario-texto">Tu comentario</label><textarea id="comentario-texto" maxlength="280" rows="3" required placeholder="Sumate a la conversación"></textarea><button class="boton" id="comentario-enviar" ${estadoPartido === "En juego" ? "" : "disabled"}>Enviar comentario</button><p id="comentario-mensaje" role="status"></p></form>` : `<p><a href="#/ingreso">Ingresá</a> para comentar.</p>`;
+  caja.innerHTML = bloque(`Comentarios · ${pais}`, "cassandra", `<p id="comentarios-estado" role="status">Consultando…</p><div id="comentarios-lista" aria-live="polite"></div>${formulario}`);
+  const cola = [], conocidos = new Set(), visibles = [];
+  async function cargar() {
+    try {
+      const datos = await api(`/partidos/${encodeURIComponent(id)}/comentarios/recientes?pais=${encodeURIComponent(pais)}`);
+      if (!caja.isConnected) return;
+      datos.items.slice().reverse().forEach(c => { if (!conocidos.has(c.comentario_id)) { conocidos.add(c.comentario_id); cola.push(c); } });
+      if (cola.length > 40) cola.splice(0, cola.length - 40);
+      if (conocidos.size > 500) { const conservar = Array.from(conocidos).slice(-250); conocidos.clear(); conservar.forEach(id => conocidos.add(id)); }
+      document.getElementById("comentarios-estado").textContent = datos.items.length ? "Actualizado" : "Todavía no hay comentarios.";
+    } catch (e) { const estado = document.getElementById("comentarios-estado"); if (estado) estado.textContent = e.message; }
+  }
+  document.getElementById("comentario-form")?.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const texto = document.getElementById("comentario-texto"), boton = document.getElementById("comentario-enviar"), mensaje = document.getElementById("comentario-mensaje");
+    const contenido = texto.value.trim(); if (!contenido) { mensaje.textContent = "Escribí un comentario."; return; }
+    boton.disabled = true; boton.dataset.enviando = "si"; mensaje.textContent = "Enviando…";
+    try {
+      const comentario = await api(`/partidos/${encodeURIComponent(id)}/comentarios`, {metodo:"POST", cuerpo:{contenido}});
+      if (!caja.isConnected) return;
+      conocidos.add(comentario.comentario_id); cola.unshift(comentario); texto.value = ""; mensaje.textContent = "Comentario enviado.";
+    } catch (e) { if (caja.isConnected) mensaje.textContent = e.message; }
+    finally { if (boton.isConnected) { boton.dataset.enviando = "no"; boton.disabled = boton.dataset.cerrado === "si"; } }
+  });
+  cargar(); comentariosTimers.push(setInterval(cargar, 8000));
+  comentariosTimers.push(setInterval(() => {
+    const c = cola.shift(), lista = document.getElementById("comentarios-lista");
+    if (!c || !lista) return; visibles.push(c); if (visibles.length > 20) visibles.shift();
+    lista.innerHTML = visibles.map(v => `<p><strong>${esc(v.usuario_nombre)}:</strong> ${esc(v.contenido)}</p>`).join("");
+  }, 500));
+}
+
+async function vistaEnVivo() {
+  contenido.innerHTML = `<div class="titulo"><div><h1>Partidos en vivo</h1><p>Seguí las simulaciones en curso y los comentarios de Argentina.</p></div>${base("mongodb")}</div><div id="lista-vivo" class="partidos"><p class="vacio">Cargando…</p></div>`;
+  const lista = document.getElementById("lista-vivo");
+  async function actualizar() {
+    try {
+      const d = await api("/en-vivo/partidos");
+      if (!lista.isConnected) return;
+      lista.innerHTML = d.partidos.map(d => { const p=d.partido, m=d.marcador || {}; return `<a class="partido en-juego" href="#/partido/${esc(p.id)}"><div class="arriba"><span>${esc(p.id)}</span><span class="estado en-juego">En juego · ${esc(d.minuto ?? 0)}′</span></div><div class="cruce"><span>${nombreEquipo(p.local)}</span><b>${esc(m.local ?? 0)} - ${esc(m.visitante ?? 0)}</b><span>${nombreEquipo(p.visitante)}</span></div></a>`; }).join("") || `<p class="vacio">No hay partidos en juego. Iniciá una simulación desde Administración.</p>`;
+    } catch (e) { if (lista.isConnected) lista.innerHTML = cajaDeError(e); }
+  }
+  actualizar(); comentariosTimers.push(setInterval(actualizar, 3000));
+}
+
 // ---------- partido ----------
 async function vistaPartido(id) {
   contenido.innerHTML = `<p class="vacio">Cargando el partido…</p>`;
@@ -164,14 +215,59 @@ async function vistaPartido(id) {
       <div class="meta"><span>${esc(partido.id)} · ${esc(partido.fase)} · ${esc(fecha(partido.fecha_hora))}</span><span>${esc(partido.estadio.nombre)}, ${esc(partido.estadio.ciudad)} ${base("neo4j")}</span></div>
       <div class="equipos">
         <div class="equipo">${nombreEquipo(partido.local)}<small>local</small></div>
-        <div class="goles">${esc(marcador(partido))}</div>
+        <div class="goles" id="marcador-vivo">${esc(marcador(partido))}</div>
         <div class="equipo">${nombreEquipo(partido.visitante)}<small>visitante</small></div>
       </div>
-      <div class="meta"><span class="estado">${esc(partido.estado)}</span><span>${partido.inicio_real ? "Empezó " + esc(fecha(partido.inicio_real)) : ""}</span></div>
+      <div class="meta"><span class="estado" id="estado-vivo">${esc(partido.estado)}</span><span>${partido.inicio_real ? "Empezó " + esc(fecha(partido.inicio_real)) : ""}</span></div>
     </section>
-    <div class="columnas"><div class="pila"><div id="pronostico"></div><div id="comentarios"></div></div><div class="pila"><div id="jugadas"></div></div></div>`;
+    <div id="estadisticas"></div><div class="columnas"><div id="pronostico"></div><div id="jugadas"></div></div><div id="comentarios" style="margin-top:22px"></div>`;
 
-  document.getElementById("comentarios").innerHTML = `<section class="bloque apagado"><header><h2>Comentarios</h2><span class="base otra">Cassandra</span></header><p>Comentarios: se conectan con Cassandra.</p></section>`;
+  iniciarComentarios(id, partido.estado);
+  const estadisticas = document.getElementById("estadisticas");
+  estadisticas.innerHTML = bloque("Estadísticas", "influxdb", "<p>Consultando estadísticas…</p>");
+  async function actualizarEstadisticas() {
+    try {
+      const d = await api(`/partidos/${encodeURIComponent(id)}/estadisticas`);
+      if (!estadisticas.isConnected) return;
+      const porCodigo = Object.fromEntries(d.equipos.map(e => [e.equipo_id, e]));
+      const local = porCodigo[partido.local?.codigo], visitante = porCodigo[partido.visitante?.codigo];
+      if (!local || !visitante) { estadisticas.innerHTML = bloque("Estadísticas", "influxdb", "<p>Aún no hay estadísticas disponibles.</p>"); return; }
+      const detalleCompleto = (e) => e.muestras != null && e.muestras_detalladas === e.muestras;
+      const tienenDetalle = detalleCompleto(local) && detalleCompleto(visitante);
+      const entero = (v) => v == null ? "—" : String(v);
+      const porcentaje = (v) => v == null ? "—" : `${Number(v).toFixed(1)} %`;
+      const fila = (nombre, a, b, textoA = entero(a), textoB = entero(b)) => {
+        const total = Number(a) + Number(b), disponible = a != null && b != null;
+        const proporción = disponible && total > 0 ? Math.max(0, Math.min(100, 100 * Number(a) / total)) : 50;
+        return `<div class="estadistica-fila"><div class="estadistica-valores"><strong>${esc(textoA)}</strong><span>${esc(nombre)}</span><strong>${esc(textoB)}</strong></div>${disponible ? `<div class="estadistica-barra" aria-hidden="true"><span style="width:${proporción}%"></span></div>` : ""}</div>`;
+      };
+      const precision = (e) => e.pases_intentados > 0 ? 100 * e.pases_completados / e.pases_intentados : null;
+      const pl = tienenDetalle ? precision(local) : null, pv = tienenDetalle ? precision(visitante) : null;
+      const detalle = (e, clave) => tienenDetalle ? e[clave] : null;
+      const contenido = `<div class="estadistica-equipos"><strong>${nombreEquipo(partido.local)}</strong><span>Comparación</span><strong>${nombreEquipo(partido.visitante)}</strong></div>` +
+        fila("Posesión promedio", local.posesion_pct, visitante.posesion_pct, porcentaje(local.posesion_pct), porcentaje(visitante.posesion_pct)) +
+        fila("Tiros", local.tiros, visitante.tiros) +
+        fila("Tiros al arco", detalle(local, "tiros_arco"), detalle(visitante, "tiros_arco")) +
+        fila("Pases acertados", local.pases_completados, visitante.pases_completados) +
+        fila("Precisión de pases", pl, pv, porcentaje(pl), porcentaje(pv)) +
+        fila("Faltas", detalle(local, "faltas"), detalle(visitante, "faltas")) +
+        fila("Córners", detalle(local, "corners"), detalle(visitante, "corners")) +
+        `<p class="nota estadistica-nota">${d.incompletas ? "Faltan algunas muestras por una falla de InfluxDB. " : ""}${!tienenDetalle ? "Algunas métricas no están disponibles para esta simulación anterior. " : ""}Datos simulados por minuto. Posesión promediada; acciones acumuladas.</p>`;
+      estadisticas.innerHTML = bloque("Estadísticas", d.fuente, contenido);
+    } catch (e) { if (estadisticas.isConnected) estadisticas.innerHTML = bloque("Estadísticas", "influxdb", e.estado === 404 ? "<p>Las estadísticas aparecerán durante la simulación.</p>" : cajaDeError(e)); }
+  }
+  actualizarEstadisticas(); comentariosTimers.push(setInterval(actualizarEstadisticas, 5000));
+  const marcadorVivo = document.getElementById("marcador-vivo");
+  let jugadasArchivadas = false;
+  async function actualizarVivo() {
+    try { const d=await api(`/en-vivo/partidos/${encodeURIComponent(id)}`); if (!marcadorVivo.isConnected) return;
+      marcadorVivo.textContent = `${d.marcador?.local ?? 0} - ${d.marcador?.visitante ?? 0}`;
+      const estado=document.getElementById("estado-vivo"); if (estado) estado.textContent = `${d.estado} · ${d.minuto ?? 0}′`;
+      if (d.archivo_estado === "completo" && !jugadasArchivadas) { jugadasArchivadas = true; dibujarJugadas(partido); }
+      const boton=document.getElementById("comentario-enviar"); if (boton) { boton.dataset.cerrado = d.estado === "En juego" ? "no" : "si"; boton.disabled = boton.dataset.cerrado === "si" || boton.dataset.enviando === "si"; }
+    } catch (e) { if (e.estado !== 404 && marcadorVivo.isConnected) avisar(e.message, true); }
+  }
+  actualizarVivo(); comentariosTimers.push(setInterval(actualizarVivo, 3000));
   dibujarPronostico(partido);
   dibujarJugadas(partido);
 }
@@ -300,12 +396,20 @@ const TIPOS = ["Pase", "Tiro", "Gol", "Falta", "Tarjeta amarilla", "Tarjeta roja
 async function vistaAdmin() {
   if (!claveAdmin) {
     contenido.innerHTML = `<div class="titulo"><div><h1>Administración</h1><p>Para operar un partido hace falta la clave de administración (ADMIN_CLAVE del archivo .env). Se guarda solo mientras esta página esté abierta.</p></div></div>
-      <section class="bloque" style="max-width:520px"><form id="clave-form"><div><label for="clave">Clave de administración</label><input id="clave" type="password" required autocomplete="off"></div><button class="boton">Entrar a administración</button></form></section>`;
-    document.getElementById("clave-form").addEventListener("submit", (ev) => { ev.preventDefault(); claveAdmin = document.getElementById("clave").value; vistaAdmin(); });
+      <section class="bloque" style="max-width:520px"><form id="clave-form"><div><label for="clave">Clave de administración</label><input id="clave" type="password" required autocomplete="off"></div><button class="boton">Entrar a administración</button><div id="clave-error" role="alert"></div></form></section>`;
+    document.getElementById("clave-form").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const form = ev.currentTarget, error = document.getElementById("clave-error");
+      const boton = form.querySelector("button"); boton.disabled = true;
+      claveAdmin = document.getElementById("clave").value;
+      try { await api("/administracion/acceso", {admin: true}); vistaAdmin(); }
+      catch (e) { claveAdmin = ""; if (form.isConnected) { error.innerHTML = cajaDeError(e); boton.disabled = false; } }
+    });
     return;
   }
   contenido.innerHTML = `<div class="titulo"><div><h1>Administración</h1><p>Operá un partido: ponerlo en juego cierra los pronósticos, las jugadas van al grafo y el cierre dispara la puntuación.</p></div></div>
     <section class="bloque" style="margin-bottom:22px"><div class="fila"><div><label for="apartido">Partido</label><select id="apartido"><option>Cargando…</option></select></div><button class="boton secundario" id="ver">Ver en el fixture</button></div><div id="admin-error"></div></section>
+    <section class="bloque" style="margin-bottom:22px"><header><h2>Simulaciones</h2></header><p>El partido seleccionado se simula en 90 segundos y genera comentarios por región.</p><button class="boton" id="simular">Iniciar simulación</button><p id="simulacion-estado" role="status"></p><button class="boton secundario" id="archivar-simulacion" type="button" hidden>Reintentar archivo histórico</button></section>
     <div id="operacion"></div>`;
   let partidos = [];
   try { partidos = (await api("/partidos")).partidos; }
@@ -316,6 +420,34 @@ async function vistaAdmin() {
   const guardado = sessionStorage.getItem("admin-partido");
   if (guardado && pendientes.some((p) => p.id === guardado)) selector.value = guardado;
   selector.addEventListener("change", () => { sessionStorage.setItem("admin-partido", selector.value); operar(selector.value); });
+  document.getElementById("simular").addEventListener("click", async () => {
+    const estado = document.getElementById("simulacion-estado");
+    const id = selector.value;
+    const boton = document.getElementById("simular"); const archivar = document.getElementById("archivar-simulacion"); archivar.hidden = true; boton.disabled = true;
+    try {
+      await api(`/administracion/simulaciones/${id}`, {metodo:"POST", admin:true});
+      estado.textContent = "Iniciando simulación…";
+      const consultar = async () => {
+        try {
+          const d = await api(`/administracion/simulaciones/${id}`, {admin:true});
+          if (!estado.isConnected) { clearInterval(reloj); return; }
+          estado.textContent = d.estado_simulacion === "fallida" ? "La simulación falló. Revisá los registros de la API." :
+            d.estado_simulacion === "completa" ? (d.archivo_estado === "completo" ? "Simulación finalizada e histórico guardado en Neo4j." : "Partido finalizado; archivo histórico pendiente.") : `Simulación en curso · minuto ${d.minuto ?? 0}`;
+          if (d.estado_simulacion === "completa" && d.archivo_estado !== "completo") {
+            archivar.hidden = false;
+            archivar.onclick = async () => {
+              archivar.disabled = true;
+              try { await api(`/administracion/simulaciones/${id}/archivar`, {metodo:"POST", admin:true}); estado.textContent = "Histórico guardado en Neo4j."; archivar.hidden = true; }
+              catch (e) { estado.textContent = e.message; }
+              finally { archivar.disabled = false; }
+            };
+          }
+          if (["fallida", "completa"].includes(d.estado_simulacion)) { clearInterval(reloj); boton.disabled = false; }
+        } catch (e) { clearInterval(reloj); if (estado.isConnected) { estado.textContent = e.message; boton.disabled = false; } }
+      };
+      const reloj = setInterval(consultar, 2000); consultar();
+    } catch (e) { if (e.estado === 401) { claveAdmin = ""; vistaAdmin(); avisar("La clave de administración no es correcta.", true); } else { estado.textContent = e.message; boton.disabled = false; } }
+  });
   document.getElementById("ver").addEventListener("click", () => { location.hash = `#/partido/${selector.value}`; });
   if (selector.value) operar(selector.value);
 }
@@ -406,9 +538,10 @@ async function operar(id) {
 }
 
 // ---------- navegación ----------
-const RUTAS = { ingreso: vistaIngreso, fixture: vistaFixture, ranking: vistaRanking, prodes: vistaProdes, admin: vistaAdmin };
+const RUTAS = { ingreso: vistaIngreso, fixture: vistaFixture, "en-vivo": vistaEnVivo, ranking: vistaRanking, prodes: vistaProdes, admin: vistaAdmin };
 
 function navegar() {
+  comentariosTimers.forEach(clearInterval); comentariosTimers = [];
   clearInterval(sondeo);
   const [, seccion = "", parametro] = location.hash.split("/");
   document.querySelectorAll("#menu a").forEach((a) => {

@@ -108,3 +108,14 @@ Todas las consultas están como constantes en [`app/adapters/neo4j.py`](../app/a
 ## Datos de laboratorio
 
 Los genera [`seed/datos.py`](../seed/datos.py) con semilla fija: 48 equipos en 12 grupos, 26 jugadores por equipo, 16 estadios y 104 partidos (72 de grupos con sus equipos y 32 de eliminatorias sin equipos, enlazados en el cuadro). Los dos primeros partidos nacen jugados, con sus jugadas y su marcador, para tener cadenas que recorrer desde el arranque.
+
+
+## Histórico de simulaciones
+
+MongoDB conserva `guiones_simulacion`, un documento por partido con el equipo, el jugador, el minuto y los identificadores y relaciones de las jugadas previstas; la simulación copia ese guion en su ficha. InfluxDB conserva las muestras por equipo y minuto. Al cerrar, el servicio cruza las jugadas del guion con los goles y contadores de las muestras, valida el marcador y guarda en Neo4j:
+
+- `(:Partido)-[:ESTADISTICA_MINUTO]->(:Equipo)`, una relación por equipo y minuto.
+- `(:Partido)-[:RESUMEN_ESTADISTICO]->(:Equipo)`, una relación con los agregados de cada equipo.
+- `(:Evento)-[:OCURRE_EN]->(:Partido)`, `(:Jugador)-[:PROTAGONIZA]->(:Evento)` y `(:Evento)-[:INFLUYE_EN]->(:Evento)` para las jugadas del guion.
+
+Las jugadas son hechos sintéticos definidos por el guion; no se inventa un jugador para cada pase o tiro agregado. Las acciones estadísticas adicionales permanecen como contadores. El archivado se puede repetir y rechaza muestras incompletas, goles contradictorios, jugadores inexistentes y conflictos de IDs.

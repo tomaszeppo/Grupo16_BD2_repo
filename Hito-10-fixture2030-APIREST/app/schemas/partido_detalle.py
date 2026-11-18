@@ -20,9 +20,18 @@ class PartidoDetalle(BaseModel):
     sede: str
     estado: EstadoPartido
     eventos: list[EventoDetalle]
+    minuto: int | None = None
+    marcador: dict[str, int] | None = None
 
 
 class CambioEstado(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     estado: EstadoPartido
+
+
+class AvanceSimulacion(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    minuto: int = Field(ge=0, le=90)
+    local: int = Field(ge=0, le=99)
+    visitante: int = Field(ge=0, le=99)

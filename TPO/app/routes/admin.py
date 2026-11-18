@@ -9,6 +9,11 @@ from app.services.puntuacion import PuntuacionService
 router = APIRouter(tags=["Administración"], dependencies=[Depends(requiere_admin)])
 
 
+@router.get("/administracion/acceso", summary="Validar clave de administración")
+def validar_acceso() -> dict:
+    return {"autorizado": True}
+
+
 @router.post("/partidos/{partido_id}/estado", summary="Poner un partido en juego")
 def cambiar_estado(partido_id: PartidoId, cuerpo: CambioDeEstado,
                    svc: PartidosAdminService = Depends(get_partidos_admin_service)) -> dict:
