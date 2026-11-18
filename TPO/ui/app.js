@@ -4,10 +4,20 @@
 
 const contenido = document.getElementById("contenido");
 const sesion = {
-  get usuario() { try { return JSON.parse(sessionStorage.getItem("usuario")); } catch { return null; } },
-  set usuario(u) { u ? sessionStorage.setItem("usuario", JSON.stringify(u)) : sessionStorage.removeItem("usuario"); },
+  get usuario() {
+    try {
+      const guardado = localStorage.getItem("usuario") || sessionStorage.getItem("usuario");
+      if (guardado && !localStorage.getItem("usuario")) localStorage.setItem("usuario", guardado);
+      sessionStorage.removeItem("usuario");
+      return JSON.parse(guardado);
+    } catch { return null; }
+  },
+  set usuario(u) {
+    u ? localStorage.setItem("usuario", JSON.stringify(u)) : localStorage.removeItem("usuario");
+    sessionStorage.removeItem("usuario");
+  },
 };
-let claveAdmin = "";      // solo en memoria: se pierde al recargar la página
+let claveAdmin = localStorage.getItem("admin_clave") || "";
 let comentariosTimers = [];
 let sondeo = null;        // consulta periódica del avance de la puntuación
 
@@ -41,6 +51,7 @@ async function api(ruta, { metodo = "GET", cuerpo, admin = false } = {}) {
   }
   const datos = await respuesta.json().catch(() => ({}));
   if (!respuesta.ok) {
+    if (admin && respuesta.status === 401) { claveAdmin = ""; localStorage.removeItem("admin_clave"); dibujarQuien(); }
     const e = datos.error || {};
     const detalle = (e.detalle || []).map((d) => `${d.campo}: ${d.motivo}`).join("; ");
     throw new ErrorDeApi(respuesta.status, e.codigo || "ERROR", [e.mensaje || `La API respondió ${respuesta.status}.`, detalle].filter(Boolean).join(" "));
@@ -77,10 +88,12 @@ async function cargarBloque(titulo, fuenteEsperada, promesa, dibujar) {
 // ---------- cabecera y pie ----------
 function dibujarQuien() {
   const u = sesion.usuario;
+  document.getElementById("menu").hidden = !u && !claveAdmin;
+  document.getElementById("menu-admin").hidden = !claveAdmin;
   document.getElementById("quien").innerHTML = u
     ? `<span><strong>${esc(u.nombre)}</strong> (${esc(u.id)})</span><button class="boton chico secundario" id="salir" style="border-color:#fff;color:#fff">Cambiar de usuario</button>`
-    : `<a href="#/ingreso">Elegir usuario</a>`;
-  document.getElementById("salir")?.addEventListener("click", () => { sesion.usuario = null; location.hash = "#/ingreso"; dibujarQuien(); });
+    : claveAdmin ? `<span>Administración</span><button class="boton chico secundario" id="salir" style="border-color:#fff;color:#fff">Salir</button>` : `<a href="#/ingreso">Elegir usuario</a>`;
+  document.getElementById("salir")?.addEventListener("click", () => { sesion.usuario = null; claveAdmin = ""; localStorage.removeItem("admin_clave"); location.hash = "#/ingreso"; dibujarQuien(); });
 }
 
 async function dibujarSalud() {
@@ -100,21 +113,22 @@ async function dibujarSalud() {
 // ---------- ingreso ----------
 async function vistaIngreso() {
   contenido.innerHTML = `
-    <div class="titulo"><div><h1>¿Quién pronostica?</h1><p>Acceso de laboratorio: no hay contraseñas. La API recibe el identificador del usuario en un encabezado; las sesiones reales llegan con Redis.</p></div></div>
+    <div class="titulo"><div><h1>Entrá al Prode</h1><p>Ingresá con tu identificador o creá una cuenta para seguir los partidos.</p></div></div>
     <div class="columnas">
       <section class="bloque"><header><h2>Usuario nuevo</h2>${base("mongodb")}</header>
         <form id="alta"><div><label for="nombre">Nombre</label><input id="nombre" required maxlength="60" autocomplete="off"></div>
         <div><label for="pais">País</label><select id="pais"><option>Cargando…</option></select></div>
         <button class="boton">Crear usuario y entrar</button><div id="alta-error"></div></form></section>
       <section class="bloque"><header><h2>Usuario existente</h2>${base("mongodb")}</header>
-        <form id="entrar"><div><label for="uid">Identificador</label><input id="uid" placeholder="U0000001" pattern="U[0-9]{7}" required autocomplete="off"></div>
-        <button class="boton secundario">Entrar</button><div id="entrar-error"></div></form></section>
+        <form id="entrar"><div><label for="uid">Identificador</label><input id="uid" placeholder="U0000001" pattern="[Uu][0-9]{7}" required autocomplete="off"></div>
+        <button class="boton secundario">Entrar</button><div id="entrar-error" role="alert"></div></form></section>
+      <section class="bloque"><header><h2>Administración</h2></header><form id="entrar-admin"><div><label for="clave-ingreso">Clave de administración</label><input id="clave-ingreso" type="password" required autocomplete="off"></div><button class="boton secundario">Entrar a administración</button><div id="ingreso-admin-error" role="alert"></div></form></section>
     </div>`;
   api("/equipos").then((d) => {
     document.getElementById("pais").innerHTML = d.equipos.map((e) => `<option value="${esc(e.codigo)}">${esc(e.nombre)}</option>`).join("");
   }).catch((e) => { document.getElementById("alta-error").innerHTML = cajaDeError(e); });
 
-  const entrarCon = (u) => { sesion.usuario = u; dibujarQuien(); location.hash = "#/fixture"; };
+  const entrarCon = (u) => { sesion.usuario = u; dibujarQuien(); location.hash = "#/en-vivo"; };
   document.getElementById("alta").addEventListener("submit", async (ev) => {
     ev.preventDefault();
     try {
@@ -125,8 +139,16 @@ async function vistaIngreso() {
   });
   document.getElementById("entrar").addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    try { entrarCon((await api(`/usuarios/${encodeURIComponent(document.getElementById("uid").value.trim())}`)).usuario); }
-    catch (e) { document.getElementById("entrar-error").innerHTML = cajaDeError(e); }
+    try {
+      const usuario = (await api(`/usuarios/${encodeURIComponent(document.getElementById("uid").value.trim().toUpperCase())}`)).usuario;
+      entrarCon(usuario);
+    } catch (e) { claveAdmin = ""; document.getElementById("entrar-error").innerHTML = cajaDeError(e); }
+  });
+  document.getElementById("entrar-admin").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    claveAdmin = document.getElementById("clave-ingreso").value;
+    try { await api("/administracion/acceso", { admin: true }); localStorage.setItem("admin_clave", claveAdmin); dibujarQuien(); location.hash = "#/en-vivo"; }
+    catch (e) { claveAdmin = ""; document.getElementById("ingreso-admin-error").innerHTML = cajaDeError(e); }
   });
 }
 
@@ -157,12 +179,13 @@ function iniciarComentarios(id, estadoPartido) {
   const caja = document.getElementById("comentarios");
   const usuario = sesion.usuario, pais = usuario?.pais || "ARG";
   const formulario = usuario ? `<form id="comentario-form" style="margin-top:16px"><label for="comentario-texto">Tu comentario</label><textarea id="comentario-texto" maxlength="280" rows="3" required placeholder="Sumate a la conversación"></textarea><button class="boton" id="comentario-enviar" ${estadoPartido === "En juego" ? "" : "disabled"}>Enviar comentario</button><p id="comentario-mensaje" role="status"></p></form>` : `<p><a href="#/ingreso">Ingresá</a> para comentar.</p>`;
-  caja.innerHTML = bloque(`Comentarios · ${pais}`, "cassandra", `<p id="comentarios-estado" role="status">Consultando…</p><div id="comentarios-lista" aria-live="polite"></div>${formulario}`);
+  caja.innerHTML = `<section class="bloque tribuna"><header><div><h2>Comentarios</h2><p class="tribuna-subtitulo">Tribuna · ${esc(pais)}</p></div><span class="tribuna-estado" id="comentarios-estado" role="status">Conectando…</span></header><div id="comentarios-lista" class="comentarios-lista" role="log" aria-label="Comentarios recientes"><p class="vacio">Todavía no hay comentarios.</p></div>${formulario}</section>`;
   const cola = [], conocidos = new Set(), visibles = [];
   async function cargar() {
     try {
       const datos = await api(`/partidos/${encodeURIComponent(id)}/comentarios/recientes?pais=${encodeURIComponent(pais)}`);
       if (!caja.isConnected) return;
+      caja.hidden = estadoPartido !== "En juego" && datos.items.length === 0;
       datos.items.slice().reverse().forEach(c => { if (!conocidos.has(c.comentario_id)) { conocidos.add(c.comentario_id); cola.push(c); } });
       if (cola.length > 40) cola.splice(0, cola.length - 40);
       if (conocidos.size > 500) { const conservar = Array.from(conocidos).slice(-250); conocidos.clear(); conservar.forEach(id => conocidos.add(id)); }
@@ -181,25 +204,96 @@ function iniciarComentarios(id, estadoPartido) {
     } catch (e) { if (caja.isConnected) mensaje.textContent = e.message; }
     finally { if (boton.isConnected) { boton.dataset.enviando = "no"; boton.disabled = boton.dataset.cerrado === "si"; } }
   });
-  cargar(); comentariosTimers.push(setInterval(cargar, 8000));
+  cargar(); if (estadoPartido === "En juego") comentariosTimers.push(setInterval(cargar, 8000));
   comentariosTimers.push(setInterval(() => {
     const c = cola.shift(), lista = document.getElementById("comentarios-lista");
     if (!c || !lista) return; visibles.push(c); if (visibles.length > 20) visibles.shift();
-    lista.innerHTML = visibles.map(v => `<p><strong>${esc(v.usuario_nombre)}:</strong> ${esc(v.contenido)}</p>`).join("");
+    const seguir = lista.scrollHeight - lista.scrollTop - lista.clientHeight < 48;
+    const anterior = lista.scrollTop;
+    lista.innerHTML = visibles.map(v => `<article class="comentario"><span class="comentario-avatar" aria-hidden="true">${esc((v.usuario_nombre || "H").slice(0, 1).toUpperCase())}</span><div><strong>${esc(v.usuario_nombre)}</strong><p>${esc(v.contenido)}</p></div></article>`).join("");
+    lista.scrollTop = seguir ? lista.scrollHeight : anterior;
   }, 500));
 }
 
+function iniciarRelato(id, partido) {
+  const caja = document.getElementById("relato-lista");
+  const estado = document.getElementById("relato-estado");
+  const seccion = caja.closest("section");
+  seccion.hidden = true;
+  const cola = [], vistos = new Set(), nombres = new Map();
+  const equipos = [partido.local, partido.visitante].filter(Boolean);
+  const textoJugada = (j) => {
+    if (j.texto) return j.texto;
+    const nombre = nombres.get(j.jugador_id) || "Un jugador";
+    const equipo = equipos.find(e => e.codigo === j.equipo_id)?.nombre || j.equipo_id;
+    const verbos = {pase: "completa un pase", tiro: "remata al arco", gol: "convierte un gol", falta: "comete una falta", amarilla: "recibe una tarjeta amarilla", roja: "recibe una tarjeta roja", cambio: "participa en un cambio"};
+    // Un tiro registrado no especifica si fue al arco.
+    if (j.categoria === "tiro") return `${nombre} remata para ${equipo}.`;
+    if (j.categoria === "pase" && j.resultado !== "exitoso") return `${nombre} intenta un pase para ${equipo}.`;
+    return `${nombre} ${verbos[j.categoria] || "participa en una jugada"} para ${equipo}.`;
+  };
+  const nombresListos = Promise.allSettled(equipos.map(e => api(`/equipos/${encodeURIComponent(e.codigo)}/jugadores?limit=50`))).then(resultados => {
+    resultados.forEach(r => { if (r.status === "fulfilled") (r.value.jugadores || []).forEach(j => nombres.set(j.id, [j.nombre, j.apellido].filter(Boolean).join(" "))); });
+  });
+  let consultando = false;
+  async function actualizar() {
+    if (consultando || !caja.isConnected) return;
+    consultando = true;
+    try {
+      const datos = await api(`/partidos/${encodeURIComponent(id)}/jugadas/temporales`);
+      if (!caja.isConnected) return;
+      seccion.hidden = datos.jugadas.length === 0 && vistos.size === 0;
+      datos.jugadas.forEach(j => { if (!vistos.has(j.evento_id)) { vistos.add(j.evento_id); cola.push(j); } });
+      if (partido.estado === "Finalizado") { while (cola.length) mostrar(); }
+      estado.textContent = datos.incompletas ? "Actualización incompleta" : "Actualizado";
+    } catch (e) {
+      if (caja.isConnected && e.estado !== 404) { seccion.hidden = false; estado.textContent = "No se pudo actualizar"; }
+    } finally { consultando = false; }
+  }
+  function mostrar() {
+    if (!caja.isConnected || !cola.length) return;
+    const jugada = cola.shift();
+    const vacio = caja.querySelector(".vacio"); if (vacio) vacio.remove();
+    const seguir = caja.scrollHeight - caja.scrollTop - caja.clientHeight < 48;
+    const fila = document.createElement("article"); fila.className = partido.estado === "Finalizado" ? "relato-accion sin-animacion" : "relato-accion";
+    fila.innerHTML = `<span class="relato-minuto">${esc(jugada.minuto)}′</span><div><strong>${esc(textoJugada(jugada))}</strong><span>${esc(jugada.equipo_id)}</span></div>`;
+    caja.appendChild(fila);
+    if (seguir) caja.scrollTop = caja.scrollHeight;
+  }
+  nombresListos.then(() => {
+    if (!caja.isConnected) return;
+    actualizar();
+    if (partido.estado !== "Finalizado") {
+      comentariosTimers.push(setInterval(actualizar, 1000));
+      comentariosTimers.push(setInterval(mostrar, 1000));
+    }
+  });
+}
+
 async function vistaEnVivo() {
-  contenido.innerHTML = `<div class="titulo"><div><h1>Partidos en vivo</h1><p>Seguí las simulaciones en curso y los comentarios de Argentina.</p></div>${base("mongodb")}</div><div id="lista-vivo" class="partidos"><p class="vacio">Cargando…</p></div>`;
+  contenido.innerHTML = `<section class="inicio-vivo"><div class="inicio-vivo-cabecera"><div><h1>Partidos en vivo</h1><p>Seguí el partido, las jugadas y la conversación.</p></div><span class="vivo-indicador"><span></span> En vivo</span></div><div id="lista-vivo" class="partidos inicio-vivo-lista"><p class="vacio">Buscando partidos…</p></div></section><section class="recientes"><div class="recientes-titulo"><div><h2>Últimos partidos</h2><p>Resultados y recorrido de jugadas.</p></div><a href="#/fixture">Ver fixture →</a></div><div id="recientes-lista" class="recientes-grilla"><p class="vacio">Cargando partidos…</p></div><button id="recientes-mas" class="boton secundario" type="button" hidden>Ver más partidos</button></section>`;
   const lista = document.getElementById("lista-vivo");
   async function actualizar() {
     try {
       const d = await api("/en-vivo/partidos");
       if (!lista.isConnected) return;
-      lista.innerHTML = d.partidos.map(d => { const p=d.partido, m=d.marcador || {}; return `<a class="partido en-juego" href="#/partido/${esc(p.id)}"><div class="arriba"><span>${esc(p.id)}</span><span class="estado en-juego">En juego · ${esc(d.minuto ?? 0)}′</span></div><div class="cruce"><span>${nombreEquipo(p.local)}</span><b>${esc(m.local ?? 0)} - ${esc(m.visitante ?? 0)}</b><span>${nombreEquipo(p.visitante)}</span></div></a>`; }).join("") || `<p class="vacio">No hay partidos en juego. Iniciá una simulación desde Administración.</p>`;
+      lista.innerHTML = d.partidos.map(d => { const p=d.partido, m=d.marcador || {}; return `<a class="partido en-juego" href="#/partido/${esc(p.id)}"><div class="arriba"><span>${esc(p.id)}</span><span class="estado en-juego">En juego · ${esc(d.minuto ?? 0)}′</span></div><div class="cruce"><span>${nombreEquipo(p.local)}</span><b>${esc(m.local ?? 0)} - ${esc(m.visitante ?? 0)}</b><span>${nombreEquipo(p.visitante)}</span></div></a>`; }).join("") || `<div class="vivo-vacio"><div class="vivo-vacio-marca" aria-hidden="true"></div><h2>La cancha está tranquila</h2><p>No hay partidos en juego ahora. Cuando empiece uno, aparece acá.</p><a class="boton secundario" href="#/fixture">Ver fixture</a>${claveAdmin ? '<a class="vivo-admin" href="#/admin">Ir a administración</a>' : ''}</div>`;
     } catch (e) { if (lista.isConnected) lista.innerHTML = cajaDeError(e); }
   }
   actualizar(); comentariosTimers.push(setInterval(actualizar, 3000));
+  const recientes = document.getElementById("recientes-lista");
+  const mas = document.getElementById("recientes-mas");
+  try {
+    const datos = await api("/partidos?estado=Finalizado");
+    if (!recientes.isConnected) return;
+    const partidos = datos.partidos.slice().sort((a, b) => new Date(b.fecha_hora) - new Date(a.fecha_hora));
+    let cantidad = 8;
+    const dibujar = () => {
+      recientes.innerHTML = partidos.slice(0, cantidad).map((p, i) => `<a class="reciente ${i % 5 === 0 ? "reciente-destacado" : ""}" href="#/partido/${esc(p.id)}"><span class="reciente-meta">${esc(p.fase)} · ${esc(fecha(p.fecha_hora))}</span><div class="reciente-equipos"><span>${nombreEquipo(p.local)}</span><strong>${esc(marcador(p))}</strong><span>${nombreEquipo(p.visitante)}</span></div><span class="reciente-pie">${esc(p.estadio?.nombre || "Partido finalizado")} <b>Ver partido →</b></span></a>`).join("") || '<p class="vacio">Todavía no hay partidos finalizados.</p>';
+      mas.hidden = cantidad >= partidos.length;
+    };
+    mas.onclick = () => { cantidad += 8; dibujar(); }; dibujar();
+  } catch (e) { if (recientes.isConnected) recientes.innerHTML = cajaDeError(e); }
 }
 
 // ---------- partido ----------
@@ -210,17 +304,17 @@ async function vistaPartido(id) {
   catch (e) { contenido.innerHTML = `<div class="titulo"><h1>Partido ${esc(id)}</h1>${base("neo4j")}</div>${cajaDeError(e)}<p><a href="#/fixture">Volver al fixture</a></p>`; return; }
 
   contenido.innerHTML = `
-    <p class="nota"><a href="#/fixture">← Fixture</a></p>
-    <section class="tablero" style="margin:10px 0 22px">
+    <p class="nota"><a href="#/en-vivo">← Inicio</a></p>
+    <section class="tablero marcador-partido">
       <div class="meta"><span>${esc(partido.id)} · ${esc(partido.fase)} · ${esc(fecha(partido.fecha_hora))}</span><span>${esc(partido.estadio.nombre)}, ${esc(partido.estadio.ciudad)} ${base("neo4j")}</span></div>
       <div class="equipos">
         <div class="equipo">${nombreEquipo(partido.local)}<small>local</small></div>
         <div class="goles" id="marcador-vivo">${esc(marcador(partido))}</div>
         <div class="equipo">${nombreEquipo(partido.visitante)}<small>visitante</small></div>
       </div>
-      <div class="meta"><span class="estado" id="estado-vivo">${esc(partido.estado)}</span><span>${partido.inicio_real ? "Empezó " + esc(fecha(partido.inicio_real)) : ""}</span></div>
+      <div class="meta"><span class="estado marcador-estado" id="estado-vivo">${esc(partido.estado)}</span><span>${partido.inicio_real ? "Empezó " + esc(fecha(partido.inicio_real)) : ""}</span></div>
     </section>
-    <div id="estadisticas"></div><div class="columnas"><div id="pronostico"></div><div id="jugadas"></div></div><div id="comentarios" style="margin-top:22px"></div>`;
+    <div class="partido-en-vivo"><div id="estadisticas"></div><section class="bloque relato" aria-labelledby="relato-titulo"><header><div><h2 id="relato-titulo">Minuto a minuto</h2><p class="relato-subtitulo">Las últimas acciones del partido</p></div><span id="relato-estado" class="relato-estado" role="status">Conectando…</span></header><div id="relato-lista" class="relato-lista" tabindex="0" aria-label="Historial de jugadas" aria-live="polite"><p class="vacio">Esperando la primera jugada.</p></div></section><div id="comentarios"></div><details class="partido-detalles"><summary>Pronóstico y recorrido de jugadas</summary><div class="columnas"><div id="pronostico"></div><div id="jugadas"></div></div></details></div>`;
 
   iniciarComentarios(id, partido.estado);
   const estadisticas = document.getElementById("estadisticas");
@@ -231,7 +325,7 @@ async function vistaPartido(id) {
       if (!estadisticas.isConnected) return;
       const porCodigo = Object.fromEntries(d.equipos.map(e => [e.equipo_id, e]));
       const local = porCodigo[partido.local?.codigo], visitante = porCodigo[partido.visitante?.codigo];
-      if (!local || !visitante) { estadisticas.innerHTML = bloque("Estadísticas", "influxdb", "<p>Aún no hay estadísticas disponibles.</p>"); return; }
+      if (!local || !visitante) { estadisticas.innerHTML = ""; return; }
       const detalleCompleto = (e) => e.muestras != null && e.muestras_detalladas === e.muestras;
       const tienenDetalle = detalleCompleto(local) && detalleCompleto(visitante);
       const entero = (v) => v == null ? "—" : String(v);
@@ -239,29 +333,30 @@ async function vistaPartido(id) {
       const fila = (nombre, a, b, textoA = entero(a), textoB = entero(b)) => {
         const total = Number(a) + Number(b), disponible = a != null && b != null;
         const proporción = disponible && total > 0 ? Math.max(0, Math.min(100, 100 * Number(a) / total)) : 50;
+        if (a == null && b == null) return "";
         return `<div class="estadistica-fila"><div class="estadistica-valores"><strong>${esc(textoA)}</strong><span>${esc(nombre)}</span><strong>${esc(textoB)}</strong></div>${disponible ? `<div class="estadistica-barra" aria-hidden="true"><span style="width:${proporción}%"></span></div>` : ""}</div>`;
       };
       const precision = (e) => e.pases_intentados > 0 ? 100 * e.pases_completados / e.pases_intentados : null;
       const pl = tienenDetalle ? precision(local) : null, pv = tienenDetalle ? precision(visitante) : null;
       const detalle = (e, clave) => tienenDetalle ? e[clave] : null;
       const contenido = `<div class="estadistica-equipos"><strong>${nombreEquipo(partido.local)}</strong><span>Comparación</span><strong>${nombreEquipo(partido.visitante)}</strong></div>` +
-        fila("Posesión promedio", local.posesion_pct, visitante.posesion_pct, porcentaje(local.posesion_pct), porcentaje(visitante.posesion_pct)) +
+        fila("Posesión", local.posesion_pct, visitante.posesion_pct, porcentaje(local.posesion_pct), porcentaje(visitante.posesion_pct)) +
         fila("Tiros", local.tiros, visitante.tiros) +
         fila("Tiros al arco", detalle(local, "tiros_arco"), detalle(visitante, "tiros_arco")) +
         fila("Pases acertados", local.pases_completados, visitante.pases_completados) +
         fila("Precisión de pases", pl, pv, porcentaje(pl), porcentaje(pv)) +
         fila("Faltas", detalle(local, "faltas"), detalle(visitante, "faltas")) +
-        fila("Córners", detalle(local, "corners"), detalle(visitante, "corners")) +
-        `<p class="nota estadistica-nota">${d.incompletas ? "Faltan algunas muestras por una falla de InfluxDB. " : ""}${!tienenDetalle ? "Algunas métricas no están disponibles para esta simulación anterior. " : ""}Datos simulados por minuto. Posesión promediada; acciones acumuladas.</p>`;
+        `<p class="nota estadistica-nota">${d.incompletas ? "Faltan algunas muestras por una falla de InfluxDB. " : ""}${!tienenDetalle ? "Algunas métricas no están disponibles para esta simulación anterior. " : ""}Datos simulados por jugador. Posesión calculada sobre segundos de ambos equipos; acciones acumuladas.</p>`;
       estadisticas.innerHTML = bloque("Estadísticas", d.fuente, contenido);
-    } catch (e) { if (estadisticas.isConnected) estadisticas.innerHTML = bloque("Estadísticas", "influxdb", e.estado === 404 ? "<p>Las estadísticas aparecerán durante la simulación.</p>" : cajaDeError(e)); }
+    } catch (e) { if (estadisticas.isConnected) estadisticas.innerHTML = e.estado === 404 ? "" : bloque("Estadísticas", "influxdb", cajaDeError(e)); }
   }
   actualizarEstadisticas(); comentariosTimers.push(setInterval(actualizarEstadisticas, 5000));
+  iniciarRelato(id, partido);
   const marcadorVivo = document.getElementById("marcador-vivo");
   let jugadasArchivadas = false;
   async function actualizarVivo() {
     try { const d=await api(`/en-vivo/partidos/${encodeURIComponent(id)}`); if (!marcadorVivo.isConnected) return;
-      marcadorVivo.textContent = `${d.marcador?.local ?? 0} - ${d.marcador?.visitante ?? 0}`;
+      marcadorVivo.textContent = `${d.marcador?.local ?? "—"} - ${d.marcador?.visitante ?? "—"}`;
       const estado=document.getElementById("estado-vivo"); if (estado) estado.textContent = `${d.estado} · ${d.minuto ?? 0}′`;
       if (d.archivo_estado === "completo" && !jugadasArchivadas) { jugadasArchivadas = true; dibujarJugadas(partido); }
       const boton=document.getElementById("comentario-enviar"); if (boton) { boton.dataset.cerrado = d.estado === "En juego" ? "no" : "si"; boton.disabled = boton.dataset.cerrado === "si" || boton.dataset.enviando === "si"; }
@@ -317,23 +412,41 @@ async function dibujarPronostico(partido) {
 
 async function dibujarJugadas(partido) {
   const caja = document.getElementById("jugadas");
-  caja.innerHTML = await cargarBloque("Jugadas", "neo4j", api(`/partidos/${partido.id}/eventos`), (d) => {
-    if (!d.eventos.length) return `<p class="vacio">Todavía no hay jugadas cargadas para este partido.</p>`;
-    const clase = (t) => t === "Gol" ? "gol" : t === "Tarjeta roja" ? "roja" : "";
-    return `<p class="nota">Tocá “¿De dónde vino?” para recorrer en el grafo las jugadas que llevaron a esa.</p>
-      <ul class="jugadas">${d.eventos.map((e) => `<li><span class="min">${e.minuto}'</span>
-        <span><span class="tipo ${clase(e.tipo)}">${esc(e.tipo)}</span><small>${e.jugador ? esc(e.jugador.nombre + " " + e.jugador.apellido) + " (" + esc(e.jugador.equipo) + ")" : ""}</small></span>
-        <button class="boton chico secundario" data-cadena="${esc(e.id)}">¿De dónde vino?</button></li>`).join("")}</ul><div id="cadena"></div>`;
-  });
-  caja.querySelectorAll("[data-cadena]").forEach((b) => b.addEventListener("click", async () => {
-    const destino = document.getElementById("cadena");
-    try {
-      const d = await api(`/partidos/${partido.id}/eventos/${encodeURIComponent(b.dataset.cadena)}/cadena`);
-      destino.innerHTML = d.cadena.length === 1
-        ? `<p class="nota" style="margin-top:12px">Esta jugada no tiene otras que la hayan provocado.</p>`
-        : `<div class="cadena" aria-label="Cadena de jugadas">${d.cadena.map((e) => `<div>${esc(e.tipo)} ${e.minuto}'<small>${e.jugador ? esc(e.jugador.apellido) : ""}</small></div>`).join("")}</div>`;
-    } catch (e) { destino.innerHTML = cajaDeError(e); }
-  }));
+  try {
+    const d = await api(`/partidos/${encodeURIComponent(partido.id)}/eventos`);
+    if (!caja.isConnected) return;
+    if (!d.eventos.length) { caja.innerHTML = ""; return; }
+    const eventos = d.eventos, porId = new Map(eventos.map(e => [e.id, e]));
+    const etiqueta = e => `${e.minuto}′ · ${e.tipo}${e.jugador ? " · " + [e.jugador.nombre, e.jugador.apellido].filter(Boolean).join(" ") : ""}`;
+    caja.innerHTML = bloque("Recorrido de jugadas", "neo4j", `<p class="nota">Explorá cómo se conectan las acciones del partido.</p><details class="buscador-hilo"><summary>Buscar otra jugada</summary><label class="busqueda-jugadas" for="buscar-jugadas">Jugador, equipo, minuto o acción</label><input id="buscar-jugadas" type="search" placeholder="Ej.: gol, 23 o Suárez"><div class="jugadas-resultados" role="group" aria-label="Jugadas encontradas"></div></details><div id="cadena" class="recorrido" aria-live="polite"></div>`);
+    const resultados = caja.querySelector('.jugadas-resultados'), destino = caja.querySelector('#cadena');
+    let seleccionado = eventos[0].id;
+    function seleccionar(id) {
+      const e = porId.get(id); if (!e) return;
+      seleccionado = id;
+      const conectados = new Set([id]), pendientes = [id];
+      while (pendientes.length) {
+        const actual = pendientes.shift(), accion = porId.get(actual);
+        const vecinos = [...(accion?.influido_por || []), ...eventos.filter(x => (x.influido_por || []).includes(actual)).map(x => x.id)];
+        vecinos.forEach(v => { if (porId.has(v) && !conectados.has(v)) { conectados.add(v); pendientes.push(v); } });
+      }
+      const hilo = eventos.filter(x => conectados.has(x.id));
+      destino.innerHTML = `<div class="hilo-encabezado"><h3>Secuencia de acciones</h3><span>${hilo.length} ${hilo.length === 1 ? 'jugada' : 'jugadas'}</span></div><p class="nota">Tocá una acción para destacarla. Las relaciones indicadas son las registradas en el grafo.</p><ol class="hilo-secuencia">${hilo.map(x => {
+        const anteriores = (x.influido_por || []).map(v => porId.get(v)).filter(Boolean);
+        const nombre = x.jugador ? [x.jugador.nombre, x.jugador.apellido].filter(Boolean).join(' ') : 'Jugador no registrado';
+        return `<li><button type="button" class="hilo-paso ${x.id === id ? 'actual' : ''}" data-ir="${esc(x.id)}" aria-pressed="${x.id === id}"><span class="hilo-tiempo">${esc(x.minuto)}′</span><span class="hilo-cuerpo"><strong>${esc(x.tipo)}</strong><span>${esc(nombre)}${x.jugador?.equipo ? ' · ' + esc(x.jugador.equipo) : ''}</span>${anteriores.length ? `<small>Viene de ${anteriores.map(v => esc(v.tipo) + ' ' + esc(v.minuto) + '′').join(' y ')}</small>` : '<small>Inicio de esta secuencia</small>'}</span></button></li>`;
+      }).join('')}</ol>${hilo.length === 1 ? '<p class="nota">Esta acción no tiene conexiones registradas.</p>' : ''}`;
+      destino.querySelectorAll('[data-ir]').forEach(btn => btn.addEventListener('click', () => seleccionar(btn.dataset.ir)));
+      resultados.querySelectorAll('[data-elegir]').forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.elegir === id)));
+    }
+    function filtrar() {
+      const texto = caja.querySelector('#buscar-jugadas').value.trim().toLocaleLowerCase('es');
+      const encontrados = eventos.filter(e => `${etiqueta(e)} ${e.jugador?.equipo || ''}`.toLocaleLowerCase('es').includes(texto));
+      resultados.innerHTML = encontrados.map(e => `<button type="button" data-elegir="${esc(e.id)}" aria-pressed="${e.id === seleccionado}">${esc(etiqueta(e))}</button>`).join('') || '<p class="nota">No encontramos jugadas con esa búsqueda.</p>';
+      resultados.querySelectorAll('[data-elegir]').forEach(btn => btn.addEventListener('click', () => (seleccionar(btn.dataset.elegir), caja.querySelector('.buscador-hilo').open = false)));
+    }
+    caja.querySelector('#buscar-jugadas').addEventListener('input', filtrar); filtrar(); seleccionar(seleccionado);
+  } catch (e) { if (caja.isConnected) caja.innerHTML = bloque("Jugadas", "neo4j", cajaDeError(e)); }
 }
 
 // ---------- ranking ----------
@@ -395,14 +508,14 @@ const TIPOS = ["Pase", "Tiro", "Gol", "Falta", "Tarjeta amarilla", "Tarjeta roja
 
 async function vistaAdmin() {
   if (!claveAdmin) {
-    contenido.innerHTML = `<div class="titulo"><div><h1>Administración</h1><p>Para operar un partido hace falta la clave de administración (ADMIN_CLAVE del archivo .env). Se guarda solo mientras esta página esté abierta.</p></div></div>
+    contenido.innerHTML = `<div class="titulo"><div><h1>Administración</h1><p>Para operar un partido hace falta la clave de administración (ADMIN_CLAVE del archivo .env). Se guarda en este navegador hasta que salgas.</p></div></div>
       <section class="bloque" style="max-width:520px"><form id="clave-form"><div><label for="clave">Clave de administración</label><input id="clave" type="password" required autocomplete="off"></div><button class="boton">Entrar a administración</button><div id="clave-error" role="alert"></div></form></section>`;
     document.getElementById("clave-form").addEventListener("submit", async (ev) => {
       ev.preventDefault();
       const form = ev.currentTarget, error = document.getElementById("clave-error");
       const boton = form.querySelector("button"); boton.disabled = true;
       claveAdmin = document.getElementById("clave").value;
-      try { await api("/administracion/acceso", {admin: true}); vistaAdmin(); }
+      try { await api("/administracion/acceso", {admin: true}); localStorage.setItem("admin_clave", claveAdmin); dibujarQuien(); vistaAdmin(); }
       catch (e) { claveAdmin = ""; if (form.isConnected) { error.innerHTML = cajaDeError(e); boton.disabled = false; } }
     });
     return;
@@ -547,9 +660,10 @@ function navegar() {
   document.querySelectorAll("#menu a").forEach((a) => {
     a.getAttribute("href") === `#/${seccion}` ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current");
   });
+  if (!sesion.usuario && !claveAdmin && seccion !== "ingreso") { location.hash = "#/ingreso"; return; }
   if (seccion === "partido" && parametro) vistaPartido(decodeURIComponent(parametro));
   else if (RUTAS[seccion]) RUTAS[seccion]();
-  else { location.hash = sesion.usuario ? "#/fixture" : "#/ingreso"; return; }
+  else { location.hash = sesion.usuario || claveAdmin ? "#/en-vivo" : "#/ingreso"; return; }
   contenido.focus({ preventScroll: true });
   window.scrollTo(0, 0);
   dibujarSalud();

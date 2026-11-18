@@ -126,6 +126,128 @@ class InfluxAdapter:
             if respuesta.status_code not in (200, 204):
                 raise DependenciaNoDisponible(FUENTE)
 
+
+    def guardar_jugadores(self, partido_id, minuto, plantel, jugadas, instante, corrida_id=None):
+        """Una muestra por jugador/minuto; un único lote por minuto."""
+        if not _RE_PARTIDO.fullmatch(partido_id) or not 0 <= minuto <= 90:
+            raise ValidacionError("Partido o minuto inválido.")
+        if instante.tzinfo is None:
+            raise ValidacionError("El instante debe incluir zona horaria.")
+        timestamp = int(instante.timestamp() * 1_000_000_000)
+        if corrida_id is not None and not re.fullmatch(r"[0-9a-f]{32}", corrida_id):
+            raise ValidacionError("Identificador de simulación inválido.")
+        etiqueta = f",corrida_id={corrida_id}" if corrida_id else ""
+        lineas = []
+        for lado, (equipo, jugadores) in enumerate(plantel.items()):
+            if not _RE_EQUIPO.fullmatch(equipo) or not jugadores:
+                raise ValidacionError("Equipo o plantel inválido.")
+            for numero, jugador in enumerate(jugadores):
+                if not re.fullmatch(r"J-[A-Z]{3}-[0-9]{2}", jugador) or not jugador.startswith(f"J-{equipo}-"):
+                    raise ValidacionError("Jugador inválido para el equipo.")
+                propias = [j for j in jugadas if j['minuto'] == minuto and j['jugador'] == jugador]
+                goles = sum(j['tipo'] == 'Gol' for j in propias)
+                tiros = goles + sum(j['tipo'] == 'Tiro' for j in propias)
+                pases = sum(j['tipo'] == 'Pase' for j in propias)
+                faltas = sum(j['tipo'] == 'Falta' for j in propias)
+                # El simulador atribuye exactamente 60 segundos de posesión por minuto.
+                total = (30 + (minuto % 11) - 5) if lado == 0 else (30 - (minuto % 11) + 5)
+                segundos = 0 if minuto == 0 else total // len(jugadores) + int(numero < total % len(jugadores))
+                lineas.append(f"estadisticas_jugador_minuto,partido_id={partido_id},equipo_id={equipo},jugador_id={jugador}{etiqueta} "
+                              f"minuto={minuto}i,pases_intentados={pases}i,pases_completados={pases}i,"
+                              f"tiros={tiros}i,tiros_arco={goles}i,goles={goles}i,faltas={faltas}i,"
+                              f"corners=0i,posesion_segundos={segundos}i {timestamp}")
+        if corrida_id:
+            if minuto == 0:
+                equipo = next(iter(plantel))
+                jugador = plantel[equipo][0]
+                lineas.append(f"jugadas_partido,partido_id={partido_id},equipo_id={equipo},jugador_id={jugador},categoria=inicio,corrida_id={corrida_id} "
+                              f"minuto=0i,orden=0i,evento_id=\"inicio\",resultado=\"registrado\" {timestamp}")
+            categorias = {"Pase": "pase", "Tiro": "tiro", "Gol": "gol", "Falta": "falta", "Tarjeta amarilla": "amarilla", "Tarjeta roja": "roja", "Cambio": "cambio"}
+            for jugada in (j for j in jugadas if j["minuto"] == minuto):
+                equipo, jugador = jugada["equipo_id"], jugada["jugador"]
+                categoria = categorias.get(jugada["tipo"])
+                orden = jugada["orden"]
+                if not categoria or equipo not in plantel or jugador not in plantel[equipo] or not isinstance(orden, int) or not 1 <= orden <= 999999:
+                    raise ValidacionError("Jugada inválida para el plantel.")
+                evento_id = jugada["id"]
+                if not re.fullmatch(r"[A-Za-z0-9_-]+", evento_id):
+                    raise ValidacionError("Identificador de jugada inválido.")
+                # El orden agrega microsegundos estables para evitar colisiones.
+                tiempo_evento = timestamp + orden * 1000
+                resultado = "exitoso" if categoria in ("pase", "gol") else "registrado"
+                lineas.append(f"jugadas_partido,partido_id={partido_id},equipo_id={equipo},jugador_id={jugador},categoria={categoria},corrida_id={corrida_id} "
+                              f"minuto={minuto}i,orden={orden}i,evento_id=\"{evento_id}\",resultado=\"{resultado}\" {tiempo_evento}")
+        with operacion(FUENTE, "guardar_jugadores", _traducir):
+            respuesta = self._cli().post("/api/v3/write_lp", params={"db": self._s.influx_db, "precision": "nanosecond"}, content="\n".join(lineas) + "\n")
+            if respuesta.status_code not in (200, 204):
+                raise DependenciaNoDisponible(FUENTE)
+
+    def muestras_jugadores(self, partido_id, corrida_id=None):
+        if not _RE_PARTIDO.fullmatch(partido_id):
+            raise ValidacionError("Identificador de partido inválido.")
+        if corrida_id is not None and not re.fullmatch(r"[0-9a-f]{32}", corrida_id):
+            raise ValidacionError("Identificador de simulación inválido.")
+        filtro_corrida = f" AND corrida_id = '{corrida_id}'" if corrida_id else ""
+        sql = ("SELECT equipo_id, jugador_id, minuto, pases_intentados, pases_completados, tiros, tiros_arco, "
+               "goles, faltas, corners, posesion_segundos, time FROM estadisticas_jugador_minuto "
+               f"WHERE partido_id = '{partido_id}'{filtro_corrida} ORDER BY equipo_id, jugador_id, minuto LIMIT 10000")
+        with operacion(FUENTE, "muestras_jugadores", _traducir):
+            return self.consultar(sql)
+
+    def agregados_jugadores(self, partido_id):
+        """Dos consultas agregadas en Influx: por equipo/minuto y por jugador."""
+        if not _RE_PARTIDO.fullmatch(partido_id):
+            raise ValidacionError("Identificador de partido inválido.")
+        campos = "SUM(pases_intentados) AS pases_intentados, SUM(pases_completados) AS pases_completados, SUM(tiros) AS tiros, SUM(tiros_arco) AS tiros_arco, SUM(goles) AS goles, SUM(faltas) AS faltas, SUM(corners) AS corners, SUM(posesion_segundos) AS posesion_segundos"
+        filtro = f" FROM estadisticas_jugador_minuto WHERE partido_id = '{partido_id}' "
+        with operacion(FUENTE, "agregados_jugadores", _traducir):
+            minutos = self.consultar("SELECT equipo_id, minuto, " + campos + filtro + "GROUP BY equipo_id, minuto ORDER BY equipo_id, minuto LIMIT 500")
+            jugadores = self.consultar("SELECT equipo_id, jugador_id, " + campos + filtro + "GROUP BY equipo_id, jugador_id ORDER BY equipo_id, jugador_id LIMIT 100")
+        return minutos, jugadores
+
+    def eventos_partido(self, partido_id, corrida_id):
+        if not _RE_PARTIDO.fullmatch(partido_id) or not re.fullmatch(r"[0-9a-f]{32}", corrida_id):
+            raise ValidacionError("Partido o simulación inválidos.")
+        sql = ("SELECT equipo_id, jugador_id, categoria, minuto, orden, evento_id, resultado, time "
+               f"FROM jugadas_partido WHERE partido_id = '{partido_id}' AND corrida_id = '{corrida_id}' AND categoria != 'inicio' "
+               "ORDER BY time LIMIT 10000")
+        with operacion(FUENTE, "eventos_partido", _traducir):
+            return self.consultar(sql)
+
+    def agregados_eventos(self, partido_id, corrida_id):
+        """Agrupa eventos en Influx y combina únicamente la posesión por minuto."""
+        if not _RE_PARTIDO.fullmatch(partido_id) or not re.fullmatch(r"[0-9a-f]{32}", corrida_id):
+            raise ValidacionError("Partido o simulación inválidos.")
+        campos = ("SUM(CASE WHEN categoria = 'pase' THEN 1 ELSE 0 END) AS pases_intentados, "
+                  "SUM(CASE WHEN categoria = 'pase' AND resultado = 'exitoso' THEN 1 ELSE 0 END) AS pases_completados, "
+                  "SUM(CASE WHEN categoria IN ('tiro', 'gol') THEN 1 ELSE 0 END) AS tiros, "
+                  "SUM(CASE WHEN categoria = 'gol' THEN 1 ELSE 0 END) AS tiros_arco, "
+                  "SUM(CASE WHEN categoria = 'gol' THEN 1 ELSE 0 END) AS goles, "
+                  "SUM(CASE WHEN categoria = 'falta' THEN 1 ELSE 0 END) AS faltas")
+        sql = ("SELECT equipo_id, jugador_id, minuto, " + campos + " FROM jugadas_partido "
+               f"WHERE partido_id = '{partido_id}' AND corrida_id = '{corrida_id}' "
+               "GROUP BY equipo_id, jugador_id, minuto LIMIT 10000")
+        # Al principio del encuentro puede no haberse creado aún la medición.
+        muestras = self.muestras_jugadores(partido_id, corrida_id)
+        if not muestras:
+            return [], []
+        with operacion(FUENTE, "agregados_eventos", _traducir):
+            eventos = self.consultar(sql)
+        por_clave = {(x['equipo_id'], x['jugador_id'], x['minuto']): x for x in eventos}
+        campos_contables = ('pases_intentados', 'pases_completados', 'tiros', 'tiros_arco', 'goles', 'faltas')
+        minutos, jugadores = {}, {}
+        for muestra in muestras:
+            equipo, jugador, minuto = muestra['equipo_id'], muestra['jugador_id'], muestra['minuto']
+            evento = por_clave.get((equipo, jugador, minuto), {})
+            valores = {campo: int(evento.get(campo) or 0) for campo in campos_contables}
+            valores.update(corners=0, posesion_segundos=muestra['posesion_segundos'])
+            for destino, clave, identidad in ((minutos, (equipo, minuto), {'equipo_id': equipo, 'minuto': minuto}),
+                                             (jugadores, (equipo, jugador), {'equipo_id': equipo, 'jugador_id': jugador})):
+                fila = destino.setdefault(clave, {**identidad, **{campo: 0 for campo in valores}})
+                for campo, valor in valores.items():
+                    fila[campo] += valor
+        return list(minutos.values()), list(jugadores.values())
+
     def resumen_partido(self, partido_id: str) -> list[dict]:
         if not _RE_PARTIDO.fullmatch(partido_id):
             raise ValidacionError("Identificador de partido inválido.")

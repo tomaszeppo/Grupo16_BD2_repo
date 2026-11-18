@@ -21,10 +21,10 @@ class Guiones:
 def test_guion_inserta_una_vez_y_conserva_relaciones():
     db = SimpleNamespace(jugadores=Jugadores(), guiones_simulacion=Guiones())
     primero = obtener_o_crear(PARTIDO, db)
-    assert len(primero["jugadas"]) == 6
-    assert primero["jugadas"][2]["tipo"] == "Gol"
-    assert primero["jugadas"][2]["jugador"] == "J-ARG-09"
-    assert primero["jugadas"][2]["influido_por"] == [primero["jugadas"][1]["id"]]
+    assert len(primero["jugadas"]) == 31
+    assert primero["jugadas"][9]["tipo"] == "Gol"
+    assert primero["jugadas"][9]["jugador"] == "J-ARG-09"
+    assert primero["jugadas"][9]["influido_por"] == [primero["jugadas"][8]["id"]]
     assert obtener_o_crear(PARTIDO, db) == primero
     assert len(db.guiones_simulacion.documentos) == 1
 

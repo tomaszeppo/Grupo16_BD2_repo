@@ -109,3 +109,7 @@ Son métricas de aplicación. Las internas de cada base salen de sus exportadore
 ## Histórico de una simulación
 
 `GET /partidos/{id}/historico` consulta Neo4j y devuelve estadísticas agregadas por equipo, muestras por minuto y jugadas con sus protagonistas. `GET /partidos/{id}/eventos/{evento_id}/cadena` recorre las jugadas previas. Si falta archivar un partido finalizado, `POST /administracion/simulaciones/{id}/archivar` permite reintentar con `X-Admin-Clave`; no crea duplicados al repetirse. El proceso requiere el guion de MongoDB y las muestras completas de InfluxDB.
+
+Para simulaciones nuevas, `GET /partidos/{id}/estadisticas/jugadores` devuelve los contadores acumulados por jugador, con su equipo y fuente. Antes del archivo consulta InfluxDB; después consulta los resúmenes de Neo4j. Las simulaciones anteriores sin métricas individuales responden 404 en esta ruta. El endpoint de estadísticas por equipo conserva su contrato y agrega los datos individuales para las simulaciones nuevas. La fórmula de posesión y el grano de los puntos están en [diseño por jugador](diseno_estadisticas_jugador.md).
+
+Las simulaciones de versión 3 exponen `GET /partidos/{id}/jugadas/temporales`: eventos de InfluxDB con categoría, jugador, minuto y timestamp de la corrida. Los resúmenes de acciones se calculan a partir de esos eventos; la posesión usa muestras separadas.

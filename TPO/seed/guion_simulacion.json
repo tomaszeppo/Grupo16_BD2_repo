@@ -1,8 +1,208 @@
 [
-  {"tipo":"Pase", "minuto":21, "equipo":"local", "dorsal":8},
-  {"tipo":"Tiro", "minuto":22, "equipo":"local", "dorsal":9, "previa":1},
-  {"tipo":"Gol",  "minuto":23, "equipo":"local", "dorsal":9, "previa":2},
-  {"tipo":"Pase", "minuto":73, "equipo":"visitante", "dorsal":8},
-  {"tipo":"Tiro", "minuto":74, "equipo":"visitante", "dorsal":9, "previa":4},
-  {"tipo":"Gol",  "minuto":75, "equipo":"visitante", "dorsal":9, "previa":5}
+  {
+    "equipo": "local",
+    "tipo": "Pase",
+    "minuto": 5,
+    "dorsal": 6
+  },
+  {
+    "equipo": "local",
+    "tipo": "Pase",
+    "minuto": 6,
+    "dorsal": 8,
+    "previa": 1
+  },
+  {
+    "equipo": "local",
+    "tipo": "Tiro",
+    "minuto": 7,
+    "dorsal": 9,
+    "previa": 2
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Pase",
+    "minuto": 11,
+    "dorsal": 6
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Pase",
+    "minuto": 12,
+    "dorsal": 10,
+    "previa": 4
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Tiro",
+    "minuto": 13,
+    "dorsal": 11,
+    "previa": 5
+  },
+  {
+    "equipo": "local",
+    "tipo": "Pase",
+    "minuto": 18,
+    "dorsal": 4
+  },
+  {
+    "equipo": "local",
+    "tipo": "Pase",
+    "minuto": 19,
+    "dorsal": 8,
+    "previa": 7
+  },
+  {
+    "equipo": "local",
+    "tipo": "Tiro",
+    "minuto": 20,
+    "dorsal": 9,
+    "previa": 8
+  },
+  {
+    "equipo": "local",
+    "tipo": "Gol",
+    "minuto": 21,
+    "dorsal": 9,
+    "previa": 9
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Pase",
+    "minuto": 29,
+    "dorsal": 5
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Falta",
+    "minuto": 30,
+    "dorsal": 6,
+    "previa": 11
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Pase",
+    "minuto": 37,
+    "dorsal": 8
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Pase",
+    "minuto": 38,
+    "dorsal": 10,
+    "previa": 13
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Tiro",
+    "minuto": 39,
+    "dorsal": 9,
+    "previa": 14
+  },
+  {
+    "equipo": "local",
+    "tipo": "Pase",
+    "minuto": 44,
+    "dorsal": 7
+  },
+  {
+    "equipo": "local",
+    "tipo": "Tiro",
+    "minuto": 45,
+    "dorsal": 11,
+    "previa": 16
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Pase",
+    "minuto": 52,
+    "dorsal": 6
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Pase",
+    "minuto": 53,
+    "dorsal": 8,
+    "previa": 18
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Tiro",
+    "minuto": 54,
+    "dorsal": 9,
+    "previa": 19
+  },
+  {
+    "equipo": "local",
+    "tipo": "Falta",
+    "minuto": 61,
+    "dorsal": 5
+  },
+  {
+    "equipo": "local",
+    "tipo": "Tarjeta amarilla",
+    "minuto": 62,
+    "dorsal": 5,
+    "previa": 21
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Pase",
+    "minuto": 70,
+    "dorsal": 4
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Pase",
+    "minuto": 71,
+    "dorsal": 8,
+    "previa": 23
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Tiro",
+    "minuto": 72,
+    "dorsal": 9,
+    "previa": 24
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Gol",
+    "minuto": 73,
+    "dorsal": 9,
+    "previa": 25
+  },
+  {
+    "equipo": "local",
+    "tipo": "Pase",
+    "minuto": 80,
+    "dorsal": 6
+  },
+  {
+    "equipo": "local",
+    "tipo": "Pase",
+    "minuto": 81,
+    "dorsal": 10,
+    "previa": 27
+  },
+  {
+    "equipo": "local",
+    "tipo": "Tiro",
+    "minuto": 82,
+    "dorsal": 11,
+    "previa": 28
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Pase",
+    "minuto": 86,
+    "dorsal": 7
+  },
+  {
+    "equipo": "visitante",
+    "tipo": "Tiro",
+    "minuto": 87,
+    "dorsal": 9,
+    "previa": 30
+  }
 ]

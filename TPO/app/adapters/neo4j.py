@@ -35,8 +35,9 @@ MATCH (p:Partido {id: $id})
 OPTIONAL MATCH (ev:Evento)-[:OCURRE_EN]->(p)
 OPTIONAL MATCH (j:Jugador)-[:PROTAGONIZA]->(ev)
 OPTIONAL MATCH (j)-[:PERTENECE_A]->(eq:Equipo)
-WITH p, ev, j, eq ORDER BY ev.minuto, ev.orden, ev.id
-RETURN p.id AS partido, collect(CASE WHEN ev IS NULL THEN null ELSE """ + _EVENTO + """ END)[..$limit] AS eventos
+OPTIONAL MATCH (prev:Evento)-[:INFLUYE_EN]->(ev)
+WITH p, ev, j, eq, collect(DISTINCT prev.id) AS previos ORDER BY ev.minuto, ev.orden, ev.id
+RETURN p.id AS partido, collect(CASE WHEN ev IS NULL THEN null ELSE {id: ev.id, tipo: ev.tipo, minuto: ev.minuto, orden: ev.orden, jugador: CASE WHEN j IS NULL THEN null ELSE {id: j.id, nombre: j.nombre, apellido: j.apellido, equipo: eq.codigo} END, influido_por: previos} END)[..$limit] AS eventos
 """
 
 # Todo lo que llevó a una jugada: se recorre INFLUYE_EN hacia atrás, sin saber de antemano cuántos pasos hay.
@@ -47,8 +48,11 @@ WITH fin, collect(DISTINCT previo) AS previos
 UNWIND previos + [fin] AS ev
 OPTIONAL MATCH (j:Jugador)-[:PROTAGONIZA]->(ev)
 OPTIONAL MATCH (j)-[:PERTENECE_A]->(eq:Equipo)
-WITH ev, j, eq ORDER BY ev.minuto, ev.orden, ev.id
-RETURN """ + _EVENTO + """ AS evento
+OPTIONAL MATCH (origen:Evento)-[:INFLUYE_EN]->(ev)
+WITH ev, j, eq, collect(DISTINCT origen.id) AS influido_por ORDER BY ev.minuto, ev.orden, ev.id
+RETURN {id: ev.id, tipo: ev.tipo, minuto: ev.minuto, orden: ev.orden,
+        jugador: CASE WHEN j IS NULL THEN null ELSE {id: j.id, nombre: j.nombre, apellido: j.apellido, equipo: eq.codigo} END,
+        influido_por: influido_por} AS evento
 """
 
 CYPHER_PARTIDOS_DE_EQUIPO = """
@@ -288,7 +292,7 @@ class Neo4jAdapter:
         with operacion(FUENTE, "finalizar_partido", _traducir):
             self._escribir(CYPHER_FINALIZAR, id=partido_id, goles_local=goles_local, goles_visitante=goles_visitante)
 
-    def archivar_estadisticas(self, partido_id: str, resumen: list[dict], muestras: list[dict], jugadas: list[dict]) -> None:
+    def archivar_estadisticas(self, partido_id: str, resumen: list[dict], muestras: list[dict], jugadas: list[dict], jugadores: list[dict] | None = None) -> None:
         """Guarda una versión completa e idempotente en una sola transacción."""
         cypher = """
         MATCH (p:Partido {id: $partido, estado: 'Finalizado'})
@@ -311,7 +315,13 @@ class Neo4jAdapter:
                 THEN fila.id ELSE null END) AS validas
         }
         WITH p, validas WHERE validas = size($jugadas)
-        SET p.archivo_estadisticas_version = 1
+        CALL (p) {
+            UNWIND $jugadores AS fila
+            OPTIONAL MATCH (j:Jugador {id: fila.jugador_id})-[:PERTENECE_A]->(:Equipo {codigo: fila.equipo_id})-[:PARTICIPA_EN]->(p)
+            RETURN count(DISTINCT j) AS jugadores_validos
+        }
+        WITH p, jugadores_validos WHERE jugadores_validos = size($jugadores)
+        SET p.archivo_estadisticas_version = CASE WHEN any(j IN $jugadas WHERE j.timestamp IS NOT NULL) THEN 3 WHEN size($jugadores) > 0 THEN 2 ELSE 1 END
         WITH p
         CALL (p) {
             UNWIND $resumen AS fila
@@ -332,6 +342,7 @@ class Neo4jAdapter:
             MATCH (j:Jugador {id: fila.jugador})-[:PERTENECE_A]->(:Equipo {codigo: fila.equipo_id})-[:PARTICIPA_EN]->(p)
             MERGE (ev:Evento {id: fila.id})
             ON CREATE SET ev.tipo = fila.tipo, ev.minuto = fila.minuto, ev.orden = fila.orden
+            SET ev.categoria = coalesce(fila.categoria, ev.categoria), ev.timestamp = coalesce(fila.timestamp, ev.timestamp)
             MERGE (ev)-[:OCURRE_EN]->(p)
             MERGE (j)-[:PROTAGONIZA]->(ev)
             RETURN count(DISTINCT ev) AS eventos
@@ -343,12 +354,20 @@ class Neo4jAdapter:
             MERGE (anterior)-[r:INFLUYE_EN]->(siguiente)
             RETURN count(r) AS relaciones
         }
-        RETURN resumenes, puntos, eventos, relaciones
+        CALL (p) {
+            UNWIND $jugadores AS fila
+            MATCH (j:Jugador {id: fila.jugador_id})-[:PERTENECE_A]->(:Equipo {codigo: fila.equipo_id})-[:PARTICIPA_EN]->(p)
+            MERGE (p)-[r:RESUMEN_JUGADOR]->(j)
+            SET r += fila
+            RETURN count(r) AS jugadores
+        }
+        RETURN resumenes, puntos, eventos, relaciones, jugadores
         """
+        jugadores = jugadores or []
         enlaces = [{"anterior": previa, "siguiente": j["id"]} for j in jugadas for previa in j.get("influido_por", [])]
         with operacion(FUENTE, "archivar_estadisticas", _traducir):
-            filas = self._escribir(cypher, partido=partido_id, codigos=[r["equipo_id"] for r in resumen], resumen=resumen, muestras=muestras, jugadas=jugadas, enlaces=enlaces)
-            if not filas or filas[0]["resumenes"] != len(resumen) or filas[0]["puntos"] != len(muestras) or filas[0]["eventos"] != len(jugadas) or filas[0]["relaciones"] != len(enlaces):
+            filas = self._escribir(cypher, partido=partido_id, codigos=[r["equipo_id"] for r in resumen], resumen=resumen, muestras=muestras, jugadas=jugadas, enlaces=enlaces, jugadores=jugadores)
+            if not filas or filas[0]["resumenes"] != len(resumen) or filas[0]["puntos"] != len(muestras) or filas[0]["eventos"] != len(jugadas) or filas[0]["relaciones"] != len(enlaces) or filas[0].get("jugadores", 0) != len(jugadores):
                 from app.errors import Conflicto
                 raise Conflicto("No se pudo archivar: revisá los equipos, jugadores y conflictos de IDs en Neo4j.")
 
@@ -363,6 +382,14 @@ class Neo4jAdapter:
         with operacion(FUENTE, "leer_estadisticas_archivadas", _traducir):
             filas = self._leer(cypher, partido=partido_id)
             return filas[0] if filas else None
+
+    def leer_resumenes_jugadores(self, partido_id: str) -> list[dict]:
+        cypher = """
+        MATCH (:Partido {id: $partido})-[r:RESUMEN_JUGADOR]->(:Jugador)
+        RETURN properties(r) AS resumen ORDER BY r.equipo_id, r.jugador_id
+        """
+        with operacion(FUENTE, "leer_resumenes_jugadores", _traducir):
+            return [fila["resumen"] for fila in self._leer(cypher, partido=partido_id)]
 
     def preparar_consultas(self) -> int:
         """Hace que Neo4j planifique todas las consultas de la API sin ejecutarlas (EXPLAIN).

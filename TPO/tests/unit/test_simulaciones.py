@@ -20,16 +20,25 @@ def test_recientes_consulta_ventanas_y_limita_por_region(monkeypatch):
     assert (llamadas[0][2] - llamadas[1][2]).total_seconds() == 1800
 
 
+class PlantelFalso:
+    def find(self, filtro, proyeccion):
+        equipo = filtro["equipo"]
+        class Cursor:
+            def sort(self, campo, orden):
+                return [{"_id": f"J-{equipo}-{n:02d}", "dorsal": n} for n in range(1, 27)]
+        return Cursor()
+
+
 def test_simulacion_escribe_antes_de_iniciar_y_finaliza(monkeypatch):
     acciones = []
     col = Mock()
-    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col))
+    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=PlantelFalso()))
     partido = {"id":"P-03", "fase": "Fase de grupos", "local": {"codigo": "ARG"}, "visitante": {"codigo": "BRA"}}
     admin = SimpleNamespace(_partido=lambda id: partido, poner_en_juego=lambda id: acciones.append("iniciar") or partido)
-    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas":[{"tipo":"Gol", "minuto":23, "equipo_id":"ARG"},{"tipo":"Gol", "minuto":75, "equipo_id":"BRA"}]})
+    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas":[{"tipo":"Gol", "minuto":23, "equipo_id":"ARG", "jugador":"J-ARG-09"},{"tipo":"Gol", "minuto":75, "equipo_id":"BRA", "jugador":"J-BRA-09"}]})
     puntuacion = SimpleNamespace(cerrar=Mock(), ejecutar=Mock())
     monkeypatch.setattr(simulaciones, "escribir", lambda id, pais, minuto, *args: acciones.append((pais, minuto)))
-    monkeypatch.setattr(simulaciones, "_influx", lambda: SimpleNamespace(guardar_minuto=lambda *args: None))
+    monkeypatch.setattr(simulaciones, "_influx", lambda: SimpleNamespace(guardar_jugadores=lambda *args: None))
     monkeypatch.setattr(simulaciones.time, "sleep", lambda n: None)
     simulaciones._ejecutar("P-03", mongo, admin, puntuacion)
     assert acciones[:5] == [("ARG", 0), ("BRA", 0), ("ESP", 0), ("URU", 0), "iniciar"]
@@ -156,18 +165,18 @@ def test_archivar_rechaza_id_duplicado():
 
 def test_simulacion_respeta_gol_definido_en_guion(monkeypatch):
     col = Mock()
-    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col))
+    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=PlantelFalso()))
     partido = {"id":"P-03", "fase":"Fase de grupos", "local":{"codigo":"ARG"}, "visitante":{"codigo":"BRA"}}
     admin = SimpleNamespace(_partido=lambda _:partido, poner_en_juego=lambda _:partido)
-    goles = [{"tipo":"Gol", "minuto":42, "equipo_id":"ARG"}]
+    goles = [{"tipo":"Gol", "minuto":42, "equipo_id":"ARG", "jugador":"J-ARG-09"}]
     monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args:{"jugadas":goles})
     monkeypatch.setattr(simulaciones, "escribir", lambda *args:None)
     monkeypatch.setattr(simulaciones, "archivar_estadisticas", lambda *args:None)
     monkeypatch.setattr(simulaciones.time, "sleep", lambda _:None)
-    influx = SimpleNamespace(guardar_minuto=Mock())
+    influx = SimpleNamespace(guardar_jugadores=Mock())
     monkeypatch.setattr(simulaciones, "_influx", lambda:influx)
     puntuacion = SimpleNamespace(cerrar=Mock(), ejecutar=Mock())
     simulaciones._ejecutar("P-03", mongo, admin, puntuacion)
     puntuacion.cerrar.assert_called_once_with("P-03", 1, 0, None)
-    muestra_42 = influx.guardar_minuto.call_args_list[42].args
-    assert muestra_42[1] == 42 and muestra_42[5] == (1, 0)
+    muestra_42 = influx.guardar_jugadores.call_args_list[42].args
+    assert muestra_42[1] == 42 and muestra_42[3][0]["jugador"] == "J-ARG-09"

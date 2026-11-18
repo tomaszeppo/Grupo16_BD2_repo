@@ -150,10 +150,11 @@ TPO/
 
 ## Estadísticas de la simulación (InfluxDB)
 
-La simulación registra cada minuto una muestra sintética por equipo: posesión instantánea, tiros, tiros al arco, pases, faltas y córners de ese minuto. La pantalla muestra el promedio de posesión, suma las acciones y calcula la precisión de pases. El marcador sigue en MongoDB y el estado en Neo4j. Las simulaciones anteriores no contienen las nuevas métricas y se muestran con un guion. Si una escritura falla se marca la información como incompleta; no hay reintentos automáticos.
+Las simulaciones nuevas registran cada jugada en `jugadas_partido` con categoría, jugador y timestamp; además escriben posesión por jugador y minuto. La API agrega las acciones por jugador y selección desde las jugadas y calcula la posesión a partir de los segundos atribuidos a cada equipo. Las simulaciones anteriores conservan su lectura histórica. La precisión de pases se calcula dividiendo pases completados por intentados. Los datos son sintéticos y no representan mediciones reales del partido.
 
-Compose inicia InfluxDB 3 y crea la base `fixture2030_metrics`. El contenedor está limitado por defecto a 0,5 CPU y 1 GB y usa un volumen propio. Para este laboratorio funciona sin autenticación, accesible solo desde la red interna de Docker y sin puerto publicado; no usar esta configuración para un despliegue compartido. Se puede ajustar `INFLUX_CPUS` e `INFLUX_MEMORIA` en `.env`.
+La pantalla consulta `GET /partidos/{id}/estadisticas`; los totales individuales están en `GET /partidos/{id}/estadisticas/jugadores` y las jugadas en `GET /partidos/{id}/jugadas/temporales`. Al finalizar, se validan las muestras, el guion y el marcador antes de archivar resúmenes de jugadores, equipos y minutos en Neo4j. Ante una falla, el archivo queda pendiente. Detalle y limitaciones en [estadísticas por jugador](docs/diseno_estadisticas_jugador.md).
 
+Compose inicia InfluxDB 3 con una base local y límites configurables. En este laboratorio no publica el puerto ni usa autenticación; no usar esa configuración en un entorno compartido.
 
 ## Histórico en Neo4j
 
