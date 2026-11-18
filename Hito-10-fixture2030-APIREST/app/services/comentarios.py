@@ -1,6 +1,6 @@
 import base64
 import binascii
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app.errors import NoEncontrado, ValidacionError
 
@@ -47,6 +47,16 @@ class ComentariosService:
             "partido_id": partido_id, "pais": pais, "ventana": v.isoformat() + "Z", "limit": limit,
             "items": items, "next_cursor": codificar_cursor(siguiente),
         }
+
+    def recientes(self, partido_id: str, pais: str) -> dict:
+        ahora = self._ahora().astimezone(timezone.utc).replace(tzinfo=None)
+        ventana = piso_ventana(ahora)
+        actuales, _ = self._repo.listar(partido_id, pais, ventana, 20, None)
+        items = list(actuales)
+        if len(items) < 20:
+            anteriores, _ = self._repo.listar(partido_id, pais, ventana - timedelta(minutes=30), 20, None)
+            items.extend(anteriores)
+        return {"partido_id": partido_id, "pais": pais, "items": items[:20]}
 
     def crear(self, partido_id: str, clave: str, datos: dict) -> tuple[dict, bool]:
         if self._partidos.obtener_partido(partido_id) is None:

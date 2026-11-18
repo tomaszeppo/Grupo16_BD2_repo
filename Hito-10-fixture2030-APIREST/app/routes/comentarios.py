@@ -3,12 +3,18 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header, Query, Response
 
 from app.deps import get_comentarios_service
-from app.schemas.comentarios import ComentarioCreado, NuevoComentario, PaginaComentarios, PaisQuery, VentanaQuery
+from app.schemas.comentarios import ComentarioCreado, ComentariosRecientes, NuevoComentario, PaginaComentarios, PaisQuery, VentanaQuery
 from app.schemas.comunes import IdPartido, LimitQuery
 from app.schemas.errores import respuestas
 from app.services.comentarios import ComentariosService
 
 router = APIRouter(tags=["Cassandra · Comentarios"])
+
+
+@router.get("/partidos/{partido_id}/comentarios/recientes", response_model=ComentariosRecientes, responses=respuestas())
+def comentarios_recientes(partido_id: IdPartido, pais: PaisQuery, svc: ComentariosService = Depends(get_comentarios_service)):
+    """Últimos 20 de la región en la ventana actual y, si hace falta, la anterior."""
+    return svc.recientes(partido_id, pais)
 
 
 @router.get(

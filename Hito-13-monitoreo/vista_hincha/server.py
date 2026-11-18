@@ -98,6 +98,24 @@ def index():
     return FileResponse(RAIZ / "static" / "index.html")
 
 
+@app.get("/react")
+def vista_react():
+    archivo = RAIZ / "react" / "dist" / "index.html"
+    if not archivo.exists():
+        raise HTTPException(503, "Compilá la vista React con npm run build en vista_hincha/react.")
+    return FileResponse(archivo)
+
+
+@app.get("/react/assets/{archivo}")
+def recursos_react(archivo: str):
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", archivo):
+        raise HTTPException(404)
+    ruta = RAIZ / "react" / "dist" / "assets" / archivo
+    if not ruta.is_file():
+        raise HTTPException(404)
+    return FileResponse(ruta)
+
+
 @app.post("/api/sesion")
 async def ingresar(datos: Acceso, response: Response, request: Request):
     nombre = datos.nombre.strip()
@@ -217,6 +235,18 @@ async def comentarios_recientes(partido_id, s, ahora=None):
     paginas = await asyncio.gather(una(ventana), una(ventana-timedelta(minutes=30)))
     unicos = {c["comentario_id"]: c for pagina in paginas for c in pagina}
     return sorted(unicos.values(), key=lambda c: c["creado_en"], reverse=True)[:40]
+
+
+@app.get("/api/partidos/{partido_id}/comentarios/recientes")
+async def recientes_vista(partido_id: str, s=Depends(sesion)):
+    if not re.fullmatch(r"P-0[1-8]", partido_id):
+        raise HTTPException(404, "Partido no disponible.")
+    if s["modo"] == "demo":
+        items = (await comentarios_recientes(partido_id, s))[:20]
+    else:
+        datos = await consultar("GET", f"partidos/{partido_id}/comentarios/recientes", params={"pais": s["pais"]})
+        items = datos["items"]
+    return {"partido_id": partido_id, "pais": s["pais"], "items": items}
 
 
 async def transmitir_comentarios(request, partido_id):

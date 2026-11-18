@@ -36,6 +36,12 @@ class PaginaComentarios(BaseModel):
     next_cursor: str | None = Field(description="Cursor opaco para pedir la página siguiente; null si no hay más")
 
 
+class ComentariosRecientes(BaseModel):
+    partido_id: str
+    pais: str
+    items: list[ComentarioItem] = Field(description="Hasta 20 comentarios, más recientes primero")
+
+
 class NuevoComentario(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
