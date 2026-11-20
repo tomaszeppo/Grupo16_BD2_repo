@@ -1,3 +1,5 @@
+> **Actualización:** La puntuación y el ranking en vivo utilizan Redis cuando `REDIS_ENABLED=true` en Compose. MongoDB conserva pronósticos y resultado y recibe los puntajes después de la espera configurada. El flujo, la recuperación y sus límites se describen en [el README](../README.md#puntuación-y-ranking-con-redis); los apartados siguientes describen la decisión anterior basada en MongoDB.
+
 # Decisiones sobre las bases
 
 El proyecto final usa cinco bases: **MongoDB** para todo lo del prode, **Neo4j** para el fixture y lo que pasa en cada partido, **Redis** para las sesiones y el partido en vivo, **Cassandra** para los comentarios e **InfluxDB** para las series de cada partido (estadísticas y audiencia). IRIS quedó afuera ([por qué](por_que_no_iris.md)). Cómo se reparten entre regiones está en [arquitectura por regiones](arquitectura_regiones.md).
@@ -157,7 +159,7 @@ Se podría: cada partido con su lista de jugadas adentro. Leer el partido entero
 
 **3. Modelo.** Series de tiempo, con consultas en SQL.
 
-**4. Estructura concreta.** En [modelo_de_datos.md](modelo_de_datos.md#influxdb--base-fixture2030_metrics). Solo son etiquetas las dimensiones por las que se filtra o agrupa (partido, país, origen, corrida, tipo); el minuto y los valores son campos. Es la corrección del Hito 8 sobre la cardinalidad.
+**4. Estructura concreta.** En [modelo_de_datos.md](modelo_de_datos.md#influxdb--tres-bases). Solo son etiquetas las dimensiones por las que se filtra o agrupa (partido, país, origen, corrida, tipo); el minuto y los valores son campos. Es la corrección del Hito 8 sobre la cardinalidad.
 
 **5. Cómo se carga y se lee.** Escribe el simulador una vez por minuto simulado. Las escrituras no esperan el volcado a disco de InfluxDB: esperándolo, cada una tardaba cerca de un segundo y el partido, que simula un minuto por segundo, se atrasaba al doble. A cambio, una caída de InfluxDB puede perder el último segundo de muestras, que el archivo del partido detecta como faltantes.
 
@@ -167,7 +169,7 @@ Se podría: cada partido con su lista de jugadas adentro. Leer el partido entero
 
 **8. Qué pasa si falla.** La simulación sigue; los minutos sin escribir se marcan como incompletos y el archivo del partido queda pendiente hasta reintentarlo. El análisis de audiencia no responde (503) mientras no vuelva.
 
-**9. Costo.** Sin vencimiento, crece con cada partido: 91 filas de audiencia y 182 de comentarios por país y partido, además de las estadísticas. Para un torneo de 104 partidos es poco; en producción, con muchos países, convendría resumir los partidos terminados.
+**9. Costo.** Los datos crudos de cada simulación vencen a los 7 días (antes se archivan en Neo4j); los resúmenes, la audiencia y los comentarios por minuto no vencen y crecen con cada partido: 91 filas de audiencia y 182 de comentarios por país y partido. Para un torneo de 104 partidos es poco; en producción, con muchos países, convendría resumir los partidos terminados.
 
 **10. Evidencia.** Formato de las filas y escrituras sin espera: [test_influx_simulacion.py](../tests/unit/test_influx_simulacion.py). Cierre de cada minuto: [test_audiencia.py](../tests/unit/test_audiencia.py). Análisis de audiencia y tramos: [test_analisis_audiencia.py](../tests/unit/test_analisis_audiencia.py).
 

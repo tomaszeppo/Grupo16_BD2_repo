@@ -7,6 +7,12 @@ Neo4j: la edición comunitaria tiene una sola base, así que BORRAN el grafo y l
 Por eso piden PERMITIR_REINICIO=1, y después hay que correr `python -m seed.run` otra vez.
 """
 import os
+
+# Estas pruebas cubren el camino de MongoDB (puntuación y ranking) y el cierre de pronósticos a la hora
+# programada. El Compose activa el ranking en Redis y los pronósticos hasta el inicio real; el camino de Redis
+# tiene sus propias pruebas en tests/redis_integration.
+os.environ["REDIS_ENABLED"] = "false"
+os.environ["PRONOSTICOS_HASTA_INICIO_REAL"] = "false"
 from datetime import datetime, timezone
 
 import pytest

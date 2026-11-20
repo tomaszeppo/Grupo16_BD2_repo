@@ -3,7 +3,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
 
-from app.deps import get_influx, get_mongo
+from app.deps import get_influx_resumenes, get_mongo
 from app.errors import NoEncontrado, ValidacionError
 from app.schemas.comunes import PartidoId
 from app.services.analisis_audiencia import resumir
@@ -29,7 +29,7 @@ def _simulacion(mongo, partido_id: str) -> dict:
 
 @router.get("/partidos/{partido_id}/audiencia", summary="Audiencia del partido, minuto a minuto")
 def audiencia(partido_id: PartidoId, rango: tuple[int, int] = Depends(tramo), pais: str | None = Pais,
-              mongo=Depends(get_mongo), influx=Depends(get_influx)) -> dict:
+              mongo=Depends(get_mongo), influx=Depends(get_influx_resumenes)) -> dict:
     """Curva de espectadores simultáneos (total y por país) con los goles, pico, promedio, minutos vistos,
     espectadores únicos y tiempo medio de visualización. Se puede pedir un tramo de minutos o un país."""
     desde, hasta = rango
@@ -46,7 +46,7 @@ def audiencia(partido_id: PartidoId, rango: tuple[int, int] = Depends(tramo), pa
 
 @router.get("/partidos/{partido_id}/comentarios/por-minuto", summary="Comentarios por minuto y país")
 def comentarios_por_minuto(partido_id: PartidoId, rango: tuple[int, int] = Depends(tramo), pais: str | None = Pais,
-                           mongo=Depends(get_mongo), influx=Depends(get_influx)) -> dict:
+                           mongo=Depends(get_mongo), influx=Depends(get_influx_resumenes)) -> dict:
     desde, hasta = rango
     doc = _simulacion(mongo, partido_id)
     filas = influx.comentarios_por_minuto(partido_id, doc["corrida_id"], desde, hasta, pais)
@@ -57,7 +57,7 @@ def comentarios_por_minuto(partido_id: PartidoId, rango: tuple[int, int] = Depen
 
 @router.get("/analisis/audiencia-por-minuto", summary="Audiencia promedio por minuto, entre todos los partidos")
 def audiencia_por_minuto(pais: str | None = Pais, tipo: Literal["demo", "carga"] | None = Query(None),
-                         influx=Depends(get_influx)) -> dict:
+                         influx=Depends(get_influx_resumenes)) -> dict:
     """Para decidir cuándo poner publicidad: en qué minutos de un partido hay, en promedio, más gente mirando.
     Cada simulación cuenta como un partido visto."""
     minutos = influx.audiencia_promedio_por_minuto(pais, tipo)

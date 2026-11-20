@@ -71,6 +71,13 @@ def _transmision() -> Transmision:
 
 
 @lru_cache
+def _ranking_redis():
+    """El ranking usa el mismo Redis que las sesiones (con su contraseña), por su propio cliente sincrónico."""
+    from app.adapters.ranking_redis import RankingRedis
+    return RankingRedis(_mongo(), _settings(), cliente=_redis().cli)
+
+
+@lru_cache
 def _calendario() -> Calendario:
     return Calendario(_neo4j(), _settings().calendario_ttl_segundos, ahora)
 
@@ -90,6 +97,11 @@ async def get_mongo() -> MongoAdapter:
 
 async def get_influx() -> InfluxAdapter:
     return _influx()
+
+
+async def get_influx_resumenes() -> InfluxAdapter:
+    """InfluxDB, base de resúmenes (sin vencimiento): audiencia y comentarios por minuto."""
+    return _influx().para_resumenes()
 
 
 async def get_neo4j() -> Neo4jAdapter:
@@ -120,7 +132,8 @@ async def get_sesiones(redis=Depends(get_redis), mongo=Depends(get_mongo),
 
 
 async def get_ranking(mongo=Depends(get_mongo)) -> RankingPort:
-    """Hoy: colección `puntajes` de MongoDB. Con Redis: devolver la implementación sobre el conjunto ordenado."""
+    if _settings().redis_enabled:
+        return _ranking_redis()
     return RankingMongo(mongo)
 
 
@@ -170,6 +183,7 @@ def espectador(partido_id: str, sesion: tuple[str, str] = Depends(sesion_actual)
 # --- servicios ---
 async def get_health_service(mongo=Depends(get_mongo), neo4j=Depends(get_neo4j), redis=Depends(get_redis),
                              cassandra=Depends(get_cassandra), calendario=Depends(get_calendario)) -> HealthService:
+    # Un solo "redis": sesiones, vivo y ranking usan el mismo servidor.
     return HealthService({"mongodb": mongo, "neo4j": neo4j, "redis": redis, **salud_por_region(cassandra)},
                          calendario)
 
@@ -192,14 +206,15 @@ async def get_prodes_service(mongo=Depends(get_mongo), reloj=Depends(get_reloj),
 
 
 async def get_pronosticos_service(mongo=Depends(get_mongo), calendario=Depends(get_calendario),
-                            reloj=Depends(get_reloj)) -> PronosticosService:
-    return PronosticosService(mongo, calendario, reloj)
+                            reloj=Depends(get_reloj), settings: Settings = Depends(get_settings),
+                            neo4j=Depends(get_neo4j)) -> PronosticosService:
+    return PronosticosService(mongo, calendario, reloj, neo4j if settings.pronosticos_hasta_inicio_real else None)
 
 
 async def get_partidos_admin_service(neo4j=Depends(get_neo4j), calendario=Depends(get_calendario),
                                reloj=Depends(get_reloj),
-                               publicador=Depends(get_publicador_eventos)) -> PartidosAdminService:
-    return PartidosAdminService(neo4j, calendario, reloj, publicador)
+                               publicador=Depends(get_publicador_eventos), ranking=Depends(get_ranking)) -> PartidosAdminService:
+    return PartidosAdminService(neo4j, calendario, reloj, publicador, ranking)
 
 
 async def get_puntuacion_service(mongo=Depends(get_mongo), neo4j=Depends(get_neo4j), calendario=Depends(get_calendario),
@@ -216,12 +231,6 @@ async def get_comentarios_service(cassandra=Depends(get_cassandra), redis=Depend
                                   mongo=Depends(get_mongo), reloj=Depends(get_reloj),
                                   settings: Settings = Depends(get_settings)) -> ComentariosService:
     return ComentariosService(cassandra, redis, neo4j, mongo, reloj, settings.chat_segundos_entre_comentarios)
-
-
-def comentarios_del_simulador() -> ComentariosService:
-    """El simulador corre en un hilo fuera de un pedido: arma el servicio con las piezas del proceso."""
-    return ComentariosService(_cassandra(), _redis(), _neo4j(), _mongo(), ahora,
-                              _settings().chat_segundos_entre_comentarios)
 
 
 def precalentar() -> None:

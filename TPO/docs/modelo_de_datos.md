@@ -153,9 +153,15 @@ CREATE TABLE fixture2030.comentarios_por_partido_pais (
 - Sin vencimiento: se guardan para el análisis posterior.
 - El historial recorre ventanas hacia atrás; "todos los países" lee la partición de cada país con actividad y las mezcla por fecha.
 
-## InfluxDB — base `fixture2030_metrics`
+## InfluxDB — tres bases
 
-Sin vencimiento. Además de las medidas de la simulación (`estadisticas_jugador_minuto`, `jugadas_partido`, `estadisticas_partido`), la audiencia:
+| Base | Vence | Qué guarda |
+|---|---|---|
+| `fixture2030_raw` | A los 7 días | Las muestras crudas de cada simulación nueva (`estadisticas_jugador_minuto`, `jugadas_partido`). Al terminar el partido se archivan en Neo4j |
+| `fixture2030_resumenes` | No | Totales de cada partido (`resumen_partido_equipo`, `resumen_partido_jugador`) y la audiencia y los comentarios por minuto (abajo) |
+| `fixture2030_metrics` | No | Las simulaciones anteriores a la separación; se siguen leyendo desde ahí |
+
+La audiencia, en `fixture2030_resumenes`:
 
 | Medida | Etiquetas | Campos | Cuándo se escribe |
 |---|---|---|---|

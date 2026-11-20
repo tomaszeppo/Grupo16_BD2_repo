@@ -1,13 +1,22 @@
-"""Simulación de laboratorio: el partido en 90 segundos, sus estadísticas en InfluxDB y su archivo en Neo4j."""
+"""Simulación de laboratorio: el partido en 90 segundos, sus estadísticas en InfluxDB y su archivo en Neo4j.
+
+El simulador se comporta como un cliente más: maneja el partido por la API (HTTP) y sus hinchas de prueba abren
+sesión, pronostican y comentan por los mismos endpoints que un usuario real.
+"""
 import random
 import threading
 import time
 import uuid
+import httpx
 from datetime import datetime, timedelta, timezone
 
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.adapters.influx import InfluxAdapter
+from app.config.settings import get_settings
 from app.deps import _influx, get_influx, get_mongo, get_neo4j, get_partidos_admin_service, get_puntuacion_service, requiere_admin
 from app.errors import Conflicto, DependenciaNoDisponible, NoEncontrado, ValidacionError
 from app.schemas.comunes import PartidoId
@@ -16,10 +25,9 @@ from seed.cargar_guion_simulacion import obtener_o_crear
 
 router = APIRouter(tags=["Simulaciones"])
 
-def _comentarios():
-    from app.deps import comentarios_del_simulador
 
-    return comentarios_del_simulador()
+def _influx_de_simulacion(influx, documento):
+    return influx.para_simulacion(documento) if isinstance(influx, InfluxAdapter) else influx
 
 
 COMENTARIOS = (
@@ -32,22 +40,28 @@ COMENTARIOS = (
     "Estoy siguiendo el partido desde casa.", "Qué bien está jugando el equipo.",
     "Con un poco más de precisión entra.", "No se puede regalar una pelota así.",
     "Partidazo, no me despego de la pantalla.", "Dale que se puede dar vuelta.",
+    "Ufff, pasó cerquita.", "Qué pase metió, por favor.",
+    "Che, ¿vieron esa jugada?", "Nooo, era por abajo.",
+    "Dale, una más y entra.", "Me agarró un ataque con esa defensa.",
+    "Buenísima esa recuperación.", "El arquero nos acaba de salvar.",
+    "Aguanten, que falta un montón todavía.", "Está lindo para un gol ahora, eh.",
+    "Qué nervios, no puedo ni tomar mate.", "La próxima hay que definirla mejor.",
+    "Vamos equipo, metan una buena contra.", "Esa pelota pedía un pase más.",
+    "Cómo está corriendo todo el equipo hoy.", "Qué partido raro, puede pasar cualquier cosa.",
+    "Bien ahí, sigan tocando.", "Me levanté del sillón con esa.",
+    "Hay que aprovechar estos minutos.", "Qué manera de sufrir este partido.",
+    "El medio está jugando una barbaridad.", "Dale, dale, no aflojen ahora.",
 )
-NOMBRES = ("Luli", "Nico", "Mica", "Santi", "Fede", "Sofi", "Juli", "Tomi", "Vale", "Maru", "Fran", "Paz")
-GOLES = ("¡Gooooool! ¡Qué locura!", "¡Gol! Se gritó con todo.", "¡Adentro! Cambia el partido.", "¡Qué momento para meterla!")
-
-
-def escribir(partido, pais, minuto, es_gol=None):
-    """Comentario automático de un hincha simulado: pasa por el mismo camino que los reales (Cassandra y vivo)."""
-    textos = GOLES if (minuto in (23, 75) if es_gol is None else es_gol) else COMENTARIOS
-    _comentarios().publicar_automatico(partido, pais, random.choice(NOMBRES), random.choice(textos))
+GOLES = ("¡Gooooool! ¡Qué locura!", "¡Gol! Se gritó con todo.", "¡Adentro! Cambia el partido.", "¡Qué momento para meterla!", "GOOOOL, me escuchó todo el edificio", "VAMOOOS, qué golazo",
+         "Al finnn, lo veníamos pidiendo", "No puedo creer lo que acaba de pasar")
 
 
 def _audiencia():
     from app.deps import _redis, _settings
     from app.services.audiencia import Audiencia
 
-    return Audiencia(_redis(), _influx(), _settings())
+    # Audiencia y comentarios por minuto van a la base de resúmenes de InfluxDB: no vencen.
+    return Audiencia(_redis(), _influx().para_resumenes(), _settings())
 
 
 def _paises(audiencia, partido_id):
@@ -56,7 +70,6 @@ def _paises(audiencia, partido_id):
         return sorted(audiencia.paises_de(partido_id))
     except Exception:
         return ["ARG", "BRA", "ESP", "URU"]
-
 
 def _verificar_cassandra():
     """Antes de arrancar: alguna de las dos regiones tiene que responder, o los comentarios no tienen dónde ir."""
@@ -72,7 +85,49 @@ def _verificar_cassandra():
     raise DependenciaNoDisponible("cassandra")
 
 
+class MinutoSimulado(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    minuto: int = Field(ge=0, le=90)
+
+
+@router.post("/administracion/simulaciones/{partido_id}/muestras", dependencies=[Depends(requiere_admin)])
+def registrar_muestra(partido_id: PartidoId, cuerpo: MinutoSimulado,
+                      mongo=Depends(get_mongo), influx=Depends(get_influx)):
+    """Cierra un minuto simulado: muestra de estadísticas (InfluxDB, datos crudos), audiencia y comentarios del
+    minuto (InfluxDB, resúmenes) y aviso del estado a quienes miran. Una falla de una base no corta el partido:
+    ese minuto queda marcado como incompleto."""
+    col = mongo.db.simulaciones
+    doc = col.find_one({"_id": partido_id})
+    if not doc or doc.get("estado_simulacion") != "en_curso":
+        raise Conflicto("No hay una simulación en curso.")
+    minuto = cuerpo.minuto
+    partido, jugadas = doc["partido"], doc["jugadas"]
+    marcador = {lado: sum(1 for j in jugadas if j["tipo"] == "Gol" and j["minuto"] <= minuto
+                          and j["equipo_id"] == partido[lado]["codigo"]) for lado in ("local", "visitante")}
+    instante = doc["inicio_estadisticas"] + timedelta(seconds=minuto)
+    cambios = {"minuto": minuto, "marcador": marcador}
+    try:
+        _influx_de_simulacion(influx, doc).guardar_jugadores(partido_id, minuto, doc["plantel_estadisticas"], jugadas,
+                                                             instante, doc["corrida_id"])
+        cambios["estadisticas_estado"] = "actualizada"
+    except Exception:
+        logger.exception("estadisticas_simulacion_fallida partido=%s minuto=%s", partido_id, minuto)
+        cambios.update(estadisticas_estado="fallida", estadisticas_incompletas=True)
+    cierre = _audiencia().cerrar_minuto(partido_id, minuto, doc["corrida_id"], doc.get("tipo", "demo"), instante,
+                                        marcador, "En juego")
+    if cierre.get("incompleto"):
+        cambios["audiencia_incompleta"] = True
+    col.update_one({"_id": partido_id}, {"$set": cambios})
+    return {"partido_id": partido_id, "minuto": minuto, "marcador": marcador,
+            "audiencia": cierre.get("audiencia"), "incompleto": bool(cierre.get("incompleto"))}
+
+
+HINCHAS_POR_PAIS = 25  # con 4 comentarios por segundo y país, cada hincha comenta cada 6 s: no choca con el modo lento
+
+
 def _ejecutar(partido_id, mongo, admin, puntuacion, neo=None, tipo="demo"):
+    """Simula el partido por la API, como un cliente: inicia, manda cada minuto, hace comentar a los hinchas de
+    prueba y cierra. Los minutos y los comentarios que fallan se marcan y el partido sigue."""
     col = mongo.db.simulaciones
     audiencia = _audiencia()
     try:
@@ -85,65 +140,83 @@ def _ejecutar(partido_id, mongo, admin, puntuacion, neo=None, tipo="demo"):
             jugadores = list(mongo.db.jugadores.find({"equipo": equipo}, {"_id": 1, "dorsal": 1}).sort("dorsal", 1))
             titulares = [j["_id"] for j in jugadores[:11]]
             protagonistas = [j["jugador"] for j in jugadas if j["equipo_id"] == equipo]
-            ids_disponibles = {j["_id"] for j in jugadores}
-            if len(titulares) != 11 or any(j not in ids_disponibles for j in protagonistas):
+            if len(titulares) != 11 or any(j not in {x["_id"] for x in jugadores} for j in protagonistas):
                 raise Conflicto("Plantel incompleto o jugador del guion inexistente.")
             plantel[equipo] = list(dict.fromkeys(titulares + protagonistas))
         corrida_id = uuid.uuid4().hex
-        col.update_one({"_id":partido_id}, {"$set":{"jugadas":jugadas, "plantel_estadisticas":plantel,
-                       "estadisticas_version":3, "corrida_id":corrida_id}})
-        for pais in _paises(audiencia, partido_id): escribir(partido_id, pais, 0)
-        partido = admin.poner_en_juego(partido_id)
-        col.update_one({"_id":partido_id}, {"$set":{"estado":"En juego", "estado_simulacion":"en_curso", "partido":partido, "minuto":0, "marcador":{"local":0,"visitante":0}}})
-        inicio_datos = datetime.now(timezone.utc).replace(microsecond=0)
-        inicio = time.monotonic()
-        col.update_one({"_id": partido_id}, {"$set": {"inicio_estadisticas": inicio_datos}})
-        def guardar_estadisticas(minuto):
-            try:
-                _influx().guardar_jugadores(partido_id, minuto, plantel, jugadas,
-                                             inicio_datos + timedelta(seconds=minuto), corrida_id)
-            except Exception:
-                logger.exception("estadisticas_simulacion_fallida partido=%s minuto=%s", partido_id, minuto)
-                col.update_one({"_id":partido_id}, {"$set":{"estadisticas_estado":"fallida", "estadisticas_incompletas":True}})
-            else:
-                col.update_one({"_id":partido_id}, {"$set":{"estadisticas_estado":"actualizada"}})
+        settings = get_settings()
+        col.update_one({"_id": partido_id}, {"$set": {"jugadas": jugadas, "plantel_estadisticas": plantel,
+                       "estadisticas_version": 3, "corrida_id": corrida_id, "influx_raw_db": settings.influx_raw_db}})
+        with httpx.Client(base_url=settings.simulador_api_url, timeout=15, trust_env=False,
+                          headers={"X-Admin-Clave": settings.admin_clave}) as http:
+            def post(url, **kwargs):
+                respuesta = http.post(url, **kwargs)
+                respuesta.raise_for_status()
+                return respuesta.json()
 
-        def cerrar_minuto(minuto, marcador):
-            """Audiencia y comentarios del minuto a InfluxDB, y aviso del estado a quienes miran."""
-            cierre = audiencia.cerrar_minuto(partido_id, minuto, corrida_id, tipo,
-                                             inicio_datos + timedelta(seconds=minuto), marcador, "En juego")
-            if cierre.get("incompleto"):
-                col.update_one({"_id": partido_id}, {"$set": {"audiencia_incompleta": True}})
-        guardar_estadisticas(0)
-        cerrar_minuto(0, {"local": 0, "visitante": 0})
-        for minuto in range(1,91):
-            time.sleep(max(0, inicio + minuto - time.monotonic()))
-            local, visitante = (sum(1 for j in jugadas if j["tipo"] == "Gol" and j["minuto"] <= minuto and j["equipo_id"] == partido[lado]["codigo"]) for lado in ("local", "visitante"))
-            col.update_one({"_id":partido_id}, {"$set":{"minuto":minuto, "marcador":{"local":local,"visitante":visitante}}})
-            guardar_estadisticas(minuto)
-            if minuto < 90:
-                for pais in _paises(audiencia, partido_id):
-                    try:
-                        escribir(partido_id, pais, minuto, any(j["tipo"] == "Gol" and j["minuto"] == minuto for j in jugadas))
-                    except Exception:  # con el partido en juego, un comentario que no se pudo guardar no lo corta
-                        logger.warning("comentario_simulado_fallido partido=%s minuto=%s pais=%s", partido_id, minuto, pais)
-                        col.update_one({"_id": partido_id}, {"$set": {"comentarios_incompletos": True}})
-            cerrar_minuto(minuto, {"local": local, "visitante": visitante})
-        clasificado = partido["local"]["codigo"] if partido["fase"] != "Fase de grupos" and local == visitante else None
-        puntuacion.cerrar(partido_id, local, visitante, clasificado)
-        puntuacion.ejecutar(partido_id)
-        col.update_one({"_id":partido_id}, {"$set":{"estado":"Finalizado", "archivo_estado":"pendiente"}})
-        audiencia.cerrar_partido(partido_id, corrida_id, tipo, inicio_datos + timedelta(seconds=90),
-                                 {"local": local, "visitante": visitante})
-        try:
-            archivar_estadisticas(partido_id, mongo, neo, _influx())
-        except Exception:
-            logger.exception("archivo_estadisticas_pendiente partido=%s", partido_id)
+            # Hinchas de los cuatro países fijos y de los que ya están mirando. Cada uno con su sesión.
+            paises = _paises(audiencia, partido_id)
+            usuarios = post("/administracion/hinchas-demo", json={"paises": paises, "cantidad": HINCHAS_POR_PAIS})["usuarios"]
+            sesiones = {u: post("/sesiones", json={"usuario_id": u})["token"] for lista in usuarios.values() for u in lista}
+            http.cookies.clear()  # cada pedido lleva su propia sesión en el encabezado
+            comentarios_por_segundo = max(1, min(10, settings.simulador_comentarios_por_region_segundo))
+            # Los hinchas argentinos también participan en el prode de prueba, por el mismo endpoint público.
+            for usuario in usuarios.get("ARG", [])[:8]:
+                rng = random.Random(f"{partido_id}:{usuario}")
+                respuesta = http.put(f"/partidos/{partido_id}/pronostico", headers={"X-Sesion": sesiones[usuario]},
+                                     json={"goles_local": rng.randrange(4), "goles_visitante": rng.randrange(4)})
+                if respuesta.status_code != 409:
+                    respuesta.raise_for_status()
+            partido = post(f"/partidos/{partido_id}/estado", json={"estado": "En juego"})["partido"]
+            inicio_datos = datetime.now(timezone.utc).replace(microsecond=0)
+            col.update_one({"_id": partido_id}, {"$set": {"inicio_comentarios": datetime.now(timezone.utc),
+                "estado": "En juego", "estado_simulacion": "en_curso", "partido": partido,
+                "minuto": 0, "marcador": {"local": 0, "visitante": 0}, "inicio_estadisticas": inicio_datos}})
+            inicio = time.monotonic()
+            turnos = dict.fromkeys(usuarios, 0)  # un turno por país: cada hincha comenta cada 25/4 = 6,25 s
+            marcador = {"local": 0, "visitante": 0}
+            for minuto in range(91):
+                time.sleep(max(0, inicio + minuto - time.monotonic()))
+                try:
+                    marcador = post(f"/administracion/simulaciones/{partido_id}/muestras", json={"minuto": minuto})["marcador"]
+                except Exception:  # la API no respondió ese minuto: el marcador se sigue llevando con el guion
+                    logger.warning("minuto_simulado_fallido partido=%s minuto=%s", partido_id, minuto)
+                    marcador = {lado: sum(1 for j in jugadas if j["tipo"] == "Gol" and j["minuto"] <= minuto
+                                          and j["equipo_id"] == partido[lado]["codigo"]) for lado in ("local", "visitante")}
+                    col.update_one({"_id": partido_id}, {"$set": {"estadisticas_incompletas": True, "audiencia_incompleta": True}})
+                if minuto < 90:
+                    es_gol = any(j["tipo"] == "Gol" and j["minuto"] == minuto for j in jugadas)
+                    for pais, hinchas in usuarios.items():
+                        for _ in range(comentarios_por_segundo):
+                            hincha = hinchas[turnos[pais] % len(hinchas)]
+                            turnos[pais] += 1
+                            try:
+                                respuesta = http.post(f"/partidos/{partido_id}/comentarios",
+                                                      headers={"X-Sesion": sesiones[hincha]},
+                                                      json={"comentario_id": str(uuid.uuid4()),
+                                                            "contenido": random.choice(GOLES if es_gol else COMENTARIOS)})
+                                fallo = respuesta.status_code >= 500
+                            except httpx.HTTPError:
+                                fallo = True
+                            if fallo:  # con el partido en juego, un comentario que no se pudo publicar no lo corta
+                                col.update_one({"_id": partido_id}, {"$set": {"comentarios_incompletos": True}})
+            local, visitante = marcador["local"], marcador["visitante"]
+            clasificado = partido["local"]["codigo"] if partido["fase"] != "Fase de grupos" and local == visitante else None
+            post(f"/partidos/{partido_id}/resultado", json={"goles_local": local, "goles_visitante": visitante,
+                                                            "clasificado": clasificado})
+            col.update_one({"_id": partido_id}, {"$set": {"fin_comentarios": datetime.now(timezone.utc),
+                                                             "estado": "Finalizado", "archivo_estado": "pendiente"}})
+            audiencia.cerrar_partido(partido_id, corrida_id, tipo, inicio_datos + timedelta(seconds=90),
+                                     {"local": local, "visitante": visitante})
+            try:
+                post(f"/administracion/simulaciones/{partido_id}/archivar")
+            except Exception:
+                logger.exception("archivo_estadisticas_pendiente partido=%s", partido_id)
     except Exception:
         logger.exception("simulacion_fallida partido=%s", partido_id)
-        col.update_one({"_id":partido_id}, {"$set":{"estado_simulacion":"fallida"}})
+        col.update_one({"_id": partido_id}, {"$set": {"estado_simulacion": "fallida"}})
     else:
-        col.update_one({"_id":partido_id}, {"$set":{"estado_simulacion":"completa"}})
+        col.update_one({"_id": partido_id}, {"$set": {"estado_simulacion": "completa"}})
 
 def _agregar_equipos(minutos):
     """Suma contadores por equipo; la posesión se calcula con segundos de ambos."""
@@ -194,30 +267,13 @@ def _validar_jugadores(doc, muestras):
             raise Conflicto("Las estadísticas no incluyen las jugadas del jugador.")
 
 
-def _relato_historico(eventos, partido, db):
-    ids = {evento["jugador_id"] for evento in eventos}
-    jugadores = {j["_id"]: j for j in db.jugadores.find({"_id": {"$in": list(ids)}}, {"nombre": 1, "apellido": 1})}
-    equipos = {partido[lado]["codigo"]: partido[lado]["nombre"] for lado in ("local", "visitante")}
-    verbos = {"pase": "completa un pase", "tiro": "remata", "gol": "convierte un gol", "falta": "comete una falta", "amarilla": "recibe una tarjeta amarilla", "roja": "recibe una tarjeta roja", "cambio": "participa en un cambio"}
-    relato = []
-    for evento in eventos:
-        jugador = jugadores.get(evento["jugador_id"])
-        if not jugador or evento["equipo_id"] not in equipos or evento["categoria"] not in verbos:
-            raise Conflicto("No se puede construir el relato: falta el jugador, equipo o categoría.")
-        nombre = " ".join(str(jugador.get(k) or "") for k in ("nombre", "apellido")).strip()
-        if not nombre:
-            raise Conflicto("No se puede construir el relato: el jugador no tiene nombre.")
-        verbo = "intenta un pase" if evento["categoria"] == "pase" and evento.get("resultado") != "exitoso" else verbos[evento["categoria"]]
-        relato.append({"evento_id": evento["evento_id"], "minuto": evento["minuto"], "equipo_id": evento["equipo_id"], "texto": f"{nombre} {verbo} para {equipos[evento['equipo_id']]}."})
-    return relato
-
-
 def archivar_estadisticas(partido_id, mongo, neo, influx):
     """Importa muestras completas al grafo; repetir el proceso no crea duplicados."""
     col = mongo.db.simulaciones
     doc = col.find_one({"_id": partido_id})
     if not doc or doc.get("estado") != "Finalizado":
         raise Conflicto("El partido debe estar finalizado antes de archivar las estadísticas.")
+    influx = _influx_de_simulacion(influx, doc)
     if doc.get("estadisticas_incompletas"):
         raise Conflicto("Faltan muestras de InfluxDB; no se puede afirmar que el histórico esté completo.")
     equipos = {doc["partido"]["local"]["codigo"], doc["partido"]["visitante"]["codigo"]}
@@ -295,15 +351,13 @@ def archivar_estadisticas(partido_id, mongo, neo, influx):
             raise Conflicto("Los goles de InfluxDB no coinciden con el marcador final.")
     limpias = [{**{campo: fila[campo] for campo in campos}, "observado_en": str(fila.get("time", ""))} for fila in muestras]
     resumen_limpio = [{k: v for k, v in fila.items() if v is not None} for fila in resumen]
-    relato = _relato_historico(eventos, doc["partido"], mongo.db) if version == 3 else None
+    if version == 3:
+        influx.guardar_resumenes(partido_id, doc["corrida_id"], doc["inicio_estadisticas"], resumen_limpio, jugadores_resumen)
     if version in (2, 3):
         neo.archivar_estadisticas(partido_id, resumen_limpio, limpias, jugadas, jugadores_resumen)
     else:
         neo.archivar_estadisticas(partido_id, resumen_limpio, limpias, jugadas)
-    cambios = {"archivo_estado": "completo"}
-    if version == 3:
-        cambios["jugadas_historicas"] = relato
-    col.update_one({"_id": partido_id}, {"$set": cambios})
+    col.update_one({"_id": partido_id}, {"$set": {"archivo_estado": "completo"}})
     return {"partido_id": partido_id, "equipos": len(resumen), "muestras": len(limpias), "jugadas": len(jugadas), "archivo_estado": "completo"}
 
 
@@ -353,7 +407,7 @@ def estadisticas_partido(partido_id: PartidoId,
     if desde > hasta:
         raise ValidacionError("desde_minuto no puede ser mayor que hasta_minuto.")
     tramo = {"tramo": {"desde_minuto": desde, "hasta_minuto": hasta}} if con_tramo else {}
-    doc = mongo.db.simulaciones.find_one({"_id": partido_id}, {"_id": 0, "partido": 1, "estadisticas_estado": 1, "estadisticas_incompletas": 1, "archivo_estado": 1, "estadisticas_version": 1, "corrida_id": 1})
+    doc = mongo.db.simulaciones.find_one({"_id": partido_id}, {"_id": 0, "partido": 1, "estadisticas_estado": 1, "estadisticas_incompletas": 1, "archivo_estado": 1, "estadisticas_version": 1, "corrida_id": 1, "influx_raw_db": 1})
     if not doc or "partido" not in doc:
         raise NoEncontrado("No hay estadísticas para este partido.")
     if doc.get("archivo_estado") == "completo":
@@ -363,6 +417,7 @@ def estadisticas_partido(partido_id: PartidoId,
             return {"fuente": "neo4j", "equipos": equipos, "incompletas": False, **tramo}
     if doc.get("estadisticas_estado") == "fallida":
         raise DependenciaNoDisponible("influxdb")
+    influx = _influx_de_simulacion(influx, doc)
     if doc.get("estadisticas_version") == 3:
         minutos, _ = influx.agregados_eventos(partido_id, doc["corrida_id"])
     elif doc.get("estadisticas_version") == 2:
@@ -377,11 +432,12 @@ def estadisticas_partido(partido_id: PartidoId,
 
 @router.get("/partidos/{partido_id}/estadisticas/jugadores")
 def estadisticas_jugadores(partido_id: PartidoId, mongo=Depends(get_mongo), influx=Depends(get_influx), neo=Depends(get_neo4j)):
-    doc = mongo.db.simulaciones.find_one({"_id": partido_id}, {"estadisticas_version": 1, "archivo_estado": 1, "estadisticas_incompletas": 1, "corrida_id": 1})
+    doc = mongo.db.simulaciones.find_one({"_id": partido_id}, {"estadisticas_version": 1, "archivo_estado": 1, "estadisticas_incompletas": 1, "corrida_id": 1, "influx_raw_db": 1})
     if not doc or doc.get("estadisticas_version") not in (2, 3):
         raise NoEncontrado("Esta simulación no tiene estadísticas por jugador.")
     if doc.get("archivo_estado") == "completo":
         return {"fuente": "neo4j", "jugadores": neo.leer_resumenes_jugadores(partido_id), "incompletas": False}
+    influx = _influx_de_simulacion(influx, doc)
     if doc.get("estadisticas_version") == 3:
         _, jugadores = influx.agregados_eventos(partido_id, doc["corrida_id"])
     else:
@@ -390,12 +446,18 @@ def estadisticas_jugadores(partido_id: PartidoId, mongo=Depends(get_mongo), infl
 
 
 @router.get("/partidos/{partido_id}/jugadas/temporales")
-def jugadas_temporales(partido_id: PartidoId, mongo=Depends(get_mongo), influx=Depends(get_influx)):
-    doc = mongo.db.simulaciones.find_one({"_id": partido_id}, {"estadisticas_version": 1, "corrida_id": 1, "estadisticas_incompletas": 1, "archivo_estado": 1, "jugadas_historicas": 1})
-    if doc and doc.get("archivo_estado") == "completo" and "jugadas_historicas" in doc:
-        return {"fuente": "mongodb", "partido_id": partido_id, "jugadas": doc["jugadas_historicas"], "incompletas": False}
+def jugadas_temporales(partido_id: PartidoId, mongo=Depends(get_mongo), influx=Depends(get_influx), neo=Depends(get_neo4j)):
+    doc = mongo.db.simulaciones.find_one({"_id": partido_id}, {"estadisticas_version": 1, "corrida_id": 1, "estadisticas_incompletas": 1, "archivo_estado": 1, "influx_raw_db": 1})
+    if doc and doc.get("archivo_estado") == "completo":
+        categorias = {"Pase":"pase", "Tiro":"tiro", "Gol":"gol", "Falta":"falta", "Tarjeta amarilla":"amarilla", "Tarjeta roja":"roja", "Cambio":"cambio"}
+        eventos = neo.listar_eventos(partido_id, 10000) or []
+        jugadas = [{"evento_id": e["id"], "minuto": e["minuto"], "equipo_id": (e.get("jugador") or {}).get("equipo"),
+                    "jugador_id": (e.get("jugador") or {}).get("id"), "categoria": categorias.get(e["tipo"], e["tipo"].lower()),
+                    "resultado": "exitoso" if e["tipo"] in ("Pase", "Gol") else "registrado"} for e in eventos]
+        return {"fuente": "neo4j", "partido_id": partido_id, "jugadas": jugadas, "incompletas": False}
     if not doc or doc.get("estadisticas_version") != 3:
         raise NoEncontrado("Esta simulación no tiene jugadas temporales.")
+    influx = _influx_de_simulacion(influx, doc)
     return {"fuente": "influxdb", "partido_id": partido_id,
             "jugadas": influx.eventos_partido(partido_id, doc["corrida_id"]),
             "incompletas": doc.get("estadisticas_incompletas", False)}

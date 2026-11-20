@@ -24,7 +24,7 @@ COLECCIONES = ["usuarios", "prodes", "pronosticos", "resultados", "puntajes", "r
 
 
 # Lo que la audiencia y los comentarios dejan en Redis por partido. Las sesiones no se tocan.
-PREFIJOS_DE_PARTIDO = ("unicos:", "paises:", "audiencia:", "cuenta:", "visto:", "lento:")
+PREFIJOS_DE_PARTIDO = ("unicos:", "paises:", "audiencia:", "cuenta:", "visto:", "lento:", "prode:ranking")
 
 
 def borrar_audiencia_de_redis(redis) -> int:

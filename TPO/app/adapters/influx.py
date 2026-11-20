@@ -103,6 +103,17 @@ class InfluxAdapter:
         self._s = settings
         self._http = None
 
+    def para_simulacion(self, documento):
+        """Los documentos anteriores sin base explícita siguen leyendo la base histórica."""
+        base = documento.get("influx_raw_db") or self._s.influx_db
+        if base == self._s.influx_db:
+            return self
+        import copy
+        self._cli()  # las vistas comparten el pool HTTP, sin crear una conexión por muestra
+        adaptador = copy.copy(self)
+        adaptador._s = self._s.model_copy(update={"influx_db": base})
+        return adaptador
+
     def _cli(self):
         if self._http is None:
             import httpx
@@ -385,3 +396,38 @@ class InfluxAdapter:
                f"WHERE partido_id = '{partido_id}' AND fuente = 'simulacion' ORDER BY equipo_id, minuto LIMIT 500")
         with operacion(FUENTE, "muestras_partido", _traducir):
             return self.consultar(sql)
+
+    def para_resumenes(self):
+        """La misma conexión, apuntando a la base de resúmenes (sin vencimiento): audiencia y comentarios por minuto."""
+        import copy
+
+        self._cli()  # las vistas comparten el pool HTTP
+        adaptador = copy.copy(self)
+        adaptador._s = self._s.model_copy(update={"influx_db": self._s.influx_resumen_db})
+        return adaptador
+
+    def guardar_resumenes(self, partido_id, corrida_id, instante, equipos, jugadores):
+        """Materializa los totales finales con un timestamp estable para permitir reintentos."""
+        if not _RE_PARTIDO.fullmatch(partido_id) or not re.fullmatch(r"[0-9a-f]{32}", corrida_id):
+            raise ValidacionError("Partido o simulación inválidos.")
+        from datetime import timezone
+        instante = instante.replace(tzinfo=timezone.utc) if instante.tzinfo is None else instante.astimezone(timezone.utc)
+        timestamp = int(instante.timestamp()) * 1_000_000_000
+        campos = ("pases_intentados", "pases_completados", "tiros", "tiros_arco", "goles", "faltas", "corners", "posesion_segundos")
+        lineas = []
+        for tipo, filas in (("resumen_partido_equipo", equipos), ("resumen_partido_jugador", jugadores)):
+            for fila in filas:
+                equipo = fila["equipo_id"]
+                if not _RE_EQUIPO.fullmatch(equipo): raise ValidacionError("Equipo inválido.")
+                tags = f"partido_id={partido_id},equipo_id={equipo},corrida_id={corrida_id}"
+                if tipo == "resumen_partido_jugador":
+                    jugador = fila["jugador_id"]
+                    if not re.fullmatch(r"J-[A-Z]{3}-[0-9]{2}", jugador): raise ValidacionError("Jugador inválido.")
+                    tags += f",jugador_id={jugador}"
+                valores = [f"{campo}={int(fila.get(campo) or 0)}i" for campo in campos]
+                if tipo == "resumen_partido_equipo" and fila.get("posesion_pct") is not None:
+                    valores.append(f"posesion_pct={float(fila['posesion_pct'])}")
+                lineas.append(f"{tipo},{tags} {','.join(valores)} {timestamp}")
+        with operacion(FUENTE, "guardar_resumenes", _traducir):
+            respuesta = self._cli().post("/api/v3/write_lp", params={"db": self._s.influx_resumen_db, "precision": "nanosecond"}, content="\n".join(lineas) + "\n")
+            if respuesta.status_code not in (200, 204): raise DependenciaNoDisponible(FUENTE)

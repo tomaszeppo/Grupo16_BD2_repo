@@ -1,6 +1,9 @@
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field
 from fastapi import APIRouter, BackgroundTasks, Depends, Response
 
-from app.deps import get_partidos_admin_service, get_puntuacion_service, requiere_admin
+from app.deps import get_mongo, get_partidos_admin_service, get_puntuacion_service, requiere_admin
 from app.schemas.admin import CambioDeEstado, EquiposDelPartido, EventoNuevo, ResultadoFinal
 from app.schemas.comunes import PartidoId
 from app.services.partidos_admin import PartidosAdminService
@@ -12,6 +15,60 @@ router = APIRouter(tags=["Administración"], dependencies=[Depends(requiere_admi
 @router.get("/administracion/acceso", summary="Validar clave de administración")
 def validar_acceso() -> dict:
     return {"autorizado": True}
+
+
+@router.post("/administracion/usuario-prueba", summary="Preparar el usuario de laboratorio del administrador")
+def usuario_prueba_admin(mongo=Depends(get_mongo)) -> dict:
+    """Una identidad compartida y un grupo reutilizables, sin sustituir la clave administrativa."""
+    import time
+    import uuid
+    from datetime import datetime, timedelta, timezone
+    from pymongo import ReturnDocument
+    from app.errors import Conflicto
+
+    config = mongo.db.configuracion
+    clave = "usuario_prueba_admin"
+    config.update_one({"_id": clave}, {"$setOnInsert": {}}, upsert=True)
+    token = uuid.uuid4().hex
+    reserva = None
+    for _ in range(50):
+        ahora = datetime.now(timezone.utc)
+        reserva = config.find_one_and_update({"_id": clave, "$or": [{"reserva_hasta": {"$exists": False}},
+                                                                        {"reserva_hasta": {"$lt": ahora}}]},
+            {"$set": {"reserva_token": token, "reserva_hasta": ahora + timedelta(seconds=30)}},
+            return_document=ReturnDocument.AFTER)
+        if reserva is not None: break
+        time.sleep(0.1)
+    if reserva is None: raise Conflicto("El usuario de prueba se está preparando; intentá de nuevo.")
+    try:
+        usuario = mongo.obtener_usuario(reserva.get("usuario_id")) if reserva.get("usuario_id") else None
+        if usuario is None:
+            usuario = mongo.crear_usuario("Administrador de prueba", "ARG", datetime.now(timezone.utc))
+            config.update_one({"_id": clave, "reserva_token": token}, {"$set": {"usuario_id": usuario["id"]}})
+        grupo = mongo.obtener_prode(reserva.get("prode_id")) if reserva.get("prode_id") else None
+        if grupo is None:
+            grupo = mongo.crear_prode("Grupo X", usuario["id"], datetime.now(timezone.utc))
+            config.update_one({"_id": clave, "reserva_token": token}, {"$set": {"prode_id": grupo["id"]}})
+        from app.services.hinchas_demo import asegurar_hinchas
+        for hincha in asegurar_hinchas(mongo, ("ARG",))["ARG"][:5]:
+            mongo.unir_a_prode(grupo["codigo"], hincha, 100)
+        grupo = mongo.obtener_prode(grupo["id"])
+        return {"usuario": usuario, "prode": grupo}
+    finally:
+        config.update_one({"_id": clave, "reserva_token": token}, {"$unset": {"reserva_token": "", "reserva_hasta": ""}})
+
+
+class PedidoHinchas(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    paises: list[Annotated[str, Field(pattern=r"^[A-Z]{3}$")]] = Field(default=["ARG", "BRA", "ESP", "URU"], max_length=48)
+    cantidad: int = Field(default=8, ge=1, le=50)
+
+
+@router.post("/administracion/hinchas-demo", summary="Preparar hinchas sintéticos para los comentarios")
+def hinchas_demo(cuerpo: PedidoHinchas | None = None, mongo=Depends(get_mongo)) -> dict:
+    from app.services.hinchas_demo import asegurar_hinchas
+    cuerpo = cuerpo or PedidoHinchas()
+    return {"usuarios": asegurar_hinchas(mongo, tuple(dict.fromkeys(cuerpo.paises)), cuerpo.cantidad)}
 
 
 @router.post("/partidos/{partido_id}/estado", summary="Poner un partido en juego")

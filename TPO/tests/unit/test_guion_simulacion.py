@@ -29,6 +29,14 @@ def test_guion_inserta_una_vez_y_conserva_relaciones():
     assert len(db.guiones_simulacion.documentos) == 1
 
 
+def test_guion_para_equipos_actualizados_en_una_llave():
+    db = SimpleNamespace(jugadores=Jugadores(), guiones_simulacion=Guiones())
+    original = obtener_o_crear(PARTIDO, db)
+    actualizado = obtener_o_crear({**PARTIDO, "visitante": {"codigo": "URU"}}, db)
+    assert {j["equipo_id"] for j in actualizado["jugadas"]} == {"ARG", "URU"}
+    assert obtener_o_crear(PARTIDO, db) == original
+
+
 def test_guion_rechaza_relacion_futura(tmp_path):
     archivo = tmp_path / "guion.json"
     archivo.write_text(json.dumps([{"equipo":"local","tipo":"Gol","minuto":23,"dorsal":9,"previa":1}]))

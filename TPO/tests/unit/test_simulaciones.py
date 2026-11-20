@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -38,45 +38,147 @@ class PlantelFalso:
         return Cursor()
 
 
-def test_simulacion_escribe_antes_de_iniciar_y_finaliza(monkeypatch):
-    acciones = []
+class ClienteFalso:
+    """La API vista por el simulador: anota cada pedido y responde lo mínimo. `fallar` decide qué rutas fallan."""
+
+    def __init__(self, partido, fallar=lambda url: False):
+        self.partido, self.fallar, self.pedidos = partido, fallar, []
+        self.cookies = SimpleNamespace(clear=lambda: None)
+
+    def __call__(self, **kwargs):
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
+    def put(self, url, **kwargs):
+        self.pedidos.append((url, kwargs))
+        return SimpleNamespace(status_code=201, raise_for_status=lambda: None)
+
+    def post(self, url, **kwargs):
+        self.pedidos.append((url, kwargs))
+        if self.fallar(url):
+            import httpx
+            def error():
+                raise httpx.HTTPStatusError("falla", request=None, response=None)
+            return SimpleNamespace(status_code=503, raise_for_status=error, json=lambda: {})
+        if url == "/administracion/hinchas-demo":
+            cantidad = kwargs["json"]["cantidad"]
+            body = {"usuarios": {p: [f"{p}{n:02d}" for n in range(cantidad)] for p in kwargs["json"]["paises"]}}
+        elif url == "/sesiones":
+            body = {"token": "t-" + kwargs["json"]["usuario_id"]}
+        elif url.endswith("/estado"):
+            body = {"partido": self.partido}
+        elif url.endswith("/muestras"):
+            body = {"marcador": {"local": int(kwargs["json"]["minuto"] >= 42), "visitante": 0}}
+        else:
+            body = {}
+        return SimpleNamespace(status_code=201, raise_for_status=lambda: None, json=lambda: body)
+
+
+def _simular(monkeypatch, fallar=lambda url: False, paises=("ARG", "BRA", "ESP", "URU")):
     col = Mock()
     mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=PlantelFalso()))
-    partido = {"id":"P-03", "fase": "Fase de grupos", "local": {"codigo": "ARG"}, "visitante": {"codigo": "BRA"}}
-    admin = SimpleNamespace(_partido=lambda id: partido, poner_en_juego=lambda id: acciones.append("iniciar") or partido)
-    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas":[{"tipo":"Gol", "minuto":23, "equipo_id":"ARG", "jugador":"J-ARG-09"},{"tipo":"Gol", "minuto":75, "equipo_id":"BRA", "jugador":"J-BRA-09"}]})
-    puntuacion = SimpleNamespace(cerrar=Mock(), ejecutar=Mock())
-    monkeypatch.setattr(simulaciones, "escribir", lambda id, pais, minuto, *args: acciones.append((pais, minuto)))
-    monkeypatch.setattr(simulaciones, "_influx", lambda: SimpleNamespace(guardar_jugadores=lambda *args: None))
-    monkeypatch.setattr(simulaciones.time, "sleep", lambda n: None)
-    simulaciones._ejecutar("P-03", mongo, admin, puntuacion)
-    assert acciones[:5] == [("ARG", 0), ("BRA", 0), ("ESP", 0), ("URU", 0), "iniciar"]
-    puntuacion.cerrar.assert_called_once_with("P-03", 1, 1, None)
-    puntuacion.ejecutar.assert_called_once_with("P-03")
-    assert col.update_one.call_args_list[-1].args[1]["$set"]["estado_simulacion"] == "completa"
+    partido = {"id": "P-03", "fase": "Fase de grupos", "local": {"codigo": "ARG"}, "visitante": {"codigo": "BRA"}}
+    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas": [{"tipo": "Gol", "minuto": 42, "equipo_id": "ARG", "jugador": "J-ARG-09"}]})
+    monkeypatch.setattr(simulaciones, "get_settings", lambda: SimpleNamespace(simulador_api_url="http://api", admin_clave="clave", influx_raw_db="fixture2030_raw", simulador_comentarios_por_region_segundo=4))
+    monkeypatch.setattr(simulaciones.time, "sleep", lambda _: None)
+    simulaciones._audiencia().paises = set(paises)
+    cliente = ClienteFalso(partido, fallar)
+    monkeypatch.setattr(simulaciones.httpx, "Client", cliente)
+    simulaciones._ejecutar("P-03", mongo, SimpleNamespace(_partido=lambda _: partido), Mock(), tipo="carga")
+    return cliente.pedidos, col
 
 
-def test_falla_de_comentarios_marca_error_sin_iniciar(monkeypatch):
+def test_simulador_maneja_el_partido_por_la_api_con_hinchas_con_sesion(monkeypatch, sin_redis):
+    pedidos, col = _simular(monkeypatch)
+    assert sum(url.endswith("/muestras") for url, _ in pedidos) == 91
+    comentarios = [kw for url, kw in pedidos if url.endswith("/comentarios")]
+    assert len(comentarios) == 90 * 4 * 4  # 90 minutos, 4 países, 4 por segundo
+    assert all(kw["headers"]["X-Sesion"].startswith("t-") and kw["json"]["comentario_id"] for kw in comentarios)
+    assert len({kw["json"]["comentario_id"] for kw in comentarios}) == len(comentarios)
+    pronosticos = [kw for url, kw in pedidos if url.endswith("/pronostico")]
+    assert pronosticos and all("X-Sesion" in kw["headers"] for kw in pronosticos)
+    assert next(kw["json"] for url, kw in pedidos if url.endswith("/resultado"))["goles_local"] == 1
+    assert sin_redis.finales == [("carga", {"local": 1, "visitante": 0})]
+    assert col.update_one.call_args.args[1]["$set"]["estado_simulacion"] == "completa"
+
+
+def test_ningun_hincha_comenta_antes_del_modo_lento(monkeypatch, sin_redis):
+    """Con 4 comentarios por segundo y país, cada hincha tiene que esperar más de 5 s entre uno y otro."""
+    pedidos, _ = _simular(monkeypatch)
+    segundo, ultimo = -1, {}
+    for url, kw in pedidos:
+        if url.endswith("/muestras"):
+            segundo = kw["json"]["minuto"]
+        elif url.endswith("/comentarios"):
+            hincha = kw["headers"]["X-Sesion"]
+            assert segundo - ultimo.get(hincha, -99) > 5, f"{hincha} comentó a los {segundo - ultimo[hincha]} s"
+            ultimo[hincha] = segundo
+
+
+def test_los_hinchas_tambien_son_de_los_paises_que_miran(monkeypatch, sin_redis):
+    pedidos, _ = _simular(monkeypatch, paises=("ARG", "BRA", "ESP", "URU", "JPN"))
+    pedido = next(kw["json"] for url, kw in pedidos if url == "/administracion/hinchas-demo")
+    assert "JPN" in pedido["paises"] and pedido["cantidad"] == simulaciones.HINCHAS_POR_PAIS
+
+
+def test_en_el_minuto_del_gol_se_comenta_el_gol(monkeypatch, sin_redis):
+    pedidos, _ = _simular(monkeypatch)
+    segundo = -1
+    for url, kw in pedidos:
+        if url.endswith("/muestras"):
+            segundo = kw["json"]["minuto"]
+        elif url.endswith("/comentarios") and segundo == 42:
+            assert kw["json"]["contenido"] in simulaciones.GOLES
+
+
+def test_comentarios_y_minutos_que_fallan_no_cortan_el_partido(monkeypatch, sin_redis):
+    """Redis o Cassandra caídos a mitad del partido: la API responde 503 a comentarios y minutos, y el partido
+    termina igual, marcado como incompleto (revisión final, hallazgo 1, con el simulador por la API)."""
+    pedidos, col = _simular(monkeypatch, fallar=lambda url: url.endswith("/comentarios") or url.endswith("/muestras"))
+    cambios = [c.args[1]["$set"] for c in col.update_one.call_args_list]
+    assert cambios[-1]["estado_simulacion"] == "completa"
+    assert any(c.get("comentarios_incompletos") for c in cambios)
+    assert any(c.get("audiencia_incompleta") for c in cambios)
+    assert next(kw["json"] for url, kw in pedidos if url.endswith("/resultado"))["goles_local"] == 1
+
+
+def test_registrar_muestra_usa_datos_de_la_corrida_y_cierra_la_audiencia(sin_redis):
+    inicio = datetime(2026, 1, 1, tzinfo=timezone.utc)
     col = Mock()
+    col.find_one.return_value = {"estado_simulacion": "en_curso", "tipo": "demo", "partido": {"local": {"codigo": "ARG"}, "visitante": {"codigo": "BRA"}},
+        "jugadas": [{"tipo": "Gol", "minuto": 42, "equipo_id": "ARG"}], "plantel_estadisticas": {}, "inicio_estadisticas": inicio, "corrida_id": "abc"}
     mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col))
-    admin = SimpleNamespace(_partido=lambda id: {"id":"P-03"}, poner_en_juego=Mock())
-    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas":[]})
-    def fallar(*args): raise RuntimeError("fallo")
-    monkeypatch.setattr(simulaciones, "escribir", fallar)
-    simulaciones._ejecutar("P-03", mongo, admin, Mock())
-    admin.poner_en_juego.assert_not_called()
-    assert col.update_one.call_args.args[1]["$set"]["estado_simulacion"] == "fallida"
+    influx = SimpleNamespace(guardar_jugadores=Mock())
+    respuesta = simulaciones.registrar_muestra("P-03", simulaciones.MinutoSimulado(minuto=42), mongo, influx)
+    assert respuesta["marcador"] == {"local": 1, "visitante": 0}
+    assert influx.guardar_jugadores.call_args.args[4] == inicio + timedelta(seconds=42)
+    assert sin_redis.minutos == [(42, "demo", {"local": 1, "visitante": 0})]
 
 
-def test_comentarios_de_gol_usan_textos_de_gol(monkeypatch):
-    guardados = []
-    servicio = SimpleNamespace(publicar_automatico=lambda *args: guardados.append(args))
-    monkeypatch.setattr(simulaciones, "_comentarios", lambda: servicio)
-    monkeypatch.setattr(simulaciones.random, "choice", lambda opciones: opciones[0])
-    simulaciones.escribir("P-03", "ARG", 23)
-    assert guardados[0][:2] == ("P-03", "ARG")
-    assert guardados[0][3] in simulaciones.GOLES
-    assert len(simulaciones.COMENTARIOS) >= 10
+def test_registrar_muestra_con_influx_caido_marca_y_sigue(sin_redis):
+    col = Mock()
+    col.find_one.return_value = {"estado_simulacion": "en_curso", "partido": {"local": {"codigo": "ARG"}, "visitante": {"codigo": "BRA"}},
+        "jugadas": [], "plantel_estadisticas": {}, "inicio_estadisticas": datetime(2026, 1, 1, tzinfo=timezone.utc), "corrida_id": "abc"}
+    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col))
+    def caer(*args):
+        raise RuntimeError("influx caído")
+    respuesta = simulaciones.registrar_muestra("P-03", simulaciones.MinutoSimulado(minuto=5), mongo,
+                                               SimpleNamespace(guardar_jugadores=caer))
+    assert respuesta["minuto"] == 5
+    assert col.update_one.call_args.args[1]["$set"]["estadisticas_incompletas"] is True
+    assert sin_redis.minutos  # la audiencia del minuto se cerró igual
+
+
+def test_endpoint_muestras_exige_administrador_y_valida_minuto(cliente):
+    ruta = "/administracion/simulaciones/P-03/muestras"
+    assert cliente.post(ruta, json={"minuto": 1}).status_code == 401
+    headers = {"X-Admin-Clave": "clave-de-prueba"}
+    assert cliente.post(ruta, headers=headers, json={"minuto": 91}).status_code == 422
 
 
 def preparar_archivo():
@@ -139,87 +241,3 @@ def test_archivar_rechaza_id_duplicado():
     with pytest.raises(Conflicto, match="duplicadas"):
         simulaciones.archivar_estadisticas("P-03", mongo, neo, influx)
     neo.archivar_estadisticas.assert_not_called()
-
-
-def test_simulacion_respeta_gol_definido_en_guion(monkeypatch):
-    col = Mock()
-    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=PlantelFalso()))
-    partido = {"id":"P-03", "fase":"Fase de grupos", "local":{"codigo":"ARG"}, "visitante":{"codigo":"BRA"}}
-    admin = SimpleNamespace(_partido=lambda _:partido, poner_en_juego=lambda _:partido)
-    goles = [{"tipo":"Gol", "minuto":42, "equipo_id":"ARG", "jugador":"J-ARG-09"}]
-    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args:{"jugadas":goles})
-    monkeypatch.setattr(simulaciones, "escribir", lambda *args:None)
-    monkeypatch.setattr(simulaciones, "archivar_estadisticas", lambda *args:None)
-    monkeypatch.setattr(simulaciones.time, "sleep", lambda _:None)
-    influx = SimpleNamespace(guardar_jugadores=Mock())
-    monkeypatch.setattr(simulaciones, "_influx", lambda:influx)
-    puntuacion = SimpleNamespace(cerrar=Mock(), ejecutar=Mock())
-    simulaciones._ejecutar("P-03", mongo, admin, puntuacion)
-    puntuacion.cerrar.assert_called_once_with("P-03", 1, 0, None)
-    muestra_42 = influx.guardar_jugadores.call_args_list[42].args
-    assert muestra_42[1] == 42 and muestra_42[3][0]["jugador"] == "J-ARG-09"
-
-
-def test_simulacion_comenta_en_los_paises_que_miran_y_cierra_cada_minuto(monkeypatch, sin_redis):
-    sin_redis.paises.add("JPN")
-    acciones = []
-    col = Mock()
-    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=PlantelFalso()))
-    partido = {"id": "P-03", "fase": "Fase de grupos", "local": {"codigo": "ARG"}, "visitante": {"codigo": "BRA"}}
-    admin = SimpleNamespace(_partido=lambda _: partido, poner_en_juego=lambda _: partido)
-    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas": []})
-    monkeypatch.setattr(simulaciones, "escribir", lambda id, pais, minuto, *args: acciones.append((pais, minuto)))
-    monkeypatch.setattr(simulaciones, "_influx", lambda: SimpleNamespace(guardar_jugadores=lambda *args: None))
-    monkeypatch.setattr(simulaciones, "archivar_estadisticas", lambda *args: None)
-    monkeypatch.setattr(simulaciones.time, "sleep", lambda _: None)
-    simulaciones._ejecutar("P-03", mongo, admin, SimpleNamespace(cerrar=Mock(), ejecutar=Mock()), tipo="carga")
-    assert ("JPN", 0) in acciones and ("JPN", 45) in acciones
-    assert [m for m, _, _ in sin_redis.minutos] == list(range(91))
-    assert {t for _, t, _ in sin_redis.minutos} == {"carga"}
-    assert sin_redis.finales == [("carga", {"local": 0, "visitante": 0})]
-
-
-def test_audiencia_incompleta_queda_marcada(monkeypatch, sin_redis):
-    sin_redis.cerrar_minuto = lambda *args: {"incompleto": True}
-    col = Mock()
-    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=PlantelFalso()))
-    partido = {"id": "P-03", "fase": "Fase de grupos", "local": {"codigo": "ARG"}, "visitante": {"codigo": "BRA"}}
-    admin = SimpleNamespace(_partido=lambda _: partido, poner_en_juego=lambda _: partido)
-    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas": []})
-    monkeypatch.setattr(simulaciones, "escribir", lambda *args: None)
-    monkeypatch.setattr(simulaciones, "_influx", lambda: SimpleNamespace(guardar_jugadores=lambda *args: None))
-    monkeypatch.setattr(simulaciones, "archivar_estadisticas", lambda *args: None)
-    monkeypatch.setattr(simulaciones.time, "sleep", lambda _: None)
-    simulaciones._ejecutar("P-03", mongo, admin, SimpleNamespace(cerrar=Mock(), ejecutar=Mock()))
-    marcas = [c.args[1]["$set"] for c in col.update_one.call_args_list if "audiencia_incompleta" in c.args[1].get("$set", {})]
-    assert marcas and col.update_one.call_args_list[-1].args[1]["$set"]["estado_simulacion"] == "completa"
-
-
-def test_redis_caido_a_mitad_del_partido_no_corta_la_simulacion(monkeypatch):
-    """Con los servicios reales (no reemplazados): el comentario automático se guarda en Cassandra aunque
-    Redis no pueda repartirlo, la audiencia queda marcada incompleta y el partido termina (revisión final, hallazgo 1)."""
-    from app.config.settings import Settings
-    from app.services.audiencia import Audiencia
-    from app.services.comentarios import ComentariosService
-    from tests.falsos import CassandraFalso, RedisFalso
-
-    redis, cassandra = RedisFalso(), CassandraFalso()
-    redis.caida = True
-    servicio = ComentariosService(cassandra, redis, None, None, lambda: datetime.now(timezone.utc), 5.0)
-    influx = SimpleNamespace(guardar_jugadores=lambda *a: None, guardar_audiencia=lambda *a: None,
-                             guardar_resumen_audiencia=lambda *a: None)
-    monkeypatch.setattr(simulaciones, "_audiencia", lambda: Audiencia(redis, influx, Settings(_env_file=None)))
-    monkeypatch.setattr(simulaciones, "_comentarios", lambda: servicio)
-    monkeypatch.setattr(simulaciones, "_influx", lambda: influx)
-    monkeypatch.setattr(simulaciones, "archivar_estadisticas", lambda *args: None)
-    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas": []})
-    monkeypatch.setattr(simulaciones.time, "sleep", lambda _: None)
-    col = Mock()
-    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=PlantelFalso()))
-    partido = {"id": "P-03", "fase": "Fase de grupos", "local": {"codigo": "ARG"}, "visitante": {"codigo": "BRA"}}
-    admin = SimpleNamespace(_partido=lambda _: partido, poner_en_juego=lambda _: partido)
-    simulaciones._ejecutar("P-03", mongo, admin, SimpleNamespace(cerrar=Mock(), ejecutar=Mock()))
-    cambios = [c.args[1]["$set"] for c in col.update_one.call_args_list]
-    assert cambios[-1]["estado_simulacion"] == "completa"
-    assert any(c.get("audiencia_incompleta") for c in cambios)
-    assert len(cassandra.filas) == 4 * 90  # los comentarios automáticos se guardaron igual

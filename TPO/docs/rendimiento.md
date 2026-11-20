@@ -4,7 +4,7 @@ Este documento tiene tres partes que no hay que mezclar: lo que **medimos** en e
 
 ## 1. Cómo medimos
 
-- Todos los pedidos medidos pasan por la API. En el Hito 12 la carga iba directo a Cassandra y nos quedó marcado como límite; acá no.
+- Todos los pedidos medidos pasan por la API. En el Hito 12 la carga iba directo a Cassandra y nos quedó marcado como límite; acá no. La única excepción es el diagnóstico de MongoDB de la sección 2.2, que mide la base por separado a propósito.
 - El generador de carga ([`carga/`](../carga/ejecutar.py)) simula usuarios que piden sin pausa durante 30 segundos. "50 a la vez" quiere decir 50 usuarios virtuales, cada uno mandando su siguiente pedido apenas recibe la respuesta del anterior. Cada usuario virtual usa la sesión de un usuario distinto, creada antes de medir.
 - Antes de medir cargamos 100.000 usuarios y sus pronósticos directo en MongoDB ([`carga/poblar.py`](../carga/poblar.py)), y una sesión por usuario directo en Redis ([`carga/sesiones.py`](../carga/sesiones.py)). Eso es preparación y no se mide.
 - La latencia se informa sobre los pedidos que salieron bien; los errores se cuentan aparte.
@@ -48,7 +48,7 @@ Para saber si el límite era la API o la base medimos MongoDB solo, sin la API, 
 | Un nodo, esperando al diario | 880,7 | 65,1 ms |
 | Mayoría de los nodos (la que usa la API) | 855,0 | 69,3 ms |
 
-Archivo: `diagnostico_mongo_20261120_023043`.
+Archivo: `diagnostico_mongo_20261120_023043`. `scripts/medir.ps1` ya no corre este diagnóstico en la serie; se repite aparte con `docker compose run --rm herramientas python -m carga.diagnostico_mongo --hilos 50 --segundos 10`.
 
 Dos conclusiones. La primera: MongoDB acepta unas 850 escrituras por segundo con la garantía que usamos y la API deja pasar unas 230, así que **el cuello de botella es la API**, no la base (la sección 2.4 lo confirma: dándole más CPU a la API, sube). La segunda: pedir confirmación de la mayoría cuesta alrededor de un cuarto de las escrituras frente a confirmar con un solo nodo sin esperar al diario (855,0 contra 1.184,9). Lo pagamos a propósito: un pronóstico confirmado no se pierde aunque se caiga el primario (ver 2.8).
 

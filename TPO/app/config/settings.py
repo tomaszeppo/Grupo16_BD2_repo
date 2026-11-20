@@ -36,11 +36,19 @@ class Settings(BaseSettings):
 
     influx_url: str = "http://influxdb:8181"
     influx_db: str = "fixture2030_metrics"
+    influx_raw_db: str = "fixture2030_raw"
+    influx_resumen_db: str = "fixture2030_resumenes"
     influx_token: str = ""
 
     calendario_ttl_segundos: float = 30.0  # 0 = consultar Neo4j en cada pronóstico (solo para comparar en las pruebas)
     prode_max_integrantes: int = 100
     admin_clave: str = ""  # vacía = administración deshabilitada
+    simulador_api_url: str = "http://127.0.0.1:8010"
+    pronosticos_hasta_inicio_real: bool = False
+    simulador_comentarios_por_region_segundo: int = 4
+    redis_enabled: bool = False  # solo el ranking en Redis; sesiones y vivo usan Redis siempre
+    redis_lote: int = 500
+    redis_persistencia_demora_segundos: int = 15
     puntuacion_toma_vencida_segundos: float = 120.0
 
 

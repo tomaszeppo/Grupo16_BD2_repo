@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from redis.exceptions import RedisError
 
 from app.errors import ApiError, cuerpo_error
 
@@ -15,6 +16,10 @@ def _respuesta(status: int, codigo: str, mensaje: str, request: Request, detalle
 
 
 def registrar_manejadores(app: FastAPI) -> None:
+    @app.exception_handler(RedisError)
+    async def _redis_error(request: Request, exc: RedisError):
+        return _respuesta(503, "DEPENDENCIA_NO_DISPONIBLE", "Redis no está disponible.", request)
+
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError):
         return _respuesta(exc.status_code, exc.codigo, exc.mensaje, request, exc.detalle)

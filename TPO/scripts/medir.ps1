@@ -49,9 +49,6 @@ foreach ($c in 10, 50) {
     Herramienta python -m carga.ejecutar posicion_ranking --usuarios $Usuarios --concurrencia $c --duracion $Duracion --etiqueta "c$c"
 }
 
-Write-Host "== 5 bis. Escrituras directas a MongoDB, sin la API =="
-Herramienta python -m carga.diagnostico_mongo --hilos 50 --segundos 10
-
 Write-Host "== 6. Pronósticos sin la copia del calendario (cada pedido consulta Neo4j) =="
 $env:CALENDARIO_TTL_SEGUNDOS = "0"
 docker compose up -d api | Out-Null

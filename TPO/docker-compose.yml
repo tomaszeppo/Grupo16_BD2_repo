@@ -48,6 +48,14 @@ x-api-entorno: &api_entorno
   REDIS_PASSWORD: ${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}
   REDIS_REPLICA_URL: redis://redis_replica:6379/0
   ADMIN_CLAVE: ${ADMIN_CLAVE:?definir ADMIN_CLAVE en .env}
+  SIMULADOR_API_URL: ${SIMULADOR_API_URL:-http://127.0.0.1:8010}
+  PRONOSTICOS_HASTA_INICIO_REAL: ${PRONOSTICOS_HASTA_INICIO_REAL:-true}
+  SIMULADOR_COMENTARIOS_POR_REGION_SEGUNDO: ${SIMULADOR_COMENTARIOS_POR_REGION_SEGUNDO:-4}
+  INFLUX_RAW_DB: ${INFLUX_RAW_DB:-fixture2030_raw}
+  INFLUX_RESUMEN_DB: ${INFLUX_RESUMEN_DB:-fixture2030_resumenes}
+  REDIS_ENABLED: ${REDIS_ENABLED:-true}
+  REDIS_LOTE: ${REDIS_LOTE:-500}
+  REDIS_PERSISTENCIA_DEMORA_SEGUNDOS: ${REDIS_PERSISTENCIA_DEMORA_SEGUNDOS:-15}
   CALENDARIO_TTL_SEGUNDOS: ${CALENDARIO_TTL_SEGUNDOS:-30}
   API_PROCESOS: ${API_PROCESOS:-2}
   LOG_NIVEL: ${LOG_NIVEL:-INFO}
@@ -124,7 +132,9 @@ services:
   redis:
     image: redis:7.4
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--requirepass", "${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}"]
+    # Tope de memoria sin desalojo: si se llena, Redis rechaza escrituras en vez de borrar sesiones al azar.
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--requirepass", "${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}",
+              "--maxmemory", "${REDIS_MAXMEMORIA:-192mb}", "--maxmemory-policy", "noeviction"]
     environment:
       REDISCLI_AUTH: ${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}
     ports: ["127.0.0.1:${REDIS_PUERTO:-6380}:6379"]
@@ -138,8 +148,6 @@ services:
     cpus: ${REDIS_CPUS:-0.5}
     networks: [tpo]
 
-  # Comentarios: un datacenter por región (ver docs/arquitectura_regiones.md). Cada nodo guarda una copia
-  # completa; cada usuario escribe y lee en el de su región sin esperar al otro.
   # Copia de solo lectura de Redis: representa "la otra región". En el laboratorio la API escribe y lee en el
   # primario; la réplica queda para leer el ranking desde otra región. Ver docs/arquitectura_regiones.md.
   redis_replica:
@@ -160,6 +168,8 @@ services:
     cpus: ${REDIS_REPLICA_CPUS:-0.25}
     networks: [tpo]
 
+  # Comentarios: un datacenter por región (ver docs/arquitectura_regiones.md). Cada nodo guarda una copia
+  # completa; cada usuario escribe y lee en el de su región sin esperar al otro.
   cassandra_america:
     <<: *cassandra
     environment:
@@ -204,14 +214,21 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >-
+        set -e;
+        [ '${INFLUX_RAW_DB:-fixture2030_raw}' != '${INFLUX_RESUMEN_DB:-fixture2030_resumenes}' ] || { echo 'Las bases de datos crudos y resúmenes deben ser distintas' >&2; exit 1; };
+        [ '${INFLUX_RAW_DB:-fixture2030_raw}' != 'fixture2030_metrics' ] || { echo 'La base cruda nueva debe ser distinta de la base histórica' >&2; exit 1; };
         for i in $$(seq 1 60); do
           influxdb3 show databases --host http://influxdb:8181 --format csv > /tmp/bases 2>/dev/null && break;
           sleep 2;
         done;
+        test -s /tmp/bases;
         grep -qx fixture2030_metrics /tmp/bases || influxdb3 create database fixture2030_metrics --host http://influxdb:8181;
-        influxdb3 update database --database fixture2030_metrics --retention-period none --host http://influxdb:8181
-    # Sin vencimiento: la audiencia y las estadísticas se guardan para el análisis posterior. La segunda línea
-    # corrige una base creada por una versión anterior, que vencía los datos a la hora.
+        influxdb3 update database --database fixture2030_metrics --retention-period none --host http://influxdb:8181;
+        grep -qx ${INFLUX_RAW_DB:-fixture2030_raw} /tmp/bases || influxdb3 create database ${INFLUX_RAW_DB:-fixture2030_raw} --retention-period ${INFLUX_RAW_RETENCION:-7d} --host http://influxdb:8181;
+        grep -qx ${INFLUX_RESUMEN_DB:-fixture2030_resumenes} /tmp/bases || influxdb3 create database ${INFLUX_RESUMEN_DB:-fixture2030_resumenes} --host http://influxdb:8181
+    # Tres bases: la histórica (fixture2030_metrics, sin vencimiento: simulaciones anteriores), la de datos crudos
+    # de cada simulación (vencen a los 7 días; al terminar el partido sus estadísticas se archivan en Neo4j) y la de
+    # resúmenes (sin vencimiento: totales del partido, audiencia y comentarios por minuto).
     networks: [tpo]
 
   api:

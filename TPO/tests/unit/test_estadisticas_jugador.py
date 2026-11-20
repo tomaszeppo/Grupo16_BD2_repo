@@ -111,7 +111,7 @@ def test_cierre_v3_comprueba_eventos_y_guarda_timestamp(monkeypatch):
               'equipo_id':'ARG', 'jugador':'J-ARG-09', 'influido_por':[]}
     doc = {'estadisticas_version':3, 'corrida_id':'a'*32, 'estado':'Finalizado',
            'plantel_estadisticas':plantel, 'partido':{'local':{'codigo':'ARG','nombre':'Argentina'},'visitante':{'codigo':'BRA','nombre':'Brasil'}},
-           'marcador':{'local':1,'visitante':0}, 'jugadas':[jugada]}
+           'marcador':{'local':1,'visitante':0}, 'jugadas':[jugada], 'inicio_estadisticas':__import__('datetime').datetime(2026,1,1)}
     col = Mock(); col.find_one.return_value = doc
     mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=SimpleNamespace(find=Mock(return_value=[{'_id':'J-ARG-09','nombre':'Ana','apellido':'López'}]))))
     muestras = []
@@ -126,10 +126,11 @@ def test_cierre_v3_comprueba_eventos_y_guarda_timestamp(monkeypatch):
     evento = {'evento_id':jugada['id'],'equipo_id':'ARG','jugador_id':'J-ARG-09',
               'minuto':23,'orden':1,'categoria':'gol','time':'2026-01-01T00:00:23.000001Z'}
     influx = SimpleNamespace(muestras_jugadores=Mock(return_value=muestras), eventos_partido=Mock(return_value=[evento]),
-        agregados_eventos=Mock(side_effect=lambda *_: ([dict(f) for f in minutos], jugadores)))
+        agregados_eventos=Mock(side_effect=lambda *_: ([dict(f) for f in minutos], jugadores)), guardar_resumenes=Mock())
     neo = Mock()
     simulaciones.archivar_estadisticas('P-03', mongo, neo, influx)
-    assert col.update_one.call_args.args[1]['$set']['jugadas_historicas'][0]['texto'] == 'Ana López convierte un gol para Argentina.'
+    influx.guardar_resumenes.assert_called_once()
+    assert col.update_one.call_args.args[1]['$set'] == {'archivo_estado': 'completo'}
     assert neo.archivar_estadisticas.call_args.args[3][0]['timestamp'] == evento['time']
     assert neo.archivar_estadisticas.call_args.args[3][0]['categoria'] == 'Gol'
     influx.eventos_partido.return_value = []

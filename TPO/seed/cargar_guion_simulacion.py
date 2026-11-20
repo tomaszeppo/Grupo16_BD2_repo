@@ -46,8 +46,11 @@ def obtener_o_crear(partido, db, ruta=PLANTILLA):
         nuevo = construir_guion(partido, db, ruta)
         db.guiones_simulacion.update_one({"_id":codigo}, {"$setOnInsert":nuevo}, upsert=True)
         guardado = db.guiones_simulacion.find_one({"_id":codigo})
-    if not guardado or guardado.get("equipos") != equipos:
-        raise Conflicto("El guion guardado no coincide con los equipos actuales del partido.")
+    if not guardado:
+        raise Conflicto("No se pudo guardar el guion del partido.")
+    if guardado.get("equipos") != equipos:
+        # La corrida usa los equipos actuales sin sobrescribir el guion guardado.
+        return construir_guion(partido, db, ruta)
     return guardado
 
 

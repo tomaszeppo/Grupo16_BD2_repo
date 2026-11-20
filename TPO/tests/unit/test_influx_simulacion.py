@@ -118,3 +118,40 @@ def test_las_escrituras_de_la_simulacion_no_esperan_el_volcado_a_disco():
     adaptador.guardar_jugadores("P-03", 1, {"ARG": ["J-ARG-01"]}, [], instante, "a" * 32)
     adaptador.guardar_minuto("P-03", 1, "ARG", "BRA", instante)
     assert len(pedidos) == 3 and all(p.url.params.get("no_sync") == "true" for p in pedidos)
+
+
+def test_resumenes_se_guardan_en_influx_con_id_y_timestamp_estables():
+    pedidos=[]
+    adaptador=InfluxAdapter(Settings(_env_file=None))
+    adaptador._http=httpx.Client(base_url="http://influx", transport=httpx.MockTransport(lambda req: pedidos.append(req) or httpx.Response(204)))
+    instante=datetime(2026,1,1,tzinfo=timezone.utc)
+    equipos=[{"equipo_id":"ARG", "tiros":2, "posesion_pct":55.0}]
+    jugadores=[{"equipo_id":"ARG", "jugador_id":"J-ARG-09", "goles":1}]
+    adaptador.guardar_resumenes("P-03", "a"*32, instante, equipos, jugadores)
+    adaptador.guardar_resumenes("P-03", "a"*32, instante, equipos, jugadores)
+    assert pedidos[0].url.params["db"] == "fixture2030_resumenes"
+    assert pedidos[0].content == pedidos[1].content
+    lineas=pedidos[0].content.decode().splitlines()
+    assert len(lineas) == 2 and lineas[0].startswith("resumen_partido_equipo,")
+    assert lineas[1].startswith("resumen_partido_jugador,") and "goles=1i" in lineas[1]
+
+
+def test_base_de_corrida_y_compatibilidad_con_simulaciones_anteriores():
+    pedidos = []
+    adaptador = InfluxAdapter(Settings(_env_file=None))
+    adaptador._http = httpx.Client(base_url="http://influx", transport=httpx.MockTransport(
+        lambda req: pedidos.append(req) or httpx.Response(200, json=[])))
+    adaptador.para_simulacion({}).consultar("SELECT 1")
+    adaptador.para_simulacion({"influx_raw_db": "fixture2030_raw"}).consultar("SELECT 1")
+    assert [__import__("json").loads(req.content)["db"] for req in pedidos] == ["fixture2030_metrics", "fixture2030_raw"]
+
+
+def test_la_audiencia_va_a_la_base_de_resumenes_que_no_vence():
+    pedidos = []
+    adaptador = InfluxAdapter(Settings(_env_file=None))
+    adaptador._http = httpx.Client(base_url="http://influx", transport=httpx.MockTransport(
+        lambda req: pedidos.append(req) or httpx.Response(204)))
+    instante = datetime(2030, 6, 13, 15, 0, tzinfo=timezone.utc)
+    adaptador.para_resumenes().guardar_audiencia("P-03", 1, "a" * 32, "demo", {"ARG": 1}, {}, instante)
+    assert pedidos[0].url.params["db"] == "fixture2030_resumenes"
+    assert adaptador._s.influx_db == "fixture2030_metrics"  # la vista no cambia el adaptador original
