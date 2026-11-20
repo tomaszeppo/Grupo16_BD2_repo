@@ -20,11 +20,19 @@ function Esperar-Api {
     }
     throw "La API no respondió."
 }
+function Esperar-Ranking {
+    foreach ($i in 1..120) {
+        try { Invoke-RestMethod "http://127.0.0.1:8010/ranking?limit=1" -TimeoutSec 15 | Out-Null; return } catch { Start-Sleep 2 }
+    }
+    throw "El ranking no respondió."
+}
 
 Write-Host "== Preparación =="
 Herramienta python -m seed.run --reiniciar --dias-hasta-inicio 3
 Herramienta python -m carga.poblar --usuarios $UsuariosChico --partidos P-06
 Herramienta python -m carga.poblar --usuarios $Usuarios --partidos P-05
+Herramienta python -m carga.poblar --usuarios $UsuariosChico --partidos P-12
+Herramienta python -m carga.poblar --usuarios $Usuarios --partidos P-11
 
 Write-Host "== 1. Pico de pronósticos (tres niveles de concurrencia) =="
 foreach ($c in 10, 50, 200) {
@@ -39,14 +47,27 @@ foreach ($c in 10, 50, 200) {
 Write-Host "== 3. Pronósticos y lecturas a la vez =="
 Herramienta python -m carga.ejecutar pico_mixto --usuarios $Usuarios --concurrencia 50 --duracion $Duracion
 
-Write-Host "== 4. Cierre de partido con dos volúmenes de pronósticos =="
-Herramienta python -m carga.ejecutar cierre_partido --partido P-06 --etiqueta "${UsuariosChico}_pronosticos"
-Herramienta python -m carga.ejecutar cierre_partido --partido P-05 --etiqueta "${Usuarios}_pronosticos"
-Herramienta python -m scripts.recalcular_puntajes
-
-Write-Host "== 5. Puesto en el ranking leyendo de MongoDB =="
+Write-Host "== 4. Cierre de partido y ranking por MongoDB (REDIS_ENABLED=false), para comparar =="
+# Va antes que el de Redis: así, cuando Redis arma su ranking por primera vez, ya toma estos puntajes de MongoDB.
+$env:REDIS_ENABLED = "false"
+docker compose up -d api | Out-Null
+Esperar-Api
+Herramienta python -m carga.ejecutar cierre_partido --partido P-12 --etiqueta "${UsuariosChico}_pronosticos_mongodb"
+Herramienta python -m carga.ejecutar cierre_partido --partido P-11 --etiqueta "${Usuarios}_pronosticos_mongodb"
 foreach ($c in 10, 50) {
-    Herramienta python -m carga.ejecutar posicion_ranking --usuarios $Usuarios --concurrencia $c --duracion $Duracion --etiqueta "c$c"
+    Herramienta python -m carga.ejecutar posicion_ranking --usuarios $Usuarios --concurrencia $c --duracion $Duracion --etiqueta "c${c}_mongodb"
+}
+Remove-Item Env:REDIS_ENABLED
+docker compose up -d api | Out-Null
+Esperar-Api
+
+Write-Host "== 5. Cierre de partido y ranking por Redis (lo que levanta Compose) =="
+Esperar-Ranking  # la primera consulta arma el ranking de Redis desde MongoDB: no es parte de lo que se mide
+Herramienta python -m carga.ejecutar cierre_partido --partido P-06 --etiqueta "${UsuariosChico}_pronosticos_redis"
+Herramienta python -m carga.ejecutar cierre_partido --partido P-05 --etiqueta "${Usuarios}_pronosticos_redis"
+Herramienta python -m scripts.recalcular_puntajes
+foreach ($c in 10, 50) {
+    Herramienta python -m carga.ejecutar posicion_ranking --usuarios $Usuarios --concurrencia $c --duracion $Duracion --etiqueta "c${c}_redis"
 }
 
 Write-Host "== 6. Pronósticos sin la copia del calendario (cada pedido consulta Neo4j) =="

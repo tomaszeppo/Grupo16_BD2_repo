@@ -1,6 +1,6 @@
 # Cómo sumar una base al proyecto
 
-La API está armada para que una base se sume sin reescribir lo que hay. Redis (sesiones y partido en vivo), Cassandra, InfluxDB y el monitoreo ya están; lo que queda por enganchar es el **ranking en Redis**. Esta guía dice qué archivos tocar.
+La API está armada para que una base se sume sin reescribir lo que hay. Redis (sesiones, partido en vivo y ranking), Cassandra, InfluxDB y el monitoreo ya están. Esta guía dice qué archivos tocar para sumar otra y cómo quedó enganchada cada una.
 
 ## Cómo está organizada la API
 
@@ -29,7 +29,7 @@ Dos reglas que conviene respetar:
 
 ## Redis: lo que ya está
 
-El adaptador es [`app/adapters/redis.py`](../app/adapters/redis.py), con métodos genéricos (guardar, leer, conjuntos ordenados, contadores, publicar) que puede usar cualquier servicio. Las sesiones están en [`app/puertos/sesiones.py`](../app/puertos/sesiones.py) y el partido en vivo en [`app/services/vivo.py`](../app/services/vivo.py). Las claves que ya se usan están en [modelo_de_datos.md](modelo_de_datos.md#redis): conviene que el ranking use un prefijo propio (`ranking:`).
+El adaptador es [`app/adapters/redis.py`](../app/adapters/redis.py), con métodos genéricos (guardar, leer, conjuntos ordenados, contadores, publicar) que puede usar cualquier servicio. Las sesiones están en [`app/puertos/sesiones.py`](../app/puertos/sesiones.py) y el partido en vivo en [`app/services/vivo.py`](../app/services/vivo.py). Las claves que ya se usan están en [modelo_de_datos.md](modelo_de_datos.md#redis); las del ranking llevan el prefijo `prode:`.
 
 ## Redis: ranking en vivo
 
@@ -37,9 +37,9 @@ El TPO incluye `app/adapters/ranking_redis.py`. Compose lo habilita mediante `RE
 
 Al iniciar un partido, un hilo prepara los pronósticos en Redis. Al cerrar, se refresca el snapshot y se aplican las reglas del dominio por lotes. Un script Lua actualiza el total, el sorted set y la marca del partido; conserva la base anterior para reintentar una ejecución parcial. Tras la espera configurada se vuelcan los puntos a MongoDB con operaciones idempotentes, se guarda la foto y se limpian los datos temporales del partido. Los pronósticos y el resultado siguen en MongoDB como respaldo.
 
-El ranking acepta lecturas parciales mientras se calcula. La puntuación se puede reintentar por la API si quedó fallida o si vence la reserva tras una interrupción. Redis usa AOF `everysec`; no hay recuperación automática al reinicio, failover ni Redis Cluster. Se asume un único partido puntuándose a la vez. El límite de memoria local es deliberadamente pequeño: hay que dimensionar y medir antes de usar millones de usuarios. Los desempates y la configuración se detallan en el README.
+El ranking acepta lecturas parciales mientras se calcula. Si la puntuación queda fallida, o el proceso que la llevaba muere, la API la retoma sola (cada 30 segundos busca las que quedaron a medias, hasta cinco intentos por partido); también se puede repetir el cierre a mano. Redis usa AOF `everysec`; no hay failover ni Redis Cluster. Se asume un único partido puntuándose a la vez. El límite de memoria local es deliberadamente pequeño: hay que dimensionar y medir antes de usar millones de usuarios. Los desempates y la configuración se detallan en el README.
 
-Usa el mismo Redis que las sesiones y el partido en vivo (con su contraseña): `deps._ranking_redis()` le pasa el cliente de `deps._redis()`. Para leer la tabla desde "la otra región" está la réplica `redis_replica` (`REDIS_REPLICA_URL`); cuánto tarda un cambio en llegarle se mide con `python -m scripts.medir_replica_redis` ([arquitectura por regiones](arquitectura_regiones.md)).
+Usa el mismo Redis que las sesiones y el partido en vivo (con su contraseña): `deps._ranking_redis()` le pasa el cliente de `deps._redis()`. La réplica `redis_replica` (`REDIS_REPLICA_URL`) representa "la otra región": hoy ningún pedido lee de ella; cuánto tarda un cambio en llegarle se mide con `python -m scripts.medir_replica_redis` ([arquitectura por regiones](arquitectura_regiones.md)).
 
 Por qué vale la pena está medido: con 100.000 usuarios, saber el puesto de uno leyendo de MongoDB tarda unos 300 ms y con 50 pedidos a la vez empieza a fallar ([rendimiento.md](rendimiento.md#26-saber-el-puesto-de-un-usuario-en-el-ranking)).
 

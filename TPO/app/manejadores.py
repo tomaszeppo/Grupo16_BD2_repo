@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from pymongo.errors import PyMongoError
 from redis.exceptions import RedisError
 
 from app.errors import ApiError, cuerpo_error
@@ -19,6 +20,12 @@ def registrar_manejadores(app: FastAPI) -> None:
     @app.exception_handler(RedisError)
     async def _redis_error(request: Request, exc: RedisError):
         return _respuesta(503, "DEPENDENCIA_NO_DISPONIBLE", "Redis no está disponible.", request)
+
+    # Las rutas de simulación y el ranking en Redis usan MongoDB sin pasar por el adaptador, que es quien
+    # traduce los errores del driver. Sin esto, una caída de MongoDB ahí salía como 500.
+    @app.exception_handler(PyMongoError)
+    async def _mongo_error(request: Request, exc: PyMongoError):
+        return _respuesta(503, "DEPENDENCIA_NO_DISPONIBLE", "MongoDB no está disponible.", request)
 
     @app.exception_handler(ApiError)
     async def _api_error(request: Request, exc: ApiError):

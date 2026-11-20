@@ -6,6 +6,7 @@ from app.observability import logger
 from app.reloj import Reloj
 
 PASOS = ("puntuar", "sumar", "foto")
+MAX_INTENTOS = 5  # tope de reintentos automáticos; repetir el cierre a mano sigue siendo posible
 
 
 class PuntuacionService:
@@ -86,7 +87,7 @@ class PuntuacionService:
                 else:
                     self._mongo.guardar_foto(partido_id, self._reloj())
                 duracion_ms = round((time.perf_counter() - inicio) * 1000, 1)
-                self._mongo.marcar_paso(partido_id, paso, duracion_ms, extra)
+                self._marcar(partido_id, paso, duracion_ms, extra)
                 self._al_terminar_paso(paso, duracion_ms, extra)
             self._ranking.partido_puntuado(partido_id)
             self._mongo.cerrar_puntuacion(partido_id, "completa", self._reloj())
@@ -94,21 +95,38 @@ class PuntuacionService:
             logger.exception("puntuacion_fallo partido=%s", partido_id)
             self._mongo.cerrar_puntuacion(partido_id, "fallida", self._reloj())
 
+    def retomar_pendientes(self) -> list[str]:
+        """Retoma las puntuaciones que no terminaron: fallaron, o el proceso que las llevaba murió.
+
+        Lo llama cada proceso de la API cada tanto. Si dos procesos lo hacen a la vez, uno solo toma cada
+        partido. Devuelve los partidos que intentó.
+        """
+        partidos = self._mongo.puntuaciones_por_retomar(self._reloj(), self._toma_vencida, MAX_INTENTOS)
+        for partido_id in partidos:
+            logger.warning("puntuacion_retomada partido=%s", partido_id)
+            self.ejecutar(partido_id)
+        return partidos
+
+    def _marcar(self, partido_id: str, paso: str, duracion_ms: float, extra: dict) -> None:
+        # Cada paso terminado renueva la toma: el plazo para darla por abandonada corre por paso, no por
+        # la puntuación entera, que con muchos pronósticos puede durar más que ese plazo.
+        self._mongo.marcar_paso(partido_id, paso, duracion_ms, {**extra, "tomada_en": self._reloj()})
+
     def _ejecutar_redis(self, partido_id, resultado, hechos):
         inicio = time.perf_counter()
         cantidad = self._ranking.puntuar_en_redis(partido_id, resultado)
-        self._mongo.marcar_paso(partido_id, "puntuar", round((time.perf_counter() - inicio) * 1000, 1),
+        self._marcar(partido_id, "puntuar", round((time.perf_counter() - inicio) * 1000, 1),
                                 {"pronosticos": cantidad})
         # El ranking queda disponible en Redis antes de hacer el volcado durable.
         if "sumar" not in hechos:
             time.sleep(self._ranking.demora)
             inicio = time.perf_counter()
             self._ranking.persistir_partido(partido_id)
-            self._mongo.marcar_paso(partido_id, "sumar", round((time.perf_counter() - inicio) * 1000, 1), {})
+            self._marcar(partido_id, "sumar", round((time.perf_counter() - inicio) * 1000, 1), {})
         if "foto" not in hechos:
             inicio = time.perf_counter()
             self._mongo.guardar_foto(partido_id, self._reloj())
-            self._mongo.marcar_paso(partido_id, "foto", round((time.perf_counter() - inicio) * 1000, 1), {})
+            self._marcar(partido_id, "foto", round((time.perf_counter() - inicio) * 1000, 1), {})
         self._mongo.cerrar_puntuacion(partido_id, "completa", self._reloj())
         try:
             self._ranking.limpiar_partido(partido_id)

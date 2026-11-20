@@ -4,6 +4,7 @@ from datetime import timedelta
 import pytest
 
 from tests.apoyo import entrar
+from tests.conftest import ADMIN
 
 _SESIONES: dict[str, dict] = {}  # usuario → encabezado de su sesión; se pisa en cada prueba al crear el usuario
 
@@ -186,8 +187,20 @@ def test_laboratorio_admite_pronostico_hasta_el_inicio_real(cliente, reloj, neo4
     usuario = crear_usuario(cliente)
     assert cliente.get("/partidos/P-03").json()["pronosticos_hasta_inicio_real"] is True
     assert pronosticar(cliente, usuario).status_code == 201
-    neo4j.partidos["P-03"]["estado"] = "En juego"
+    inicio = cliente.post("/partidos/P-03/estado", json={"estado": "En juego"}, headers=ADMIN)
+    assert inicio.status_code == 200, inicio.text
     assert pronosticar(cliente, usuario).status_code == 409
+
+
+def test_laboratorio_valida_con_la_copia_del_calendario_y_no_con_neo4j(cliente, reloj, neo4j, settings):
+    """Admitir pronósticos pasado el horario no pone a Neo4j en el camino de cada pronóstico."""
+    settings.pronosticos_hasta_inicio_real = True
+    reloj.instante = reloj.instante.replace(day=14)
+    usuario = crear_usuario(cliente)
+    assert pronosticar(cliente, usuario).status_code == 201  # deja la copia cargada
+    neo4j.caida = True
+    reloj.instante += timedelta(minutes=5)
+    assert pronosticar(cliente, usuario, "P-04").status_code == 201
 
 
 def test_neo4j_caido_sin_copia_del_calendario_responde_503(cliente, neo4j):

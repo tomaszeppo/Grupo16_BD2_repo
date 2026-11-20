@@ -136,8 +136,19 @@ class MongoFalso(_Base):
         vencida = p["estado"] == "en_curso" and (ahora - p["tomada_en"]).total_seconds() > vencimiento_seg
         if p["estado"] not in ("pendiente", "fallida") and not vencida:
             return None
-        p.update(estado="en_curso", tomada_en=ahora, iniciada_en=p["iniciada_en"] or ahora)
+        p.update(estado="en_curso", tomada_en=ahora, iniciada_en=p["iniciada_en"] or ahora,
+                 intentos=p.get("intentos", 0) + 1)
         return _pub(copy.deepcopy(r))
+
+    def puntuaciones_por_retomar(self, ahora, vencimiento_seg, max_intentos):
+        self._verificar()
+        salida = []
+        for partido_id, r in sorted(self.resultados.items()):
+            p = r["puntuacion"]
+            vencida = p["estado"] == "en_curso" and (ahora - p["tomada_en"]).total_seconds() > vencimiento_seg
+            if (p["estado"] in ("pendiente", "fallida") or vencida) and p.get("intentos", 0) < max_intentos:
+                salida.append(partido_id)
+        return salida
 
     def puntuar_pronosticos(self, partido_id, resultado) -> int:
         self._verificar()
@@ -484,6 +495,11 @@ class CassandraFalso(_Base):
                  if (p, pa, v) == (partido_id, pais, ventana) and f["creado_en"] < antes_de]
         filas.sort(key=lambda f: f["creado_en"], reverse=True)
         return filas[:limite], atendio
+
+    def comentarios_del_instante(self, region, partido_id, pais, ventana, instante):
+        atendio = self._region(region)
+        return [dict(f, comentario_id=str(f["comentario_id"])) for (p, pa, v, _, _), f in self.filas.items()
+                if (p, pa, v) == (partido_id, pais, ventana) and f["creado_en"] == instante], atendio
 
     def ping_region(self, region):
         self._verificar()

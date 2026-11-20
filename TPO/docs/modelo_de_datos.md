@@ -15,6 +15,9 @@ Colecciones, validación e índices se crean en [`seed/cargar_mongo.py`](../seed
 | `equipos` | `ARG` | `nombre`, `grupo` | — |
 | `jugadores` | `J-ARG-09` | `nombre`, `apellido`, `dorsal`, `posicion`, `equipo` | `equipo`, `posicion` |
 | `contadores` | `usuarios` | `valor` (último número de usuario entregado) | — |
+| `simulaciones` | `P-07` | Ficha de la simulación del partido: `estado_simulacion`, `tipo` (`demo` o `carga`), `corrida_id`, `partido`, `minuto`, `marcador`, `jugadas` y `plantel_estadisticas` (copiados del guion), horas de inicio y fin, `archivo_estado` y las marcas de minutos incompletos | — |
+| `guiones_simulacion` | `P-07` | `equipos` y `jugadas` previstas para ese partido | — |
+| `configuracion` | `hinchas_demo`, `usuario_prueba_admin` | Identificadores de los usuarios de prueba que reutiliza la demostración, y una reserva temporal para que dos pedidos no los creen a la vez | — |
 
 `usuarios`, `prodes` y `pronosticos` tienen validación de esquema (`$jsonSchema`).
 
@@ -59,7 +62,7 @@ El resultado de un partido, con el avance de su puntuación (también de ejemplo
 }
 ```
 
-Los estados de la puntuación son `pendiente`, `en_curso`, `completa` y `fallida`. Los tiempos de `pasos` están en milisegundos.
+Los estados de la puntuación son `pendiente`, `en_curso`, `completa` y `fallida`. Los tiempos de `pasos` están en milisegundos. Además lleva `tomada_en` (última señal del proceso que la está haciendo) e `intentos` (cuántas veces se tomó), que usa la API para retomar sola una puntuación que quedó a medias.
 
 ### Reglas de puntos y desempate
 
@@ -133,6 +136,12 @@ Claves que usa la API. Todas viven en el primario; la réplica (`redis_replica`)
 | `cuenta:{partido}:{pais}:{origen}` | contador | Comentarios del minuto en curso; el simulador lo toma y lo borra al cerrar cada minuto | Al leerse |
 | `visto:{comentario_id}` | texto | El comentario ya guardado, para responder igual a un reintento | 10 min |
 | `lento:{usuario}` | texto | Marca del modo lento | 5 s |
+| `prode:ranking` | conjunto ordenado | El ranking en vivo: un miembro por usuario con puntaje; el puntaje junta puntos, exactos y tiempo acumulado | No |
+| `prode:ranking:datos` | hash | Por usuario, sus puntos, exactos y tiempo, para mostrarlos sin ir a MongoDB | No |
+| `prode:ranking:nombres` | hash | Nombre de cada usuario del ranking | No |
+| `prode:ranking:listo` | texto | Marca de que el ranking ya se armó desde MongoDB; si falta, se reconstruye | No |
+| `prode:partido:{partido}:pronosticos` | hash | Copia de los pronósticos del partido, para puntuarlos | Se borra al terminar la puntuación |
+| `prode:partido:{partido}:aplicados` | hash | Qué usuarios ya tienen sumado ese partido y con qué puntaje | Se borra al terminar la puntuación |
 
 Canales de publicación y suscripción: `chat:{partido}:{pais}` y `chat:{partido}:todos` (cada comentario se publica en los dos) y `estado:{partido}` (minuto, marcador y audiencia, una vez por minuto simulado). Cada proceso de la API tiene una sola suscripción compartida por todas sus conexiones en vivo.
 
@@ -151,7 +160,8 @@ CREATE TABLE fixture2030.comentarios_por_partido_pais (
 - La partición es partido, país y ventana de media hora: la tribuna de un país en un tramo del partido. Acota el tamaño de cada partición y reparte la escritura de un partido con mucha gente.
 - `origen` separa los comentarios de usuarios de los automáticos del simulador.
 - Sin vencimiento: se guardan para el análisis posterior.
-- El historial recorre ventanas hacia atrás; "todos los países" lee la partición de cada país con actividad y las mezcla por fecha.
+- El historial recorre ventanas hacia atrás; "todos los países" lee la partición de cada país con actividad y las mezcla por fecha. Si el partido ya se cerró, empieza a leer desde su cierre y no desde la hora actual.
+- La hora se guarda al milisegundo, así que dos comentarios pueden tener la misma. Para que ninguno se pierda entre dos páginas, cada página termina siempre en un cambio de hora: puede traer algunos comentarios más que los pedidos.
 
 ## InfluxDB — tres bases
 

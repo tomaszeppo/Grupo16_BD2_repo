@@ -1,8 +1,6 @@
-> **Actualización:** La puntuación y el ranking en vivo utilizan Redis cuando `REDIS_ENABLED=true` en Compose. MongoDB conserva pronósticos y resultado y recibe los puntajes después de la espera configurada. El flujo, la recuperación y sus límites se describen en [el README](../README.md#puntuación-y-ranking-con-redis); los apartados siguientes describen la decisión anterior basada en MongoDB.
-
 # Decisiones sobre las bases
 
-El proyecto final usa cinco bases: **MongoDB** para todo lo del prode, **Neo4j** para el fixture y lo que pasa en cada partido, **Redis** para las sesiones y el partido en vivo, **Cassandra** para los comentarios e **InfluxDB** para las series de cada partido (estadísticas y audiencia). IRIS quedó afuera ([por qué](por_que_no_iris.md)). Cómo se reparten entre regiones está en [arquitectura por regiones](arquitectura_regiones.md).
+El proyecto final usa cinco bases: **MongoDB** para todo lo del prode, **Neo4j** para el fixture y lo que pasa en cada partido, **Redis** para las sesiones, el partido en vivo y el ranking, **Cassandra** para los comentarios e **InfluxDB** para las series de cada partido (estadísticas y audiencia). IRIS quedó afuera ([por qué](por_que_no_iris.md)). Cómo se reparten entre regiones está en [arquitectura por regiones](arquitectura_regiones.md).
 
 Para cada base respondemos los diez puntos que pide la consigna del Hito 13. Donde decimos que algo está medido, el número y el archivo están en [rendimiento.md](rendimiento.md).
 
@@ -12,7 +10,7 @@ Para cada base respondemos los diez puntos que pide la consigna del Hito 13. Don
 |---|---|---|
 | Usuarios, prodes privados, pronósticos | MongoDB | — |
 | Resultado de un partido, a efectos del prode | MongoDB (`resultados`) | Neo4j guarda el marcador en el partido, para mostrarlo; lo escribe la misma operación de cierre |
-| Puntajes y versiones históricas del ranking | MongoDB | El ranking en vivo irá a Redis y se reconstruye desde `puntajes` |
+| Puntajes y versiones históricas del ranking | MongoDB | Redis tiene el ranking en vivo (un conjunto ordenado). Al cerrar un partido se actualiza primero y los puntajes llegan a MongoDB segundos después; si Redis se pierde, se reconstruye desde `puntajes` |
 | Sesiones | Redis | — |
 | Quién está mirando cada partido ahora | Redis | El conteo por minuto queda en InfluxDB |
 | Comentarios | Cassandra | Una copia por región; Redis los reparte en vivo sin guardarlos |
@@ -50,7 +48,7 @@ El catálogo duplicado es la única copia de datos entre las dos bases. La acept
 
 **8. Qué pasa si falla.** Con un nodo caído el conjunto sigue. Medido dos veces, con resultados distintos: el 17/11, apagar el primario con orden no dio errores y cortarlo de golpe dejó unos 10 segundos sin poder escribir (503); el 20/11, cortarlo de golpe no dio errores y apagarlo con orden tampoco al caer, pero sí 60 errores (503) en unos segundos después de que el nodo volvió. En todos los casos lo ya confirmado no se perdió ([rendimiento.md](rendimiento.md#28-fallas-controladas-durante-la-carga)). Si MongoDB entero no responde, no hay prode: la API devuelve 503 y el fixture se sigue viendo.
 
-**9. Costo.** Tres nodos para una sola base. La consistencia entre documentos queda a cargo nuestro: no usamos transacciones de varios documentos, así que cada paso del cierre de un partido está escrito para poder repetirse sin efecto. Y MongoDB resuelve mal "en qué puesto estoy": tiene que contar cuántos están mejor.
+**9. Costo.** Tres nodos para una sola base. La consistencia entre documentos queda a cargo nuestro: no usamos transacciones de varios documentos, así que cada paso del cierre de un partido está escrito para poder repetirse sin efecto. Y MongoDB resuelve mal "en qué puesto estoy": tiene que contar cuántos están mejor. Por eso el ranking en vivo se lee de Redis.
 
 **10. Evidencia.** Carga repetida, unicidad y validación: [test_carga.py](../tests/integration/test_carga.py). Puntuación comparada documento por documento contra las reglas, cierres simultáneos y reinicio de una puntuación a medias: [test_puntuacion_real.py](../tests/integration/test_puntuacion_real.py). Rendimiento, costo de la mayoría, cierre de partido, puesto en el ranking y caídas: [rendimiento.md](rendimiento.md).
 
@@ -60,11 +58,13 @@ Es la operación más delicada del prode y la única que escribe en las dos base
 
 1. Se guarda el resultado en MongoDB. Si ya había uno con el mismo marcador, se sigue; con otro marcador, se rechaza.
 2. Se marca el partido como finalizado en Neo4j.
-3. Se puntúan los pronósticos del partido con una sola actualización que corre dentro de MongoDB, sin traerlos a la API.
-4. Se suma a cada usuario lo de ese partido, salvo que ya lo tenga sumado: cada puntaje lleva la lista de partidos aplicados.
+3. Se puntúan los pronósticos del partido y se actualiza el ranking en Redis, por lotes. Cada usuario se aplica con una operación atómica que anota que ese partido ya se le sumó.
+4. Pasada una espera (15 segundos por defecto), los puntos se vuelcan a MongoDB: cada pronóstico con su puntaje y cada usuario con su acumulado, salvo que ya tenga sumado ese partido (cada puntaje lleva la lista de partidos aplicados).
 5. Se guarda la foto del ranking.
 
-Si algo se corta en el medio, se repite el mismo pedido: el paso 1 encuentra el resultado, el 3 vuelve a escribir los mismos valores y el 4 no suma dos veces. Si llegan varios cierres a la vez, uno solo toma la puntuación (probado con 8 simultáneos). Las reglas de puntos y desempate están en [`app/dominio/puntuacion.py`](../app/dominio/puntuacion.py), y una prueba verifica que lo que calcula MongoDB coincide con esa función en cada pronóstico.
+El ranking se ve actualizado apenas termina el paso 3; MongoDB lo alcanza en el paso 4. Con `REDIS_ENABLED=false` los pasos 3 y 4 corren enteros dentro de MongoDB (una actualización que puntúa y otra que suma), que es como funcionaba antes de sumar Redis; los dos caminos están medidos en [rendimiento.md](rendimiento.md).
+
+Si algo se corta en el medio, se repite el mismo pedido: el paso 1 encuentra el resultado, el 3 no vuelve a aplicar a quien ya lo tiene y el 4 no suma dos veces. Si llegan varios cierres a la vez, uno solo toma la puntuación (probado con 8 simultáneos). No hace falta repetirlo a mano: cada proceso de la API busca cada 30 segundos las puntuaciones que quedaron pendientes, fallidas o tomadas por un proceso que dejó de dar señales (120 segundos sin terminar un paso) y las retoma, hasta cinco intentos por partido. Las reglas de puntos y desempate están en [`app/dominio/puntuacion.py`](../app/dominio/puntuacion.py), y una prueba verifica que lo que calcula MongoDB coincide con esa función en cada pronóstico.
 
 Los goles en contra no se modelan: un gol cuenta para el equipo del jugador que lo hizo.
 
@@ -100,7 +100,7 @@ Se podría: cada partido con su lista de jugadas adentro. Leer el partido entero
 
 ## Redis
 
-**1. Qué guarda.** Las sesiones, quién está mirando cada partido en este momento, los espectadores únicos de cada partido y los contadores de comentarios del minuto en curso. También reparte cada comentario entre los procesos de la API (publicación y suscripción) y lleva las marcas del modo lento y de los comentarios repetidos.
+**1. Qué guarda.** Las sesiones, el ranking en vivo, quién está mirando cada partido en este momento, los espectadores únicos de cada partido y los contadores de comentarios del minuto en curso. También reparte cada comentario entre los procesos de la API (publicación y suscripción) y lleva las marcas del modo lento y de los comentarios repetidos.
 
 **2. Qué accesos motivaron elegirlo.** Todo es lectura o escritura de una clave en el camino de cada pedido, o datos que viven segundos: validar una sesión en cada pedido; renovar la presencia de miles de conexiones cada pocos segundos; contar cuántos dieron señal en los últimos 15 segundos; avisar a todos los procesos que llegó un comentario. Necesita vencimiento automático y que todos los procesos de la API vean lo mismo.
 
@@ -112,16 +112,17 @@ Se podría: cada partido con su lista de jugadas adentro. Leer el partido entero
 - *Un espectador es una sesión*: varias pestañas con la misma sesión cuentan una vez. Los únicos se cuentan por usuario con un HyperLogLog, que ocupa lo mismo con cien o con un millón de usuarios.
 - *Una sola suscripción por proceso*, compartida por todas sus conexiones: un proceso con mil espectadores no abre mil suscripciones.
 - *No se guarda el token en la presencia*, sino un resumen de él.
+- *El ranking es un conjunto ordenado* cuyo puntaje junta en un solo número los puntos, los exactos y el tiempo acumulado, en ese orden de importancia. El puesto de un usuario es una sola consulta (`ZREVRANK`), sin contar a nadie. El miembro es el número de usuario invertido, para que a igualdad total quede primero el identificador más bajo, igual que en MongoDB.
 
 **5. Cómo se carga y se lee.** Lo escribe la API al vuelo. Las sesiones para las pruebas de carga se crean por lotes ([`carga/sesiones.py`](../carga/sesiones.py)).
 
-**6. Distribución.** Un primario y una réplica de solo lectura, que representa "la otra región". En producción, un Redis por región para sesiones, presencia y chat, y réplicas del primario central para leer el ranking ([arquitectura por regiones](arquitectura_regiones.md)).
+**6. Distribución.** Un primario y una réplica de solo lectura, que representa "la otra región". En el laboratorio la API lee y escribe todo en el primario: la réplica está para medir cuánto tarda en llegarle un cambio, no la consulta ningún pedido. En producción, un Redis por región para sesiones, presencia y chat, y réplicas del primario central para leer el ranking ([arquitectura por regiones](arquitectura_regiones.md)).
 
 **7. Consistencia.** La réplica copia sin que el primario la espere: lo que se lee ahí puede llegar con atraso; medido en [rendimiento.md](rendimiento.md#29-partido-en-vivo). La presencia tolera unos segundos de error a propósito: es un conteo para el análisis, no un dato que se cobre.
 
 **8. Qué pasa si falla.** Sin Redis no hay sesiones: toda ruta que necesita saber quién pide responde 503 (no se vuelve a confiar en lo que mande el cliente). La conexión en vivo se cierra con un aviso y el navegador reintenta solo. La simulación no se corta: los minutos sin Redis quedan sin audiencia y se marcan (`audiencia_incompleta`). Las sesiones sobreviven a un reinicio porque Redis guarda en disco cada segundo (AOF).
 
-**9. Costo.** Una pieza más que, si se cae, deja a todos sin sesión. Por eso tiene réplica, y en producción tendría conmutación automática. La memoria crece con las sesiones abiertas y las conexiones en vivo, no con el historial.
+**9. Costo.** Una pieza más que, si se cae, deja a todos sin sesión. Por eso tiene réplica, y en producción tendría conmutación automática. La memoria crece con las sesiones abiertas, las conexiones en vivo y la cantidad de usuarios con puntaje, no con el historial. Sesiones, partido en vivo y ranking comparten una sola instancia con un tope de memoria sin desalojo: si se llena, Redis rechaza escrituras (no se abren sesiones ni se puntúa) en vez de borrar datos. En producción irían separados, como dice la arquitectura por regiones.
 
 **10. Evidencia.** Sesiones, vencimiento y Redis caído: [test_sesiones.py](../tests/unit/test_sesiones.py). Presencia, tribunas y conexiones cortadas: [test_vivo.py](../tests/unit/test_vivo.py). Contra Redis real: [test_redis_real.py](../tests/integration/test_redis_real.py). Atraso de la réplica y carga del partido en vivo: [rendimiento.md](rendimiento.md#29-partido-en-vivo).
 
@@ -185,13 +186,14 @@ Qué cuesta: cuando se pone un partido en juego antes de su horario, el proceso 
 
 La renovación de la copia nunca frena a los demás pedidos; ese detalle lo encontró la prueba de caída y está contado en [rendimiento.md](rendimiento.md#28-fallas-controladas-durante-la-carga).
 
-Cuando esté Redis, esta copia puede pasar ahí: sería una sola para todos los procesos y el atraso desaparecería.
+Esta copia podría pasar a Redis: sería una sola para todos los procesos y el atraso desaparecería. No lo hicimos porque pondría a Redis en el camino de cada pronóstico más de lo que ya está (hoy solo valida la sesión).
 
 ## Simplificaciones de laboratorio
 
 - **Sin contraseñas.** Hay sesiones de verdad en Redis, pero abrir una es elegir un usuario: no se pide contraseña.
 - **Administración con una clave fija** en un encabezado, para poder operar partidos en la demostración.
 - **El calendario se ubica desde la fecha de carga**, para que haya partidos abiertos. La regla de habilitar los pronósticos 3 días antes del Mundial no se aplica.
+- **Se puede pronosticar pasado el horario programado, hasta que el partido se pone en juego** (`PRONOSTICOS_HASTA_INICIO_REAL=true`, el valor con el que levanta Compose). Sirve para la demostración, donde los partidos se inician a mano y no a su hora. La validación sigue saliendo de la copia del calendario, no de Neo4j: lo único que cambia es que no se compara contra el horario. Un pronóstico que entra después del inicio real se anula al puntuar, igual que en el caso anterior. Con `false` rige el cierre por horario.
 - **Los equipos de las eliminatorias se asignan a mano.** No calculamos las tablas de los grupos.
 - **Datos sintéticos.** Los equipos llevan nombres de países para que el fixture se lea fácil; todo lo demás es inventado.
 - **"Mirar" un partido es tener abierta su página.** No hay video; la conexión en vivo de la página es la señal de que alguien mira.

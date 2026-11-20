@@ -131,3 +131,39 @@ def test_recientes_sigue_respondiendo(cliente):
     resp = cliente.get("/partidos/P-03/comentarios/recientes?pais=ARG")
     assert resp.status_code == 200 and resp.json()["items"][0]["contenido"] == "hola"
     assert cliente.get("/partidos/P-03/comentarios/recientes?pais=arg").status_code == 422
+
+
+def test_paginar_no_saltea_comentarios_del_mismo_instante(cliente, reloj):
+    """Varios comentarios con la misma hora justo en el corte de página: tienen que aparecer todos, una vez."""
+    _comentar(cliente, _preparar(cliente, "ARG", "Viejo"), "anterior")
+    reloj.instante += timedelta(seconds=10)
+    for n in range(3):  # el reloj no avanza: los tres quedan con la misma hora
+        _comentar(cliente, _preparar(cliente, "ARG", f"Hincha {n}", en_juego=False), f"junto{n}")
+    vistos, antes_de = [], None
+    for _ in range(5):
+        parametros = {"pais": "ARG", "limit": 2, **({"antes_de": antes_de} if antes_de else {})}
+        pagina = cliente.get("/partidos/P-03/comentarios", params=parametros).json()
+        vistos += [c["contenido"] for c in pagina["items"]]
+        antes_de = pagina["siguiente"]
+        if not antes_de:
+            break
+    assert sorted(vistos) == ["anterior", "junto0", "junto1", "junto2"]
+
+
+def test_historial_de_un_partido_terminado_hace_dias(cliente, reloj):
+    """Sin `antes_de`, el historial de un partido cerrado arranca en su cierre y no en la hora actual."""
+    _comentar(cliente, _preparar(cliente), "durante el partido")
+    reloj.instante += timedelta(minutes=5)
+    cierre = cliente.post("/partidos/P-03/resultado", json={"goles_local": 1, "goles_visitante": 0}, headers=ADMIN)
+    assert cierre.status_code == 202, cierre.text
+    reloj.instante += timedelta(days=3)
+    resp = cliente.get("/partidos/P-03/comentarios?pais=ARG")
+    assert [c["contenido"] for c in resp.json()["items"]] == ["durante el partido"]
+    assert cliente.get("/partidos/P-03/comentarios/recientes?pais=ARG").json()["items"]
+
+
+def test_historial_sigue_respondiendo_si_no_se_puede_consultar_el_cierre(cliente, mongo):
+    _comentar(cliente, _preparar(cliente), "hola")
+    mongo.caida = True
+    resp = cliente.get("/partidos/P-03/comentarios?pais=ARG")
+    assert resp.status_code == 200 and resp.json()["items"][0]["contenido"] == "hola"

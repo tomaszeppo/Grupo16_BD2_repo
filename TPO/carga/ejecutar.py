@@ -128,7 +128,7 @@ def _entorno(base_url: str) -> dict:
     """Lo que se sabe del entorno. Los límites salen de las mismas variables que usa el Compose."""
     entorno = {k.lower(): os.environ.get(k) for k in (
         "API_PROCESOS", "API_MEMORIA", "API_CPUS", "MONGO_MEMORIA", "MONGO_CPUS", "NEO4J_MEMORIA", "NEO4J_CPUS",
-        "CALENDARIO_TTL_SEGUNDOS")}
+        "CALENDARIO_TTL_SEGUNDOS", "REDIS_ENABLED", "PRONOSTICOS_HASTA_INICIO_REAL")}
     entorno["nodos_de_mongodb"] = 3
     entorno["generador"] = "proceso lanzado por el operador; su ubicación y límites dependen de cómo se ejecutó"
     try:

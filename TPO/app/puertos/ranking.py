@@ -1,13 +1,16 @@
 """Puerto de ranking: de dónde sale la tabla de posiciones.
 
-Hoy sale de la colección `puntajes` de MongoDB. Saber el puesto de un usuario ahí obliga a contar cuántos
-tienen mejor puntaje (ver docs/rendimiento.md); un conjunto ordenado de Redis lo resuelve directo. Para
-pasarlo a Redis: una clase que cumpla `RankingPort`, que en `partido_puntuado` lea de MongoDB los puntajes
-nuevos de ese partido y los escriba con ZADD, y cambiar el proveedor en app/deps.py. MongoDB sigue siendo
-la fuente de verdad: si Redis se pierde, se reconstruye desde `puntajes`.
+Hay dos implementaciones y `app/deps.py` elige según `REDIS_ENABLED`:
+
+- `RankingRedis` (app/adapters/ranking_redis.py), la que levanta Compose: un conjunto ordenado, donde el
+  puesto de un usuario es una sola consulta. También puntúa el partido al cerrarlo.
+- `RankingMongo` (acá abajo): lee la colección `puntajes`. Saber el puesto de un usuario ahí obliga a contar
+  cuántos tienen mejor puntaje (ver docs/rendimiento.md).
+
+MongoDB guarda los puntajes de forma durable: si Redis se pierde, el ranking se reconstruye desde `puntajes`.
 
 Orden del ranking: puntos, resultados exactos, tiempo acumulado (todos de mayor a menor) y, a igualdad
-total, id de usuario. El sorteo final queda para la implementación de Redis.
+total, id de usuario.
 """
 from typing import Protocol
 

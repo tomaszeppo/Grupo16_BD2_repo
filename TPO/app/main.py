@@ -31,9 +31,10 @@ TAGS = [
 
 @asynccontextmanager
 async def _arranque(app: FastAPI):
-    from app.deps import precalentar
+    from app.deps import precalentar, vigilar_puntuaciones
 
     precalentar()
+    vigilar_puntuaciones()
     yield
 
 

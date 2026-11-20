@@ -6,7 +6,7 @@ def _orden(fila: dict) -> tuple:
 
 
 class RankingService:
-    """Tablas de posiciones. El ranking general sale del puerto de ranking (hoy MongoDB, mañana Redis)."""
+    """Tablas de posiciones. El ranking general sale del puerto de ranking (Redis o MongoDB, según la configuración)."""
 
     def __init__(self, ranking, mongo):
         self._ranking = ranking

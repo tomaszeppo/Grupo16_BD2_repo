@@ -1,7 +1,8 @@
 """Puerto de eventos: a quién se le avisa cada jugada que se carga.
 
-Hoy nadie escucha. Cuando esté InfluxDB, alcanza con una clase que cumpla `PublicadorEventos` y escriba el
-punto de la serie, y cambiar el proveedor en app/deps.py. Si el publicador falla, la jugada igual queda
+Hoy nadie escucha las jugadas cargadas a mano desde administración (las de la simulación llegan a InfluxDB
+por su propio camino). Para publicarlas alcanza con una clase que cumpla `PublicadorEventos` y cambiar el
+proveedor en app/deps.py. Si el publicador falla, la jugada igual queda
 guardada en Neo4j: el aviso es secundario. Ver docs/como_sumar_una_base.md.
 """
 from typing import Protocol

@@ -131,14 +131,14 @@ async def get_sesiones(redis=Depends(get_redis), mongo=Depends(get_mongo),
     return SesionesRedis(redis, mongo, settings.sesion_ttl_segundos)
 
 
-async def get_ranking(mongo=Depends(get_mongo)) -> RankingPort:
-    if _settings().redis_enabled:
+async def get_ranking(mongo=Depends(get_mongo), settings: Settings = Depends(get_settings)) -> RankingPort:
+    if settings.redis_enabled:
         return _ranking_redis()
     return RankingMongo(mongo)
 
 
 async def get_publicador_eventos() -> PublicadorEventos:
-    """Hoy: nadie escucha las jugadas. Con InfluxDB: devolver la implementación que escribe la serie."""
+    """Nadie escucha las jugadas cargadas a mano; la simulación escribe en InfluxDB por su propio camino."""
     return SinPublicador()
 
 
@@ -206,9 +206,9 @@ async def get_prodes_service(mongo=Depends(get_mongo), reloj=Depends(get_reloj),
 
 
 async def get_pronosticos_service(mongo=Depends(get_mongo), calendario=Depends(get_calendario),
-                            reloj=Depends(get_reloj), settings: Settings = Depends(get_settings),
-                            neo4j=Depends(get_neo4j)) -> PronosticosService:
-    return PronosticosService(mongo, calendario, reloj, neo4j if settings.pronosticos_hasta_inicio_real else None)
+                            reloj=Depends(get_reloj),
+                            settings: Settings = Depends(get_settings)) -> PronosticosService:
+    return PronosticosService(mongo, calendario, reloj, settings.pronosticos_hasta_inicio_real)
 
 
 async def get_partidos_admin_service(neo4j=Depends(get_neo4j), calendario=Depends(get_calendario),
@@ -259,3 +259,32 @@ def precalentar() -> None:
                     logger.warning("precalentamiento paso=%s resultado=%s", nombre, type(exc).__name__)
 
     threading.Thread(target=trabajo, daemon=True, name="precalentar").start()
+
+
+def vigilar_puntuaciones() -> None:
+    """Cada tanto, retoma las puntuaciones que quedaron a medias (ver PuntuacionService.retomar_pendientes).
+
+    Sin esto, si un proceso moría mientras puntuaba, el partido quedaba sin puntuar hasta que alguien
+    repitiera el cierre a mano. Corre en un hilo aparte en cada proceso; si una base no responde, se anota
+    y se vuelve a probar en la próxima vuelta.
+    """
+    import threading
+    import time
+
+    from app.observability import logger
+
+    intervalo = _settings().puntuacion_reintento_segundos
+    if intervalo <= 0:
+        return
+
+    def trabajo() -> None:
+        while True:
+            time.sleep(intervalo)
+            try:
+                ranking = _ranking_redis() if _settings().redis_enabled else RankingMongo(_mongo())
+                PuntuacionService(_mongo(), _neo4j(), _calendario(), ahora, ranking,
+                                  _settings().puntuacion_toma_vencida_segundos).retomar_pendientes()
+            except Exception as exc:
+                logger.warning("vigilancia_de_puntuaciones resultado=%s", type(exc).__name__)
+
+    threading.Thread(target=trabajo, daemon=True, name="vigilar-puntuaciones").start()

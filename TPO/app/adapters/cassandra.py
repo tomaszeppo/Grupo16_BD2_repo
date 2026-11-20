@@ -25,6 +25,9 @@ _CONSULTAS = {
                 "usuario_nombre, contenido, origen) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     "listar": "SELECT comentario_id, usuario_nombre, contenido, creado_en, origen FROM fixture2030.comentarios_por_partido_pais "
               "WHERE partido_id = ? AND pais = ? AND ventana = ? AND creado_en < ? LIMIT ?",
+    "listar_instante": "SELECT comentario_id, usuario_nombre, contenido, creado_en, origen "
+                       "FROM fixture2030.comentarios_por_partido_pais "
+                       "WHERE partido_id = ? AND pais = ? AND ventana = ? AND creado_en = ?",
     "ping": "SELECT now() FROM system.local",
 }
 
@@ -104,8 +107,19 @@ class CassandraAdapter:
     def comentarios(self, region: str, partido_id: str, pais: str, ventana, antes_de,
                     limite: int) -> tuple[list[dict], str]:
         filas, atendio = self._ejecutar(region, "listar", (partido_id, pais, ventana, antes_de, int(limite)))
+        return self._comentarios(filas, pais), atendio
+
+    def comentarios_del_instante(self, region: str, partido_id: str, pais: str, ventana,
+                                 instante) -> tuple[list[dict], str]:
+        """Todos los comentarios de esa tribuna con exactamente esa hora. La hora se guarda al milisegundo, así
+        que puede haber varios: el historial los pide para no partir ese grupo entre dos páginas."""
+        filas, atendio = self._ejecutar(region, "listar_instante", (partido_id, pais, ventana, instante))
+        return self._comentarios(filas, pais), atendio
+
+    @staticmethod
+    def _comentarios(filas, pais: str) -> list[dict]:
         return [{"comentario_id": str(f.comentario_id), "usuario_nombre": f.usuario_nombre, "contenido": f.contenido,
-                 "creado_en": f.creado_en, "origen": f.origen or "usuario", "pais": pais} for f in filas], atendio
+                 "creado_en": f.creado_en, "origen": f.origen or "usuario", "pais": pais} for f in filas]
 
     def ping_region(self, region: str) -> None:
         """Sin cambio de región: el estado de salud tiene que decir si ESTA región responde."""

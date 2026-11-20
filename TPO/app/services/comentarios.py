@@ -24,6 +24,8 @@ from app.observability import logger
 PAISES_SIMULADOR = ("ARG", "BRA", "ESP", "URU")
 VENTANAS_HACIA_ATRAS = 6  # tres horas: alcanza para un partido con alargue y la previa
 SEGUNDOS_REPETIDO = 600
+# El resultado se registra un instante antes de marcar el partido como finalizado: en ese hueco todavía entran comentarios.
+MARGEN_TRAS_EL_CIERRE = timedelta(minutes=1)
 
 
 def ventana(fecha: datetime) -> datetime:
@@ -31,12 +33,13 @@ def ventana(fecha: datetime) -> datetime:
     return fecha.replace(minute=fecha.minute // 30 * 30, second=0, microsecond=0)
 
 
+def _utc(fecha: datetime) -> datetime:
+    """El driver de Cassandra devuelve fechas sin zona, en UTC."""
+    return fecha.replace(tzinfo=timezone.utc) if fecha.tzinfo is None else fecha
+
+
 def _iso(fecha) -> str:
-    if isinstance(fecha, str):
-        return fecha
-    if fecha.tzinfo is None:  # el driver de Cassandra devuelve fechas sin zona, en UTC
-        fecha = fecha.replace(tzinfo=timezone.utc)
-    return fecha.isoformat()
+    return fecha if isinstance(fecha, str) else _utc(fecha).isoformat()
 
 
 class ComentariosService:
@@ -119,21 +122,56 @@ class ComentariosService:
     # --- historial ---
     def historial(self, partido_id: str, pais: str | None, antes_de: datetime | None, limite: int) -> dict:
         """Hacia atrás, ventana por ventana. `pais=None` mezcla todos los países que tuvieron actividad."""
-        tope = antes_de or (self._reloj() + timedelta(seconds=1))
+        tope = antes_de or self._tope_inicial(partido_id)
         paises = [pais] if pais else sorted(self._redis.miembros(f"paises:{partido_id}") or PAISES_SIMULADOR)
         items, regiones = [], set()
+        cortadas = []  # (país, ventana) que devolvieron el máximo pedido: pueden tener más filas
         actual = ventana(tope)
         for _ in range(VENTANAS_HACIA_ATRAS):
             for p in paises:
                 filas, region = self._cassandra.comentarios(region_de(p), partido_id, p, actual, tope, limite)
                 items.extend(filas)
                 regiones.add(region)
+                if len(filas) >= limite:
+                    cortadas.append((p, actual))
             if len(items) >= limite:
                 break
             actual -= timedelta(minutes=30)
         items.sort(key=lambda c: c["creado_en"], reverse=True)
-        items = items[:limite]
+        siguiente = None
+        if len(items) >= limite:
+            # La página siguiente pide "anteriores a la hora del último". Si el corte cae en medio de varios
+            # comentarios con la misma hora, los que quedan afuera no aparecerían nunca: la página se extiende
+            # hasta incluirlos a todos (puede traer algunos más que `limite`).
+            ultimo = items[limite - 1]["creado_en"]
+            vistos = {c["comentario_id"] for c in items if c["creado_en"] == ultimo}
+            for p, v in cortadas:
+                if v != ventana(_utc(ultimo)):
+                    continue
+                filas, region = self._cassandra.comentarios_del_instante(region_de(p), partido_id, p, v, ultimo)
+                regiones.add(region)
+                nuevas = [f for f in filas if f["comentario_id"] not in vistos]
+                vistos.update(f["comentario_id"] for f in nuevas)
+                items.extend(nuevas)
+            items = [c for c in items if c["creado_en"] >= ultimo]
+            items.sort(key=lambda c: c["creado_en"], reverse=True)
+            siguiente = _iso(ultimo)
         for c in items:
             c["creado_en"] = _iso(c["creado_en"])
-        siguiente = items[-1]["creado_en"] if len(items) == limite else None
         return {"items": items, "siguiente": siguiente, "regiones_atendidas": sorted(regiones)}
+
+    def _tope_inicial(self, partido_id: str) -> datetime:
+        """Desde dónde se empieza a leer hacia atrás cuando el cliente no lo indica.
+
+        Con el partido en juego, desde ahora. Con el partido cerrado, desde su cierre: si no, pasadas tres
+        horas el historial quedaría vacío aunque los comentarios siguen guardados. Si MongoDB no responde se
+        lee desde ahora, que es lo correcto para un partido en juego.
+        """
+        ahora = self._reloj() + timedelta(seconds=1)
+        try:
+            resultado = self._mongo.obtener_resultado(partido_id)
+        except Exception:
+            return ahora
+        if not resultado or not resultado.get("cerrado_en"):
+            return ahora
+        return min(ahora, _utc(resultado["cerrado_en"]) + MARGEN_TRAS_EL_CIERRE)

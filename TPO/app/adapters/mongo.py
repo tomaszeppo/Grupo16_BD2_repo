@@ -229,9 +229,25 @@ class MongoAdapter:
                     {"puntuacion.estado": "en_curso", "puntuacion.tomada_en": {"$lt": limite}},
                 ]},
                 [{"$set": {"puntuacion.estado": "en_curso", "puntuacion.tomada_en": ahora,
-                           "puntuacion.iniciada_en": {"$ifNull": ["$puntuacion.iniciada_en", ahora]}}}],
+                           "puntuacion.iniciada_en": {"$ifNull": ["$puntuacion.iniciada_en", ahora]},
+                           "puntuacion.intentos": {"$add": [{"$ifNull": ["$puntuacion.intentos", 0]}, 1]}}}],
                 return_document=ReturnDocument.AFTER)
             return _publico(doc)
+
+    def puntuaciones_por_retomar(self, ahora, vencimiento_seg: float, max_intentos: int) -> list[str]:
+        """Partidos cerrados cuya puntuación no terminó: pendiente, fallida o tomada por un proceso que ya no
+        da señales. Deja afuera las que ya se intentaron `max_intentos` veces. `resultados` tiene a lo sumo
+        104 documentos: no hace falta un índice."""
+        from datetime import timedelta
+
+        limite = ahora - timedelta(seconds=vencimiento_seg)
+        with operacion(FUENTE, "puntuaciones_por_retomar", _traducir):
+            cursor = self.db.resultados.find(
+                {"puntuacion.intentos": {"$not": {"$gte": max_intentos}}, "$or": [
+                    {"puntuacion.estado": {"$in": ["pendiente", "fallida"]}},
+                    {"puntuacion.estado": "en_curso", "puntuacion.tomada_en": {"$lt": limite}},
+                ]}, {"_id": 1}).sort("_id", 1)
+            return [doc["_id"] for doc in cursor]
 
     def puntuar_pronosticos(self, partido_id: str, resultado: dict) -> int:
         """Puntúa todos los pronósticos del partido dentro de MongoDB, sin traerlos a la API.

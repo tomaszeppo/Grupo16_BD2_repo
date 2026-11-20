@@ -193,7 +193,10 @@ class RankingRedis:
         posicion = self.r.zrevrank(ZSET, miembro_redis(usuario_id))
         if posicion is None:
             return None
-        datos = json.loads(self.r.hget(DATOS, usuario_id))
+        texto = self.r.hget(DATOS, usuario_id)
+        if texto is None:  # está en el orden pero sin sus datos: se informa como sin puntaje, no como error
+            return None
+        datos = json.loads(texto)
         return {"puesto": posicion + 1, **datos, "total_usuarios": self.r.zcard(ZSET)}
 
     def puntajes_de(self, usuario_ids):

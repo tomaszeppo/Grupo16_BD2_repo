@@ -105,3 +105,18 @@ def test_flujo_en_vivo_no_corta_por_el_tope_de_duracion():
     assert respuesta.status_code == 200 and respuesta.headers["X-Request-ID"]
     assert cliente.get("/lento").status_code == 504
     assert es_flujo_en_vivo("/partidos/P-01/vivo") and not es_flujo_en_vivo("/partidos/P-01/vivo/otra")
+
+
+def test_falla_de_mongodb_fuera_del_adaptador_responde_503(cliente, mongo):
+    """Las rutas que usan la base directo (simulaciones) también informan la caída como 503 y no como 500."""
+    from pymongo.errors import ServerSelectionTimeoutError
+
+    class BaseCaida:
+        def __getattr__(self, nombre):
+            raise ServerSelectionTimeoutError("sin primario")
+
+    mongo.db = BaseCaida()
+    resp = cliente.get("/en-vivo/partidos")
+    assert resp.status_code == 503
+    assert resp.json()["error"]["codigo"] == "DEPENDENCIA_NO_DISPONIBLE"
+    assert "sin primario" not in resp.text

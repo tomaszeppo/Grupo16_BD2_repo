@@ -22,3 +22,16 @@ def test_puntaje_cabe_en_double_sin_perdida():
 def test_rechaza_desbordes(valores):
     with pytest.raises(ValueError):
         codificar_puntaje(*valores)
+
+
+def test_posicion_sin_datos_no_rompe():
+    """Un usuario que figura en el conjunto ordenado pero no tiene datos se informa como sin puntaje."""
+    from types import SimpleNamespace
+
+    from app.adapters.ranking_redis import RankingRedis
+
+    cliente = SimpleNamespace(exists=lambda clave: 1, zrevrank=lambda clave, miembro: 0,
+                              hget=lambda clave, campo: None, zcard=lambda clave: 1)
+    ranking = RankingRedis(mongo=None, settings=SimpleNamespace(redis_lote=500, redis_persistencia_demora_segundos=0),
+                           cliente=cliente)
+    assert ranking.posicion("U0000001") is None

@@ -264,3 +264,47 @@ def test_acceso_valida_clave_antes_de_abrir_panel(cliente):
     respuesta = cliente.get("/administracion/acceso", headers=ADMIN)
     assert respuesta.status_code == 200
     assert respuesta.json() == {"autorizado": True}
+
+
+# --- puntuaciones que quedaron a medias ---
+def _servicio_de_puntuacion(mongo, neo4j, reloj):
+    from app.puertos.ranking import RankingMongo
+    from app.services.calendario import Calendario
+    from app.services.puntuacion import PuntuacionService
+
+    return PuntuacionService(mongo, neo4j, Calendario(neo4j, 30, reloj), reloj, RankingMongo(mongo), 120)
+
+
+def test_una_puntuacion_fallida_se_retoma_sola(cliente, mongo, neo4j, reloj):
+    u = crear_usuario(cliente)
+    pronosticar(cliente, u, "P-03", 2, 1)
+    reloj.instante += timedelta(minutes=1)  # el partido empieza después de cargado el pronóstico
+    poner_en_juego(cliente)
+    mongo.registrar_resultado("P-03", 2, 1, None, reloj(), reloj(), reloj())
+    mongo.resultados["P-03"]["puntuacion"]["estado"] = "fallida"
+    servicio = _servicio_de_puntuacion(mongo, neo4j, reloj)
+    assert servicio.retomar_pendientes() == ["P-03"]
+    assert mongo.resultados["P-03"]["puntuacion"]["estado"] == "completa"
+    assert mongo.puntajes[u]["puntos"] == 3
+    assert servicio.retomar_pendientes() == []
+
+
+def test_una_puntuacion_cortada_se_retoma_recien_al_vencer_la_toma(cliente, mongo, neo4j, reloj):
+    poner_en_juego(cliente)
+    mongo.registrar_resultado("P-03", 2, 1, None, reloj(), reloj(), reloj())
+    mongo.tomar_puntuacion("P-03", reloj(), 120)  # la tomó un proceso que después murió
+    servicio = _servicio_de_puntuacion(mongo, neo4j, reloj)
+    assert servicio.retomar_pendientes() == []
+    reloj.instante += timedelta(seconds=121)
+    assert servicio.retomar_pendientes() == ["P-03"]
+    assert mongo.resultados["P-03"]["puntuacion"]["estado"] == "completa"
+
+
+def test_no_se_reintenta_sin_fin_una_puntuacion_que_siempre_falla(cliente, mongo, neo4j, reloj):
+    poner_en_juego(cliente)
+    mongo.registrar_resultado("P-03", 2, 1, None, reloj(), reloj(), reloj())
+    mongo.puntuar_pronosticos = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("falla"))
+    servicio = _servicio_de_puntuacion(mongo, neo4j, reloj)
+    intentos = sum(len(servicio.retomar_pendientes()) for _ in range(10))
+    assert intentos == 5
+    assert mongo.resultados["P-03"]["puntuacion"]["estado"] == "fallida"
