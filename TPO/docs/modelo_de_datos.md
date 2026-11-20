@@ -119,3 +119,48 @@ MongoDB conserva `guiones_simulacion`, un documento por partido con el equipo, e
 - `(:Evento)-[:OCURRE_EN]->(:Partido)`, `(:Jugador)-[:PROTAGONIZA]->(:Evento)` y `(:Evento)-[:INFLUYE_EN]->(:Evento)` para las jugadas del guion.
 
 Las jugadas son hechos sintéticos definidos por el guion; no se inventa un jugador para cada pase o tiro agregado. Las acciones estadísticas adicionales permanecen como contadores. El archivado se puede repetir y rechaza muestras incompletas, goles contradictorios, jugadores inexistentes y conflictos de IDs.
+
+## Redis
+
+Claves que usa la API. Todas viven en el primario; la réplica (`redis_replica`) recibe una copia de lectura.
+
+| Clave | Tipo | Qué guarda | Vence |
+|---|---|---|---|
+| `sesion:{token}` | texto | Id del usuario de esa sesión | 24 h desde el último uso |
+| `audiencia:{partido}:{pais}` | conjunto ordenado | Quién está mirando: un resumen del token de cada conexión abierta, con la hora de su última señal como puntaje | Cada miembro deja de contar si no da señal en 15 s; sale al cerrar la conexión |
+| `unicos:{partido}:{pais}` | HyperLogLog | Usuarios distintos que miraron el partido desde ese país | No |
+| `paises:{partido}` | conjunto | Países con espectadores o comentarios en el partido | No |
+| `cuenta:{partido}:{pais}:{origen}` | contador | Comentarios del minuto en curso; el simulador lo toma y lo borra al cerrar cada minuto | Al leerse |
+| `visto:{comentario_id}` | texto | El comentario ya guardado, para responder igual a un reintento | 10 min |
+| `lento:{usuario}` | texto | Marca del modo lento | 5 s |
+
+Canales de publicación y suscripción: `chat:{partido}:{pais}` y `chat:{partido}:todos` (cada comentario se publica en los dos) y `estado:{partido}` (minuto, marcador y audiencia, una vez por minuto simulado). Cada proceso de la API tiene una sola suscripción compartida por todas sus conexiones en vivo.
+
+## Cassandra — keyspace `fixture2030`
+
+Replicación `NetworkTopologyStrategy {'america': 1, 'europa': 1}`: una copia completa en cada región. El esquema está en [`cassandra/esquema.cql`](../cassandra/esquema.cql) y lo aplica, de forma repetible, [`cassandra/iniciar.sh`](../cassandra/iniciar.sh).
+
+```sql
+CREATE TABLE fixture2030.comentarios_por_partido_pais (
+  partido_id text, pais text, ventana timestamp, creado_en timestamp, comentario_id uuid,
+  usuario_nombre text, contenido text, origen text,
+  PRIMARY KEY ((partido_id, pais, ventana), creado_en, comentario_id)
+) WITH CLUSTERING ORDER BY (creado_en DESC, comentario_id ASC);
+```
+
+- La partición es partido, país y ventana de media hora: la tribuna de un país en un tramo del partido. Acota el tamaño de cada partición y reparte la escritura de un partido con mucha gente.
+- `origen` separa los comentarios de usuarios de los automáticos del simulador.
+- Sin vencimiento: se guardan para el análisis posterior.
+- El historial recorre ventanas hacia atrás; "todos los países" lee la partición de cada país con actividad y las mezcla por fecha.
+
+## InfluxDB — base `fixture2030_metrics`
+
+Sin vencimiento. Además de las medidas de la simulación (`estadisticas_jugador_minuto`, `jugadas_partido`, `estadisticas_partido`), la audiencia:
+
+| Medida | Etiquetas | Campos | Cuándo se escribe |
+|---|---|---|---|
+| `audiencia_partido` | `partido_id`, `pais`, `corrida_id`, `tipo` | `espectadores`, `minuto` | Una fila por país en cada minuto simulado |
+| `comentarios_partido` | `partido_id`, `pais`, `origen`, `corrida_id`, `tipo` | `comentarios`, `minuto` | Una fila por país y origen en cada minuto simulado |
+| `audiencia_resumen` | `partido_id`, `pais`, `corrida_id`, `tipo` | `unicos` | Una fila por país al terminar el partido |
+
+`tipo` es `demo` o `carga`. `corrida_id` identifica cada simulación: las consultas de un partido usan la última. Las etiquetas son las que se usan para filtrar o agrupar; el minuto es un campo, como en las demás medidas de la simulación. Cada partido escribe, por país, 91 filas de audiencia y 182 de comentarios.
