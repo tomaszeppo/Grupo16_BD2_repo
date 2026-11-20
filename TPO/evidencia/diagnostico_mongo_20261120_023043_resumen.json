@@ -1,0 +1,39 @@
+{
+  "escenario": "diagnostico_mongo",
+  "inicio": "2026-11-20T02:30:43.737107+00:00",
+  "commit": "9b8f940",
+  "parametros": {
+    "hilos": 50,
+    "segundos": 10.0
+  },
+  "entorno": {
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "nodos_de_mongodb": 3
+  },
+  "que_mide": "upsert de documentos chicos directo con el driver, sin la API, con tres garantías de escritura",
+  "medicion": {
+    "w1_sin_esperar_al_diario": {
+      "escrituras": 11915,
+      "por_segundo": 1184.9,
+      "p50_ms": 30.0,
+      "p95_ms": 91.5,
+      "p99_ms": 104.9
+    },
+    "w1_con_diario": {
+      "escrituras": 8818,
+      "por_segundo": 880.7,
+      "p50_ms": 65.1,
+      "p95_ms": 102.0,
+      "p99_ms": 114.9
+    },
+    "mayoria": {
+      "escrituras": 8608,
+      "por_segundo": 855.0,
+      "p50_ms": 69.3,
+      "p95_ms": 100.2,
+      "p99_ms": 111.1
+    }
+  },
+  "notas": []
+}

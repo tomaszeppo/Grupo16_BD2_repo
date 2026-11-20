@@ -1,0 +1,127 @@
+{
+  "escenario": "lecturas_fixture",
+  "etiqueta": "c200_api_4cpu_4procesos",
+  "inicio": "2026-11-20T02:33:46.390512+00:00",
+  "commit": "9b8f940",
+  "parametros": {
+    "usuarios": 1000,
+    "concurrencia": 200,
+    "duracion": 30.0,
+    "partido": "P-03",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 200,
+    "comentan": 0.05
+  },
+  "entorno": {
+    "api_procesos": "4",
+    "api_memoria": "512m",
+    "api_cpus": "4.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio; 6 procesos y 200 hilos",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 8.533764,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [],
+  "duracion_real_segundos": 30.0,
+  "medicion": {
+    "total": 20980,
+    "por_segundo": 699.3,
+    "exitosos": 20980,
+    "errores": 0,
+    "porcentaje_de_error": 0.0,
+    "errores_por_estado": {},
+    "p50_ms": 280.0,
+    "p95_ms": 399.1,
+    "p99_ms": 498.4,
+    "max_ms": 1112.5,
+    "max_ms_incluyendo_errores": 1112.5,
+    "por_ruta": {
+      "GET /partidos": {
+        "total": 5306,
+        "por_segundo": 176.9,
+        "exitosos": 5306,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 221.0,
+        "p95_ms": 312.2,
+        "p99_ms": 356.9,
+        "max_ms": 1112.5,
+        "max_ms_incluyendo_errores": 1112.5
+      },
+      "GET /partidos/{id}": {
+        "total": 9428,
+        "por_segundo": 314.3,
+        "exitosos": 9428,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 296.1,
+        "p95_ms": 410.7,
+        "p99_ms": 589.5,
+        "max_ms": 937.1,
+        "max_ms_incluyendo_errores": 937.1
+      },
+      "GET /partidos/{id}/eventos": {
+        "total": 4122,
+        "por_segundo": 137.4,
+        "exitosos": 4122,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 297.6,
+        "p95_ms": 410.6,
+        "p99_ms": 574.6,
+        "max_ms": 928.0,
+        "max_ms_incluyendo_errores": 928.0
+      },
+      "GET /partidos/{id}/eventos/{id}/cadena": {
+        "total": 2124,
+        "por_segundo": 70.8,
+        "exitosos": 2124,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 296.4,
+        "p95_ms": 408.1,
+        "p99_ms": 486.3,
+        "max_ms": 882.5,
+        "max_ms_incluyendo_errores": 882.5
+      }
+    }
+  },
+  "fin": "2026-11-20T02:34:17.612451+00:00"
+}

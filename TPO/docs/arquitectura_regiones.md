@@ -46,7 +46,7 @@ Lo que no está armado: Redis de sesiones y presencia por región, InfluxDB por 
 .\scripts\prueba_de_falla.ps1 europa -Brusco -Partido P-10
 ```
 
-Durante un partido simulado con espectadores conectados, el script mata el nodo de Europa cerca del minuto 30 y lo levanta 30 segundos después. Mientras está caído, los hinchas europeos siguen comentando: la API los atiende desde América. Al volver, el nodo de Europa recibe lo que se escribió durante el corte. Al final, el script cuenta los comentarios del partido en cada región leyendo solo su propia copia, y deja el conteo en `evidencia/`. Los resultados están en [rendimiento.md](rendimiento.md#partido-en-vivo).
+Durante un partido simulado con espectadores conectados, el script mata el nodo de Europa cerca del minuto 30 y lo levanta 30 segundos después. Mientras está caído, los hinchas europeos siguen comentando: la API los atiende desde América. Al volver, el nodo de Europa recibe lo que se escribió durante el corte. Al final, el script cuenta los comentarios del partido en cada región leyendo solo su propia copia, y deja el conteo en `evidencia/`. Los resultados están en [rendimiento.md](rendimiento.md#29-partido-en-vivo).
 
 ## Cómo sería en producción
 
@@ -61,6 +61,6 @@ Lo que cambia respecto del laboratorio:
 
 ### Cuántas instancias hacen falta
 
-La cuenta sale de lo medido en el laboratorio, no de estimaciones. La pieza que se satura primero en el partido en vivo es la CPU de la API, no las bases ([rendimiento.md](rendimiento.md#partido-en-vivo)). Por eso el dimensionamiento parte de cuántos espectadores sostiene una instancia de la API con su CPU antes de que la entrega de comentarios supere el segundo, y se escala de forma lineal agregando instancias. La cuenta con los números medidos está en [rendimiento.md](rendimiento.md#partido-en-vivo).
+La cuenta sale de lo medido en el laboratorio, no de estimaciones. La pieza que se satura primero en el partido en vivo es la CPU de la API, no las bases ([rendimiento.md](rendimiento.md#29-partido-en-vivo)). Por eso el dimensionamiento parte de cuántos espectadores sostiene una instancia de la API con su CPU antes de que la entrega de comentarios supere el segundo, y se escala de forma lineal agregando instancias. La cuenta con los números medidos está en [rendimiento.md](rendimiento.md#29-partido-en-vivo).
 
 Esa extrapolación tiene un límite que conviene decir: en el laboratorio todas las piezas comparten la misma máquina. En producción, cada instancia tendría su CPU y las bases no competirían con la API por el procesador, así que la cuenta es una cota de lo que hace falta, no una medición del sistema distribuido.

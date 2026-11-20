@@ -44,9 +44,9 @@ El catálogo duplicado es la única copia de datos entre las dos bases. La acept
 
 **6. Distribución.** Un conjunto de réplicas de tres nodos. Las escrituras piden confirmación de la mayoría; el ranking se puede leer de un secundario. Fragmentar no está construido: la clave que usaríamos (por usuario) y qué consultas quedarían dirigidas a un solo fragmento están en la proyección de [rendimiento.md](rendimiento.md#4-proyección-al-mundial-no-medido).
 
-**7. Consistencia.** Los pronósticos y los resultados necesitan no perderse: por eso la confirmación de la mayoría. Medido, cuesta alrededor de un tercio de las escrituras frente a confirmar con un solo nodo sin esperar al diario. El ranking tolera atraso: mientras se suman los puntos de un partido, quien consulte puede ver a unos usuarios con el partido aplicado y a otros todavía no, sobre todo leyendo de un secundario. Lo aceptamos porque dura lo que tarda la suma y no deja nada mal al terminar.
+**7. Consistencia.** Los pronósticos y los resultados necesitan no perderse: por eso la confirmación de la mayoría. Medido, cuesta entre un cuarto y un tercio de las escrituras (según la corrida) frente a confirmar con un solo nodo sin esperar al diario. El ranking tolera atraso: mientras se suman los puntos de un partido, quien consulte puede ver a unos usuarios con el partido aplicado y a otros todavía no, sobre todo leyendo de un secundario. Lo aceptamos porque dura lo que tarda la suma y no deja nada mal al terminar.
 
-**8. Qué pasa si falla.** Con un nodo caído el conjunto sigue. Medido: si el primario se apaga con orden no hay ningún error; si se corta de golpe, unos 10 segundos sin poder escribir (la API responde 503) hasta que los otros dos eligen un nuevo primario, y lo ya confirmado no se pierde. Si MongoDB entero no responde, no hay prode: la API devuelve 503 y el fixture se sigue viendo.
+**8. Qué pasa si falla.** Con un nodo caído el conjunto sigue. Medido dos veces, con resultados distintos: el 17/11, apagar el primario con orden no dio errores y cortarlo de golpe dejó unos 10 segundos sin poder escribir (503); el 20/11, cortarlo de golpe no dio errores y apagarlo con orden tampoco al caer, pero sí 60 errores (503) en unos segundos después de que el nodo volvió. En todos los casos lo ya confirmado no se perdió ([rendimiento.md](rendimiento.md#28-fallas-controladas-durante-la-carga)). Si MongoDB entero no responde, no hay prode: la API devuelve 503 y el fixture se sigue viendo.
 
 **9. Costo.** Tres nodos para una sola base. La consistencia entre documentos queda a cargo nuestro: no usamos transacciones de varios documentos, así que cada paso del cierre de un partido está escrito para poder repetirse sin efecto. Y MongoDB resuelve mal "en qué puesto estoy": tiene que contar cuántos están mejor.
 
@@ -84,7 +84,7 @@ Los goles en contra no se modelan: un gol cuenta para el equipo del jugador que 
 
 **7. Consistencia.** Cada operación es una transacción. El estado de un partido cambia en un solo sentido (programado, en juego, finalizado) y repetir el cambio no tiene efecto: poner en juego dos veces no mueve el momento de inicio.
 
-**8. Qué pasa si falla.** No se puede ver el detalle de un partido, sus jugadas ni operar partidos: la API devuelve 503. **Se puede seguir pronosticando y viendo el fixture**, con la copia del calendario. Medido: 9.301 pronósticos sin un error con Neo4j caído.
+**8. Qué pasa si falla.** No se puede ver el detalle de un partido, sus jugadas ni operar partidos: la API devuelve 503. **Se puede seguir pronosticando y viendo el fixture**, con la copia del calendario. Medido: 19.499 pronósticos sin un error en una corrida en la que Neo4j estuvo caído 30 segundos.
 
 **9. Costo.** Un producto más para operar, con un único punto de falla en esta edición. La primera vez que ve una consulta tarda en armar el plan, y en el laboratorio eso superaba el tiempo de espera de un pedido: por eso la API hace que Neo4j planifique todas sus consultas al arrancar.
 
@@ -115,13 +115,13 @@ Se podría: cada partido con su lista de jugadas adentro. Leer el partido entero
 
 **6. Distribución.** Un primario y una réplica de solo lectura, que representa "la otra región". En producción, un Redis por región para sesiones, presencia y chat, y réplicas del primario central para leer el ranking ([arquitectura por regiones](arquitectura_regiones.md)).
 
-**7. Consistencia.** La réplica copia sin que el primario la espere: lo que se lee ahí puede llegar con atraso; medido en [rendimiento.md](rendimiento.md#partido-en-vivo). La presencia tolera unos segundos de error a propósito: es un conteo para el análisis, no un dato que se cobre.
+**7. Consistencia.** La réplica copia sin que el primario la espere: lo que se lee ahí puede llegar con atraso; medido en [rendimiento.md](rendimiento.md#29-partido-en-vivo). La presencia tolera unos segundos de error a propósito: es un conteo para el análisis, no un dato que se cobre.
 
 **8. Qué pasa si falla.** Sin Redis no hay sesiones: toda ruta que necesita saber quién pide responde 503 (no se vuelve a confiar en lo que mande el cliente). La conexión en vivo se cierra con un aviso y el navegador reintenta solo. La simulación no se corta: los minutos sin Redis quedan sin audiencia y se marcan (`audiencia_incompleta`). Las sesiones sobreviven a un reinicio porque Redis guarda en disco cada segundo (AOF).
 
 **9. Costo.** Una pieza más que, si se cae, deja a todos sin sesión. Por eso tiene réplica, y en producción tendría conmutación automática. La memoria crece con las sesiones abiertas y las conexiones en vivo, no con el historial.
 
-**10. Evidencia.** Sesiones, vencimiento y Redis caído: [test_sesiones.py](../tests/unit/test_sesiones.py). Presencia, tribunas y conexiones cortadas: [test_vivo.py](../tests/unit/test_vivo.py). Contra Redis real: [test_redis_real.py](../tests/integration/test_redis_real.py). Atraso de la réplica y carga del partido en vivo: [rendimiento.md](rendimiento.md#partido-en-vivo).
+**10. Evidencia.** Sesiones, vencimiento y Redis caído: [test_sesiones.py](../tests/unit/test_sesiones.py). Presencia, tribunas y conexiones cortadas: [test_vivo.py](../tests/unit/test_vivo.py). Contra Redis real: [test_redis_real.py](../tests/integration/test_redis_real.py). Atraso de la réplica y carga del partido en vivo: [rendimiento.md](rendimiento.md#29-partido-en-vivo).
 
 ---
 
@@ -141,11 +141,11 @@ Se podría: cada partido con su lista de jugadas adentro. Leer el partido entero
 
 **7. Consistencia.** `LOCAL_ONE`: cada escritura confirma en su región sin esperar a la otra, que recibe la copia por detrás. Un hincha de Europa puede ver un comentario de América con un instante de atraso; nunca se pierde.
 
-**8. Qué pasa si falla.** Si se cae la región de un usuario, la API escribe y lee en la otra, lo informa (`region_atendida`) y lo cuenta en una métrica. Al volver, la región caída recibe lo que se escribió en el corte. Medido en [rendimiento.md](rendimiento.md#partido-en-vivo). Si se caen las dos, comentar responde 503 y el partido sigue.
+**8. Qué pasa si falla.** Si se cae la región de un usuario, la API escribe y lee en la otra, lo informa (`region_atendida`) y lo cuenta en una métrica. Al volver, la región caída recibe lo que se escribió en el corte. Medido en [rendimiento.md](rendimiento.md#29-partido-en-vivo). Si se caen las dos, comentar responde 503 y el partido sigue.
 
 **9. Costo.** Dos nodos de unos 750 MB cada uno en el laboratorio, el mayor consumo de memoria del proyecto. Una tabla por consulta: si mañana se quisiera leer "los comentarios de un usuario", haría falta otra tabla.
 
-**10. Evidencia.** Cambio de región y comentarios repetidos: [test_cassandra_adaptador.py](../tests/unit/test_cassandra_adaptador.py), [test_comentarios.py](../tests/unit/test_comentarios.py). Escribir en una región y leer en la otra: [test_cassandra_real.py](../tests/integration/test_cassandra_real.py). Caída de una región durante un partido: [rendimiento.md](rendimiento.md#partido-en-vivo).
+**10. Evidencia.** Cambio de región y comentarios repetidos: [test_cassandra_adaptador.py](../tests/unit/test_cassandra_adaptador.py), [test_comentarios.py](../tests/unit/test_comentarios.py). Escribir en una región y leer en la otra: [test_cassandra_real.py](../tests/integration/test_cassandra_real.py). Caída de una región durante un partido: [rendimiento.md](rendimiento.md#29-partido-en-vivo).
 
 ---
 
@@ -177,7 +177,7 @@ Se podría: cada partido con su lista de jugadas adentro. Leer el partido entero
 
 Para aceptar un pronóstico hay que saber si el partido existe, si tiene equipos y si no empezó. Esos datos los gobierna Neo4j, pero consultarlo en cada pronóstico lo ponía en el camino del pico. Cada proceso de la API guarda entonces una copia de los 104 partidos y la renueva cada 30 segundos.
 
-Qué ganamos, medido: más del doble de pronósticos por segundo, y que la caída de Neo4j no impida pronosticar.
+Qué ganamos, medido: casi el doble de pronósticos por segundo (227,7 contra 115,7 con 50 usuarios), y que la caída de Neo4j no impida pronosticar.
 
 Qué cuesta: cuando se pone un partido en juego antes de su horario, el proceso que atendió ese pedido cierra los pronósticos en el acto, pero los otros procesos pueden tardar hasta 30 segundos en enterarse y aceptar alguno más. Para que eso no cuente, Neo4j guarda el momento real de inicio y la puntuación **anula** todo pronóstico cargado en ese momento o después: queda guardado, pero vale cero y se marca como anulado. El cierre por horario no tiene este problema, porque el horario ya está en la copia.
 

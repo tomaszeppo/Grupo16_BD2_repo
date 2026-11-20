@@ -1,0 +1,5 @@
+Control de puntajes (scripts/recalcular_puntajes.py), corrido por scripts/medir.ps1 el 20/11/2026, commit 9b8f940.
+
+Usuarios con puntaje guardado: 100000
+Pronósticos puntuados: 120000
+Sin diferencias: la suma partido a partido coincide con el recálculo completo.

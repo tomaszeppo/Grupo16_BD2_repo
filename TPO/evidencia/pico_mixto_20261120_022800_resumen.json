@@ -1,0 +1,140 @@
+{
+  "escenario": "pico_mixto",
+  "etiqueta": "",
+  "inicio": "2026-11-20T02:28:00.694076+00:00",
+  "commit": "9b8f940",
+  "parametros": {
+    "usuarios": 100000,
+    "concurrencia": 50,
+    "duracion": 30.0,
+    "partido": "P-03",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 200,
+    "comentan": 0.05
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio; 6 procesos y 50 hilos",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 11.830369,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [],
+  "duracion_real_segundos": 30.0,
+  "medicion": {
+    "total": 6218,
+    "por_segundo": 207.3,
+    "exitosos": 6218,
+    "errores": 0,
+    "porcentaje_de_error": 0.0,
+    "errores_por_estado": {},
+    "p50_ms": 225.2,
+    "p95_ms": 315.8,
+    "p99_ms": 393.5,
+    "max_ms": 1302.9,
+    "max_ms_incluyendo_errores": 1302.9,
+    "por_ruta": {
+      "GET /partidos": {
+        "total": 480,
+        "por_segundo": 16.0,
+        "exitosos": 480,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 123.5,
+        "p95_ms": 193.6,
+        "p99_ms": 284.7,
+        "max_ms": 306.3,
+        "max_ms_incluyendo_errores": 306.3
+      },
+      "GET /partidos/{id}": {
+        "total": 849,
+        "por_segundo": 28.3,
+        "exitosos": 849,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 257.0,
+        "p95_ms": 317.5,
+        "p99_ms": 395.3,
+        "max_ms": 505.8,
+        "max_ms_incluyendo_errores": 505.8
+      },
+      "GET /partidos/{id}/eventos": {
+        "total": 370,
+        "por_segundo": 12.3,
+        "exitosos": 370,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 233.7,
+        "p95_ms": 369.4,
+        "p99_ms": 403.2,
+        "max_ms": 437.1,
+        "max_ms_incluyendo_errores": 437.1
+      },
+      "GET /partidos/{id}/eventos/{id}/cadena": {
+        "total": 194,
+        "por_segundo": 6.5,
+        "exitosos": 194,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 233.1,
+        "p95_ms": 322.4,
+        "p99_ms": 385.6,
+        "max_ms": 388.6,
+        "max_ms_incluyendo_errores": 388.6
+      },
+      "PUT /partidos/{id}/pronostico": {
+        "total": 4325,
+        "por_segundo": 144.2,
+        "exitosos": 4325,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 230.6,
+        "p95_ms": 316.0,
+        "p99_ms": 394.0,
+        "max_ms": 1302.9,
+        "max_ms_incluyendo_errores": 1302.9
+      }
+    }
+  },
+  "fin": "2026-11-20T02:28:32.415283+00:00"
+}
