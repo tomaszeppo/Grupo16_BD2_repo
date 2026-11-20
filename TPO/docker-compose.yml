@@ -246,8 +246,69 @@ services:
     volumes: ["./:/srv"]
     networks: [tpo]
 
+  # --- Monitoreo: Prometheus recolecta, Grafana muestra. Puertos distintos a los del Hito 13 (9091, 3001). ---
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=15d"]
+    volumes:
+      - ./monitoreo/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_datos:/prometheus
+    ports: ["127.0.0.1:${PROMETHEUS_PUERTO:-9091}:9090"]
+    mem_limit: 512m
+    cpus: 0.5
+    networks: [tpo]
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?definir GRAFANA_PASSWORD en .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # Solo lectura sin ingresar, para proyectar el tablero en la demostración. El puerto escucha solo en
+      # 127.0.0.1; para editar hace falta el usuario admin.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/tableros/prode2030.json
+    volumes:
+      - ./monitoreo/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoreo/grafana/tableros:/var/lib/grafana/tableros:ro
+      - grafana_datos:/var/lib/grafana
+    depends_on: [prometheus]
+    ports: ["127.0.0.1:${GRAFANA_PUERTO:-3001}:3000"]
+    mem_limit: 256m
+    cpus: 0.5
+    networks: [tpo]
+
+  # Exportadores: métricas internas de Redis (primario y réplica) y de MongoDB.
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.75.0
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}
+    mem_limit: 128m
+    cpus: 0.25
+    networks: [tpo]
+
+  mongodb_exporter:
+    image: percona/mongodb_exporter:0.44.0
+    restart: unless-stopped
+    command: ["--collect-all", "--compatible-mode", "--mongodb.direct-connect=false"]
+    environment:
+      MONGODB_URI: mongodb://mongo1:27017,mongo2:27017,mongo3:27017/admin?replicaSet=rs0
+      MONGODB_USER: ${MONGO_USER:-admin}
+      MONGODB_PASSWORD: ${MONGO_PASSWORD:?definir MONGO_PASSWORD en .env}
+    depends_on:
+      mongo_inicio: {condition: service_completed_successfully}
+    mem_limit: 128m
+    cpus: 0.25
+    networks: [tpo]
+
 volumes:
   redis_datos:
+  prometheus_datos:
+  grafana_datos:
   mongo_clave:
   mongo1_datos:
   mongo2_datos:

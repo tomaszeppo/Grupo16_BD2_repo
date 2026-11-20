@@ -1,0 +1,10 @@
+apiVersion: 1
+providers:
+  - name: prode2030
+    folder: Prode Mundial 2030
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/tableros

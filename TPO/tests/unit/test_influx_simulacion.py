@@ -104,3 +104,17 @@ def test_audiencia_rechaza_valores_que_romperian_la_linea():
         adaptador.guardar_audiencia("P-03", 1, "a" * 32, "demo", {"AR G": 1}, {}, instante)
     with pytest.raises(ValidacionError):
         adaptador.guardar_audiencia("P-03", 1, "a" * 32, "otro", {"ARG": 1}, {}, instante)
+
+
+def test_las_escrituras_de_la_simulacion_no_esperan_el_volcado_a_disco():
+    """InfluxDB 3 tarda ~1 s en confirmar si espera el volcado del registro (medido); el partido simula un minuto
+    por segundo, así que las escrituras confirman sin esperarlo (no_sync)."""
+    pedidos = []
+    adaptador = InfluxAdapter(Settings(_env_file=None))
+    adaptador._http = httpx.Client(base_url="http://influx", transport=httpx.MockTransport(
+        lambda req: pedidos.append(req) or httpx.Response(204)))
+    instante = datetime(2030, 6, 13, 15, 0, tzinfo=timezone.utc)
+    adaptador.guardar_audiencia("P-03", 1, "a" * 32, "demo", {"ARG": 1}, {}, instante)
+    adaptador.guardar_jugadores("P-03", 1, {"ARG": ["J-ARG-01"]}, [], instante, "a" * 32)
+    adaptador.guardar_minuto("P-03", 1, "ARG", "BRA", instante)
+    assert len(pedidos) == 3 and all(p.url.params.get("no_sync") == "true" for p in pedidos)

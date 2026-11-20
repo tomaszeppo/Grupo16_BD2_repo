@@ -1,0 +1,882 @@
+{
+  "uid": "prode2030",
+  "title": "Prode Mundial 2030",
+  "tags": [
+    "prode2030"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": false,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "API",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Mirando partidos en vivo",
+      "description": "Conexiones en vivo abiertas, suma de los procesos de la API (prode_vivo_conexiones).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "sum(prode_vivo_conexiones)",
+          "legendFormat": "conexiones",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Pedidos por segundo, por ruta",
+      "description": "prode_api_pedidos_total. La conexión en vivo cuenta una vez, al cerrarse.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 10,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "sum by (ruta) (rate(prode_api_pedidos_total[1m]))",
+          "legendFormat": "{{ruta}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Respuestas con error, por ruta y estado",
+      "description": "5xx: falla nuestra o de una base. 429: modo lento del chat.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 1,
+        "w": 10,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "sum by (ruta, estado) (rate(prode_api_pedidos_total{estado=~\"5..|429\"}[1m]))",
+          "legendFormat": "{{estado}} {{ruta}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Latencia p95 por ruta",
+      "description": "prode_api_duracion_segundos. Sin la conexión en vivo, que dura todo el partido.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, ruta) (rate(prode_api_duracion_segundos_bucket{ruta!=\"/partidos/{partido_id}/vivo\"}[1m])))",
+          "legendFormat": "{{ruta}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "row",
+      "title": "Bases",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Latencia p95 de la API contra cada base",
+      "description": "prode_base_duracion_segundos, medido desde la API.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 18,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, base) (rate(prode_base_duracion_segundos_bucket[1m])))",
+          "legendFormat": "{{base}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Operaciones fallidas por base",
+      "description": "prode_base_operaciones_total con resultado distinto de ok (no disponible, tiempo agotado).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 18,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "sum by (base, resultado) (rate(prode_base_operaciones_total{resultado!=\"ok\"}[1m]))",
+          "legendFormat": "{{base}} {{resultado}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Cassandra: atendido por la otra región",
+      "description": "Operaciones que su región no pudo atender y resolvió la otra (prode_cassandra_cambio_region_total).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 18,
+        "w": 6,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "sum by (desde, hacia) (increase(prode_cassandra_cambio_region_total[1m]))",
+          "legendFormat": "{{desde}} → {{hacia}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Partido en vivo",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Comentarios por segundo",
+      "description": "prode_vivo_comentarios_total por origen (usuario o simulación) y resultado.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 27,
+        "w": 10,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "sum by (origen, resultado) (rate(prode_vivo_comentarios_total[1m]))",
+          "legendFormat": "{{origen}} {{resultado}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Demora de entrega de comentarios (p50 y p95)",
+      "description": "Desde que se publica hasta que sale por cada conexión (prode_vivo_entrega_segundos).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 10,
+        "y": 27,
+        "w": 9,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(prode_vivo_entrega_segundos_bucket[1m])))",
+          "legendFormat": "p50",
+          "refId": "A",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(prode_vivo_entrega_segundos_bucket[1m])))",
+          "legendFormat": "p95",
+          "refId": "B",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Mensajes descartados",
+      "description": "Espectadores que no daban abasto: se les descarta lo más viejo (prode_vivo_descartados_total).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 19,
+        "y": 27,
+        "w": 5,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "sum(rate(prode_vivo_descartados_total[1m]))",
+          "legendFormat": "descartados",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Audiencia por minuto, partido y país (InfluxDB)",
+      "description": "Espectadores contados en cada minuto simulado, apilados por país (medida audiencia_partido). La altura total es la audiencia del partido.",
+      "datasource": {
+        "type": "influxdb",
+        "uid": "influxdb-tpo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 35,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "influxdb-tpo"
+          },
+          "rawSql": "SELECT time, CAST(concat(partido_id, ' ', pais) AS VARCHAR) AS serie, espectadores FROM audiencia_partido WHERE $__timeFilter(time) AND espectadores > 0 ORDER BY time",
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "fillOpacity": 35,
+            "lineWidth": 1,
+            "spanNulls": false,
+            "insertNulls": 5000
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "Puntuación y calendario",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Duración de cada paso de la puntuación (p95)",
+      "description": "prode_puntuacion_duracion_segundos: cuánto tarda la tabla en quedar al día tras un partido.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 16,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, paso) (rate(prode_puntuacion_duracion_segundos_bucket[5m])))",
+          "legendFormat": "{{paso}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Copia del calendario",
+      "description": "1 si algún proceso no pudo renovar su copia del calendario desde Neo4j.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 44,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "max(prode_calendario_desactualizado)",
+          "legendFormat": "desactualizada",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Al día",
+                  "color": "green"
+                },
+                "1": {
+                  "text": "Desactualizada",
+                  "color": "red"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "row",
+      "title": "Redis y MongoDB",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 52,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Redis: memoria y clientes",
+      "description": "Del exportador de Redis, primario y réplica.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 53,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "redis_memory_used_bytes",
+          "legendFormat": "memoria {{instancia}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Redis: atraso de la réplica",
+      "description": "Bytes que la réplica todavía no recibió (offset del primario menos el de la réplica).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 53,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "max(redis_master_repl_offset{instancia=\"redis\"}) - max(redis_connected_slave_offset_bytes{instancia=\"redis\"})",
+          "legendFormat": "bytes pendientes",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "MongoDB: operaciones por segundo",
+      "description": "Del exportador de MongoDB (mongodb_op_counters_total).",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 53,
+        "w": 8,
+        "h": 8
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "sum by (type) (rate(mongodb_op_counters_total[1m]))",
+          "legendFormat": "{{type}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "state-timeline",
+      "title": "MongoDB: rol de cada nodo",
+      "description": "1 = primario, 2 = secundario (mongodb_rs_members_state). Un cambio es una elección.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-tpo"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 61,
+        "w": 24,
+        "h": 6
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-tpo"
+          },
+          "expr": "max by (member_idx) (mongodb_rs_members_state)",
+          "legendFormat": "{{member_idx}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "Primario",
+                  "color": "green"
+                },
+                "2": {
+                  "text": "Secundario",
+                  "color": "blue"
+                },
+                "8": {
+                  "text": "Caído",
+                  "color": "red"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    }
+  ]
+}

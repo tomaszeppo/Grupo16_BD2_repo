@@ -155,15 +155,22 @@ class InfluxAdapter:
                           f"pases_intentados={intentados}i,tiros={tiros}i,tiros_arco={tiros_arco}i,"
                           f"faltas={faltas}i,corners={corners}i,goles={gol}i {timestamp}")
         with operacion(FUENTE, "guardar_minuto", _traducir):
-            respuesta = self._cli().post("/api/v3/write_lp", params={"db": self._s.influx_db, "precision": "nanosecond"},
+            respuesta = self._cli().post("/api/v3/write_lp", params=self._parametros_escritura(),
                                          content="\n".join(lineas) + "\n")
             if respuesta.status_code not in (200, 204):
                 raise DependenciaNoDisponible(FUENTE)
 
 
+    def _parametros_escritura(self) -> dict:
+        """no_sync: InfluxDB confirma sin esperar el volcado de su registro a disco. Esperándolo, cada escritura
+        tarda cerca de 1 s (medido) y el partido simula un minuto por segundo con dos escrituras por minuto: se
+        atrasaba al doble. A cambio, una caída de InfluxDB puede perder el último segundo de muestras, que el
+        archivo del partido detecta como muestras faltantes."""
+        return {"db": self._s.influx_db, "precision": "nanosecond", "no_sync": "true"}
+
     def _escribir(self, nombre: str, lineas: list[str]) -> None:
         with operacion(FUENTE, nombre, _traducir):
-            respuesta = self._cli().post("/api/v3/write_lp", params={"db": self._s.influx_db, "precision": "nanosecond"},
+            respuesta = self._cli().post("/api/v3/write_lp", params=self._parametros_escritura(),
                                          content="\n".join(lineas) + "\n")
             if respuesta.status_code not in (200, 204):
                 raise DependenciaNoDisponible(FUENTE)
@@ -282,7 +289,7 @@ class InfluxAdapter:
                 lineas.append(f"jugadas_partido,partido_id={partido_id},equipo_id={equipo},jugador_id={jugador},categoria={categoria},corrida_id={corrida_id} "
                               f"minuto={minuto}i,orden={orden}i,evento_id=\"{evento_id}\",resultado=\"{resultado}\" {tiempo_evento}")
         with operacion(FUENTE, "guardar_jugadores", _traducir):
-            respuesta = self._cli().post("/api/v3/write_lp", params={"db": self._s.influx_db, "precision": "nanosecond"}, content="\n".join(lineas) + "\n")
+            respuesta = self._cli().post("/api/v3/write_lp", params=self._parametros_escritura(), content="\n".join(lineas) + "\n")
             if respuesta.status_code not in (200, 204):
                 raise DependenciaNoDisponible(FUENTE)
 
