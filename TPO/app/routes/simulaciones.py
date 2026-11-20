@@ -1,19 +1,23 @@
-"""Simulación de laboratorio y lectura de comentarios por región."""
-import base64
-import json
+"""Simulación de laboratorio: el partido en 90 segundos, sus estadísticas en InfluxDB y su archivo en Neo4j.
+
+El simulador se comporta como un cliente más: maneja el partido por la API (HTTP) y sus hinchas de prueba abren
+sesión, pronostican y comentan por los mismos endpoints que un usuario real.
+"""
 import random
 import threading
 import time
 import uuid
 import httpx
 from datetime import datetime, timedelta, timezone
-from functools import lru_cache
+
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
-from app.config.settings import get_settings
+from pydantic import BaseModel, ConfigDict, Field
+
 from app.adapters.influx import InfluxAdapter
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-from app.deps import _influx, get_influx, get_mongo, get_neo4j, get_partidos_admin_service, get_puntuacion_service, requiere_admin, usuario_actual
+from app.config.settings import get_settings
+from app.deps import _influx, get_influx, get_mongo, get_neo4j, get_partidos_admin_service, get_puntuacion_service, requiere_admin
 from app.errors import Conflicto, DependenciaNoDisponible, NoEncontrado, ValidacionError
 from app.schemas.comunes import PartidoId
 from app.observability import logger
@@ -25,19 +29,6 @@ router = APIRouter(tags=["Simulaciones"])
 def _influx_de_simulacion(influx, documento):
     return influx.para_simulacion(documento) if isinstance(influx, InfluxAdapter) else influx
 
-@lru_cache
-def cassandra():
-    try:
-        from cassandra.cluster import Cluster
-        cluster = Cluster(["cassandra"], connect_timeout=5, protocol_version=4)
-        session = cluster.connect("fixture2030")
-        session.default_timeout = 5
-        return session
-    except Exception as exc:
-        raise DependenciaNoDisponible("cassandra") from exc
-
-def ventana(fecha):
-    return fecha.replace(minute=fecha.minute // 30 * 30, second=0, microsecond=0)
 
 COMENTARIOS = (
     "Qué lindo partido se está armando.", "¡Vamos, que todavía hay tiempo!",
@@ -61,123 +52,37 @@ COMENTARIOS = (
     "Hay que aprovechar estos minutos.", "Qué manera de sufrir este partido.",
     "El medio está jugando una barbaridad.", "Dale, dale, no aflojen ahora.",
 )
-NOMBRES = ("Luli", "Nico", "Mica", "Santi", "Fede", "Sofi", "Juli", "Tomi", "Vale", "Maru", "Fran", "Paz")
 GOLES = ("¡Gooooool! ¡Qué locura!", "¡Gol! Se gritó con todo.", "¡Adentro! Cambia el partido.", "¡Qué momento para meterla!", "GOOOOL, me escuchó todo el edificio", "VAMOOOS, qué golazo",
          "Al finnn, lo veníamos pidiendo", "No puedo creer lo que acaba de pasar")
 
 
-def guardar_comentario(partido, pais, nombre, contenido):
-    ahora = datetime.now(timezone.utc)
-    comentario_id = uuid.uuid4()
+def _audiencia():
+    from app.deps import _redis, _settings
+    from app.services.audiencia import Audiencia
+
+    # Audiencia y comentarios por minuto van a la base de resúmenes de InfluxDB: no vencen.
+    return Audiencia(_redis(), _influx().para_resumenes(), _settings())
+
+
+def _paises(audiencia, partido_id):
+    """Países que comenta el simulador: los cuatro fijos y los de quienes estén mirando."""
     try:
-        cassandra().execute("INSERT INTO comentarios_por_partido_pais (partido_id,pais,ventana,creado_en,comentario_id,usuario_nombre,contenido) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-            (partido, pais, ventana(ahora), ahora, comentario_id, nombre, contenido))
-    except Exception as exc:
-        raise DependenciaNoDisponible("cassandra") from exc
-    return {"comentario_id": str(comentario_id), "usuario_nombre": nombre,
-            "contenido": contenido, "creado_en": ahora.isoformat()}
+        return sorted(audiencia.paises_de(partido_id))
+    except Exception:
+        return ["ARG", "BRA", "ESP", "URU"]
 
+def _verificar_cassandra():
+    """Antes de arrancar: alguna de las dos regiones tiene que responder, o los comentarios no tienen dónde ir."""
+    from app.deps import _cassandra
+    from app.dominio.regiones import REGIONES
 
-def escribir(partido, pais, minuto, es_gol=None):
-    textos = GOLES if (minuto in (23, 75) if es_gol is None else es_gol) else COMENTARIOS
-    guardar_comentario(partido, pais, random.choice(NOMBRES), random.choice(textos))
-
-
-class NuevoComentario(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    contenido: str = Field(min_length=1, max_length=280)
-
-    @field_validator("contenido")
-    @classmethod
-    def validar_contenido(cls, texto):
-        texto = texto.strip()
-        if not texto:
-            raise ValueError("El comentario no puede estar vacío.")
-        return texto
-
-
-@router.post("/partidos/{partido_id}/comentarios", status_code=201)
-def publicar_comentario(partido_id: PartidoId, cuerpo: NuevoComentario,
-                        usuario_id: str = Depends(usuario_actual),
-                        mongo=Depends(get_mongo), neo4j=Depends(get_neo4j)):
-    partido = neo4j.obtener_partido(partido_id)
-    if partido is None:
-        raise NoEncontrado("No existe el partido.")
-    if partido["estado"] != "En juego":
-        raise Conflicto("Solo se puede comentar mientras el partido está en juego.")
-    usuario = mongo.obtener_usuario(usuario_id)
-    if usuario is None:
-        raise NoEncontrado("No existe el usuario.")
-    comentario = guardar_comentario(partido_id, usuario["pais"], usuario["nombre"], cuerpo.contenido)
-    return {"fuente": "cassandra", "partido_id": partido_id, "pais": usuario["pais"], **comentario}
-
-
-@router.get("/partidos/{partido_id}/comentarios/recientes")
-def recientes(partido_id: PartidoId, pais: str = Query(pattern="^[A-Z]{3}$")):
-    ahora = datetime.now(timezone.utc)
-    actual = ventana(ahora)
-    items = []
-    try:
-        for v in (actual, actual - timedelta(minutes=30)):
-            filas = cassandra().execute("SELECT comentario_id,usuario_nombre,contenido,creado_en FROM comentarios_por_partido_pais WHERE partido_id=%s AND pais=%s AND ventana=%s LIMIT 20", (partido_id, pais, v))
-            items.extend({"comentario_id": str(f.comentario_id), "usuario_nombre": f.usuario_nombre,
-                          "contenido": f.contenido, "creado_en": f.creado_en.isoformat()} for f in filas)
-            if len(items) >= 20: break
-    except Exception as exc:
-        raise DependenciaNoDisponible("cassandra") from exc
-    return {"fuente":"cassandra", "partido_id":partido_id, "pais":pais, "items":items[:20]}
-
-def _utc(fecha):
-    return fecha.replace(tzinfo=timezone.utc) if fecha.tzinfo is None else fecha.astimezone(timezone.utc)
-
-
-def _cursor_comentarios(ventana_actual, paging_state=None, partido_id=None, pais=None):
-    datos = {"partido": partido_id, "pais": pais, "ventana": ventana_actual.isoformat(), "pagina": base64.urlsafe_b64encode(paging_state).decode("ascii") if paging_state else None}
-    return base64.urlsafe_b64encode(json.dumps(datos, separators=(",", ":")).encode()).decode("ascii")
-
-
-@router.get("/partidos/{partido_id}/comentarios/historial")
-def historial_comentarios(partido_id: PartidoId, pais: str = Query(pattern="^[A-Z]{3}$"),
-                           cursor: str | None = Query(default=None, max_length=4096),
-                           mongo=Depends(get_mongo), neo4j=Depends(get_neo4j)):
-    """Comentarios de un partido finalizado; cursor recorre ventanas y páginas de Cassandra."""
-    from cassandra.query import SimpleStatement
-    partido = neo4j.obtener_partido(partido_id)
-    if not partido: raise NoEncontrado("No existe el partido.")
-    if partido["estado"] != "Finalizado": raise Conflicto("El historial está disponible al finalizar el partido.")
-    doc = mongo.db.simulaciones.find_one({"_id": partido_id}) or {}
-    inicio = doc.get("inicio_comentarios") or doc.get("inicio_estadisticas") or partido.get("inicio_real")
-    if inicio is None: raise NoEncontrado("No está registrada la fecha de inicio de comentarios.")
-    # En simulaciones anteriores los comentarios se creaban poco antes del inicio de estadísticas.
-    if not doc.get("inicio_comentarios"): inicio -= timedelta(minutes=2)
-    resultado = mongo.obtener_resultado(partido_id)
-    fin = doc.get("fin_comentarios") or (resultado or {}).get("cerrado_en")
-    if fin is None: raise NoEncontrado("No está registrada la fecha de cierre del partido.")
-    primera, ultima = ventana(_utc(inicio)), ventana(_utc(fin))
-    actual, pagina = ultima, None
-    if cursor:
+    for region in REGIONES:
         try:
-            datos = json.loads(base64.b64decode(cursor.encode("ascii"), altchars=b"-_", validate=True))
-            if datos.get("partido") != partido_id or datos.get("pais") != pais: raise ValueError()
-            actual = _utc(datetime.fromisoformat(datos["ventana"]))
-            pagina = base64.b64decode(datos["pagina"].encode("ascii"), altchars=b"-_", validate=True) if datos.get("pagina") else None
-            if actual != ventana(actual) or actual < primera or actual > ultima: raise ValueError()
-        except (ValueError, KeyError, TypeError, UnicodeError) as exc:
-            raise ValidacionError("El cursor de comentarios no es válido.") from exc
-    try:
-        consulta = SimpleStatement("SELECT comentario_id,usuario_nombre,contenido,creado_en FROM comentarios_por_partido_pais WHERE partido_id=%s AND pais=%s AND ventana=%s", fetch_size=20)
-        resultado_pagina = cassandra().execute(consulta, (partido_id, pais, actual), paging_state=pagina)
-        items = [{"comentario_id":str(f.comentario_id), "usuario_nombre":f.usuario_nombre,
-                  "contenido":f.contenido, "creado_en":f.creado_en.isoformat()} for f in resultado_pagina.current_rows]
-        if resultado_pagina.has_more_pages:
-            siguiente = _cursor_comentarios(actual, resultado_pagina.paging_state, partido_id, pais)
-        elif actual > primera:
-            siguiente = _cursor_comentarios(actual - timedelta(minutes=30), partido_id=partido_id, pais=pais)
-        else:
-            siguiente = None
-    except Exception as exc:
-        raise DependenciaNoDisponible("cassandra") from exc
-    return {"fuente":"cassandra", "partido_id":partido_id, "pais":pais, "items":items, "next_cursor":siguiente}
+            _cassandra().ping_region(region)
+            return
+        except DependenciaNoDisponible:
+            continue
+    raise DependenciaNoDisponible("cassandra")
 
 
 class MinutoSimulado(BaseModel):
@@ -188,30 +93,43 @@ class MinutoSimulado(BaseModel):
 @router.post("/administracion/simulaciones/{partido_id}/muestras", dependencies=[Depends(requiere_admin)])
 def registrar_muestra(partido_id: PartidoId, cuerpo: MinutoSimulado,
                       mongo=Depends(get_mongo), influx=Depends(get_influx)):
-    """Recibe el minuto simulado y escribe la muestra temporal de la corrida activa."""
+    """Cierra un minuto simulado: muestra de estadísticas (InfluxDB, datos crudos), audiencia y comentarios del
+    minuto (InfluxDB, resúmenes) y aviso del estado a quienes miran. Una falla de una base no corta el partido:
+    ese minuto queda marcado como incompleto."""
     col = mongo.db.simulaciones
     doc = col.find_one({"_id": partido_id})
     if not doc or doc.get("estado_simulacion") != "en_curso":
         raise Conflicto("No hay una simulación en curso.")
-    influx = _influx_de_simulacion(influx, doc)
     minuto = cuerpo.minuto
     partido, jugadas = doc["partido"], doc["jugadas"]
     marcador = {lado: sum(1 for j in jugadas if j["tipo"] == "Gol" and j["minuto"] <= minuto
                           and j["equipo_id"] == partido[lado]["codigo"]) for lado in ("local", "visitante")}
+    instante = doc["inicio_estadisticas"] + timedelta(seconds=minuto)
+    cambios = {"minuto": minuto, "marcador": marcador}
     try:
-        influx.guardar_jugadores(partido_id, minuto, doc["plantel_estadisticas"], jugadas,
-                                doc["inicio_estadisticas"] + timedelta(seconds=minuto), doc["corrida_id"])
+        _influx_de_simulacion(influx, doc).guardar_jugadores(partido_id, minuto, doc["plantel_estadisticas"], jugadas,
+                                                             instante, doc["corrida_id"])
+        cambios["estadisticas_estado"] = "actualizada"
     except Exception:
-        col.update_one({"_id": partido_id}, {"$set": {"estadisticas_estado": "fallida", "estadisticas_incompletas": True}})
-        raise
-    col.update_one({"_id": partido_id}, {"$set": {"minuto": minuto, "marcador": marcador,
-                                                   "estadisticas_estado": "actualizada"}})
-    return {"partido_id": partido_id, "minuto": minuto, "marcador": marcador}
+        logger.exception("estadisticas_simulacion_fallida partido=%s minuto=%s", partido_id, minuto)
+        cambios.update(estadisticas_estado="fallida", estadisticas_incompletas=True)
+    cierre = _audiencia().cerrar_minuto(partido_id, minuto, doc["corrida_id"], doc.get("tipo", "demo"), instante,
+                                        marcador, "En juego")
+    if cierre.get("incompleto"):
+        cambios["audiencia_incompleta"] = True
+    col.update_one({"_id": partido_id}, {"$set": cambios})
+    return {"partido_id": partido_id, "minuto": minuto, "marcador": marcador,
+            "audiencia": cierre.get("audiencia"), "incompleto": bool(cierre.get("incompleto"))}
 
 
-def _ejecutar(partido_id, mongo, admin, puntuacion, neo=None):
-    """Generador: usa HTTP para iniciar, publicar comentarios, muestras y cerrar."""
+HINCHAS_POR_PAIS = 25  # con 4 comentarios por segundo y país, cada hincha comenta cada 6 s: no choca con el modo lento
+
+
+def _ejecutar(partido_id, mongo, admin, puntuacion, neo=None, tipo="demo"):
+    """Simula el partido por la API, como un cliente: inicia, manda cada minuto, hace comentar a los hinchas de
+    prueba y cierra. Los minutos y los comentarios que fallan se marcan y el partido sigue."""
     col = mongo.db.simulaciones
+    audiencia = _audiencia()
     try:
         partido = admin._partido(partido_id)
         guion = obtener_o_crear(partido, mongo.db)
@@ -235,13 +153,17 @@ def _ejecutar(partido_id, mongo, admin, puntuacion, neo=None):
                 respuesta = http.post(url, **kwargs)
                 respuesta.raise_for_status()
                 return respuesta.json()
-            usuarios = post("/administracion/hinchas-demo")["usuarios"]
+
+            # Hinchas de los cuatro países fijos y de los que ya están mirando. Cada uno con su sesión.
+            paises = _paises(audiencia, partido_id)
+            usuarios = post("/administracion/hinchas-demo", json={"paises": paises, "cantidad": HINCHAS_POR_PAIS})["usuarios"]
+            sesiones = {u: post("/sesiones", json={"usuario_id": u})["token"] for lista in usuarios.values() for u in lista}
+            http.cookies.clear()  # cada pedido lleva su propia sesión en el encabezado
             comentarios_por_segundo = max(1, min(10, settings.simulador_comentarios_por_region_segundo))
-            # Los compañeros sintéticos también participan en el prode de prueba.
-            # Se registra su pronóstico antes del inicio por el mismo endpoint público.
-            for usuario in usuarios["ARG"]:
+            # Los hinchas argentinos también participan en el prode de prueba, por el mismo endpoint público.
+            for usuario in usuarios.get("ARG", [])[:8]:
                 rng = random.Random(f"{partido_id}:{usuario}")
-                respuesta = http.put(f"/partidos/{partido_id}/pronostico", headers={"X-Usuario-Id": usuario},
+                respuesta = http.put(f"/partidos/{partido_id}/pronostico", headers={"X-Sesion": sesiones[usuario]},
                                      json={"goles_local": rng.randrange(4), "goles_visitante": rng.randrange(4)})
                 if respuesta.status_code != 409:
                     respuesta.raise_for_status()
@@ -251,22 +173,41 @@ def _ejecutar(partido_id, mongo, admin, puntuacion, neo=None):
                 "estado": "En juego", "estado_simulacion": "en_curso", "partido": partido,
                 "minuto": 0, "marcador": {"local": 0, "visitante": 0}, "inicio_estadisticas": inicio_datos}})
             inicio = time.monotonic()
+            turnos = dict.fromkeys(usuarios, 0)  # un turno por país: cada hincha comenta cada 25/4 = 6,25 s
             marcador = {"local": 0, "visitante": 0}
             for minuto in range(91):
                 time.sleep(max(0, inicio + minuto - time.monotonic()))
-                marcador = post(f"/administracion/simulaciones/{partido_id}/muestras", json={"minuto": minuto})["marcador"]
+                try:
+                    marcador = post(f"/administracion/simulaciones/{partido_id}/muestras", json={"minuto": minuto})["marcador"]
+                except Exception:  # la API no respondió ese minuto: el marcador se sigue llevando con el guion
+                    logger.warning("minuto_simulado_fallido partido=%s minuto=%s", partido_id, minuto)
+                    marcador = {lado: sum(1 for j in jugadas if j["tipo"] == "Gol" and j["minuto"] <= minuto
+                                          and j["equipo_id"] == partido[lado]["codigo"]) for lado in ("local", "visitante")}
+                    col.update_one({"_id": partido_id}, {"$set": {"estadisticas_incompletas": True, "audiencia_incompleta": True}})
                 if minuto < 90:
                     es_gol = any(j["tipo"] == "Gol" and j["minuto"] == minuto for j in jugadas)
                     for pais, hinchas in usuarios.items():
                         for _ in range(comentarios_por_segundo):
-                            post(f"/partidos/{partido_id}/comentarios", headers={"X-Usuario-Id": random.choice(hinchas)},
-                                 json={"contenido": random.choice(GOLES if es_gol else COMENTARIOS)})
+                            hincha = hinchas[turnos[pais] % len(hinchas)]
+                            turnos[pais] += 1
+                            try:
+                                respuesta = http.post(f"/partidos/{partido_id}/comentarios",
+                                                      headers={"X-Sesion": sesiones[hincha]},
+                                                      json={"comentario_id": str(uuid.uuid4()),
+                                                            "contenido": random.choice(GOLES if es_gol else COMENTARIOS)})
+                                fallo = respuesta.status_code >= 500
+                            except httpx.HTTPError:
+                                fallo = True
+                            if fallo:  # con el partido en juego, un comentario que no se pudo publicar no lo corta
+                                col.update_one({"_id": partido_id}, {"$set": {"comentarios_incompletos": True}})
             local, visitante = marcador["local"], marcador["visitante"]
             clasificado = partido["local"]["codigo"] if partido["fase"] != "Fase de grupos" and local == visitante else None
             post(f"/partidos/{partido_id}/resultado", json={"goles_local": local, "goles_visitante": visitante,
                                                             "clasificado": clasificado})
             col.update_one({"_id": partido_id}, {"$set": {"fin_comentarios": datetime.now(timezone.utc),
                                                              "estado": "Finalizado", "archivo_estado": "pendiente"}})
+            audiencia.cerrar_partido(partido_id, corrida_id, tipo, inicio_datos + timedelta(seconds=90),
+                                     {"local": local, "visitante": visitante})
             try:
                 post(f"/administracion/simulaciones/{partido_id}/archivar")
             except Exception:
@@ -434,29 +375,60 @@ def historico_partido(partido_id: PartidoId, neo=Depends(get_neo4j)):
     return {"fuente": "neo4j", "partido_id": partido_id, **historico, "jugadas": jugadas}
 
 
+_CAMPOS_MINUTO = ("pases_intentados", "pases_completados", "tiros", "tiros_arco", "goles", "faltas", "corners",
+                  "posesion_segundos")
+
+
+def _en_tramo(minutos, desde, hasta):
+    """Las muestras por minuto del tramo, en la forma que espera _agregar_equipos.
+
+    Las archivadas en Neo4j traen la posesión del minuto en porcentaje: como cada minuto simulado reparte 60
+    segundos entre los dos equipos, los segundos se reconstruyen con 60 × porcentaje / 100.
+    """
+    filas = []
+    for m in minutos:
+        if not desde <= m["minuto"] <= hasta:
+            continue
+        fila = {"equipo_id": m["equipo_id"], "minuto": m["minuto"], **{c: m.get(c) or 0 for c in _CAMPOS_MINUTO}}
+        if m.get("posesion_segundos") is None and m.get("posesion_pct") is not None:
+            fila["posesion_segundos"] = 60 * m["posesion_pct"] / 100
+        filas.append(fila)
+    return filas
+
+
 @router.get("/partidos/{partido_id}/estadisticas")
-def estadisticas_partido(partido_id: PartidoId, mongo=Depends(get_mongo), influx=Depends(get_influx), neo=Depends(get_neo4j)):
-    """Promedio de posesión y suma de tiros/pases de la simulación."""
+def estadisticas_partido(partido_id: PartidoId,
+                         desde_minuto: int | None = Query(None, ge=0, le=90, description="Desde este minuto, inclusive"),
+                         hasta_minuto: int | None = Query(None, ge=0, le=90, description="Hasta este minuto, inclusive"),
+                         mongo=Depends(get_mongo), influx=Depends(get_influx), neo=Depends(get_neo4j)):
+    """Posesión, pases, tiros y faltas por equipo: del partido entero o de un tramo de minutos."""
+    con_tramo = desde_minuto is not None or hasta_minuto is not None
+    desde, hasta = desde_minuto or 0, 90 if hasta_minuto is None else hasta_minuto
+    if desde > hasta:
+        raise ValidacionError("desde_minuto no puede ser mayor que hasta_minuto.")
+    tramo = {"tramo": {"desde_minuto": desde, "hasta_minuto": hasta}} if con_tramo else {}
     doc = mongo.db.simulaciones.find_one({"_id": partido_id}, {"_id": 0, "partido": 1, "estadisticas_estado": 1, "estadisticas_incompletas": 1, "archivo_estado": 1, "estadisticas_version": 1, "corrida_id": 1, "influx_raw_db": 1})
     if not doc or "partido" not in doc:
         raise NoEncontrado("No hay estadísticas para este partido.")
     if doc.get("archivo_estado") == "completo":
         historico = neo.leer_estadisticas_archivadas(partido_id)
         if historico:
-            return {"fuente": "neo4j", "equipos": historico["equipos"], "incompletas": False}
+            equipos = _agregar_equipos(_en_tramo(historico["muestras"], desde, hasta)) if con_tramo else historico["equipos"]
+            return {"fuente": "neo4j", "equipos": equipos, "incompletas": False, **tramo}
     if doc.get("estadisticas_estado") == "fallida":
         raise DependenciaNoDisponible("influxdb")
     influx = _influx_de_simulacion(influx, doc)
     if doc.get("estadisticas_version") == 3:
         minutos, _ = influx.agregados_eventos(partido_id, doc["corrida_id"])
-        equipos = _agregar_equipos(minutos)
     elif doc.get("estadisticas_version") == 2:
         minutos, _ = influx.agregados_jugadores(partido_id)
-        equipos = _agregar_equipos(minutos)
+    elif con_tramo:
+        raise Conflicto("Esta simulación es anterior a las muestras por minuto: no admite tramos.")
     else:
-        equipos = influx.resumen_partido(partido_id)
-    return {"fuente": "influxdb", "equipos": equipos, "incompletas": doc.get("estadisticas_incompletas", False)}
-
+        return {"fuente": "influxdb", "equipos": influx.resumen_partido(partido_id),
+                "incompletas": doc.get("estadisticas_incompletas", False)}
+    equipos = _agregar_equipos(_en_tramo(minutos, desde, hasta) if con_tramo else minutos)
+    return {"fuente": "influxdb", "equipos": equipos, "incompletas": doc.get("estadisticas_incompletas", False), **tramo}
 
 @router.get("/partidos/{partido_id}/estadisticas/jugadores")
 def estadisticas_jugadores(partido_id: PartidoId, mongo=Depends(get_mongo), influx=Depends(get_influx), neo=Depends(get_neo4j)):
@@ -506,25 +478,26 @@ def partido_en_vivo(partido_id: PartidoId, mongo=Depends(get_mongo)):
     return {"fuente": "mongodb", **doc}
 
 @router.post("/administracion/simulaciones/{partido_id}", status_code=202, dependencies=[Depends(requiere_admin)])
-def iniciar(partido_id: PartidoId, mongo=Depends(get_mongo), admin=Depends(get_partidos_admin_service), puntuacion=Depends(get_puntuacion_service), neo=Depends(get_neo4j)):
+def iniciar(partido_id: PartidoId, tipo: Literal["demo", "carga"] = Query("demo", description="demo o carga: se separan en el análisis de audiencia"),
+            mongo=Depends(get_mongo), admin=Depends(get_partidos_admin_service), puntuacion=Depends(get_puntuacion_service), neo=Depends(get_neo4j)):
     partido = admin._partido(partido_id)
     if partido["estado"] != "Programado" or not partido["local"] or not partido["visitante"]:
         raise Conflicto("Elegí un partido programado con equipos definidos.")
-    cassandra()
+    _verificar_cassandra()
     try:
-        mongo.db.simulaciones.insert_one({"_id":partido_id, "estado_simulacion":"iniciando"})
+        mongo.db.simulaciones.insert_one({"_id":partido_id, "estado_simulacion":"iniciando", "tipo": tipo})
     except Exception as exc:
         from pymongo.errors import DuplicateKeyError
         if not isinstance(exc, DuplicateKeyError):
             raise
         reinicio = mongo.db.simulaciones.replace_one(
             {"_id": partido_id, "estado_simulacion": "fallida"},
-            {"_id": partido_id, "estado_simulacion": "iniciando"},
+            {"_id": partido_id, "estado_simulacion": "iniciando", "tipo": tipo},
         )
         if reinicio.modified_count != 1:
             raise Conflicto("Ya existe una simulación activa o finalizada para este partido.") from exc
-    threading.Thread(target=_ejecutar, args=(partido_id,mongo,admin,puntuacion,neo), daemon=True).start()
-    return {"partido_id":partido_id,"estado":"iniciando"}
+    threading.Thread(target=_ejecutar, args=(partido_id,mongo,admin,puntuacion,neo,tipo), daemon=True).start()
+    return {"partido_id":partido_id,"estado":"iniciando","tipo":tipo}
 
 @router.get("/administracion/simulaciones/{partido_id}", dependencies=[Depends(requiere_admin)])
 def estado(partido_id: PartidoId, mongo=Depends(get_mongo)):

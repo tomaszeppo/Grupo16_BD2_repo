@@ -1,6 +1,6 @@
 # Cómo sumar una base al proyecto
 
-La API está armada para que Redis, Cassandra, InfluxDB y el monitoreo se agreguen sin reescribir lo que hay. Esta guía dice qué archivos tocar en cada caso.
+La API está armada para que una base se sume sin reescribir lo que hay. Redis (sesiones y partido en vivo), Cassandra, InfluxDB y el monitoreo ya están; lo que queda por enganchar es el **ranking en Redis**. Esta guía dice qué archivos tocar.
 
 ## Cómo está organizada la API
 
@@ -27,23 +27,9 @@ Dos reglas que conviene respetar:
 5. **Proveedor.** En [`app/deps.py`](../app/deps.py), una función con `@lru_cache` que cree el adaptador una sola vez por proceso, y sumarlo al diccionario de `get_health_service` para que aparezca en `/health/dependencias`.
 6. **Pruebas.** Un adaptador falso en [`tests/falsos.py`](../tests/falsos.py) para las pruebas sin bases, y pruebas de integración en `tests/integration/`.
 
-## Redis: sesiones
+## Redis: lo que ya está
 
-Hoy la API confía en el encabezado `X-Usuario-Id`. El punto de enganche es [`app/puertos/sesiones.py`](../app/puertos/sesiones.py):
-
-```python
-class SesionesPort(Protocol):
-    def usuario_de(self, credencial: str | None) -> str:
-        """Devuelve el id del usuario o lanza NoAutorizado."""
-```
-
-Qué hacer:
-
-1. Escribir una clase que reciba el identificador de sesión, lo busque en Redis y devuelva el usuario, o lance `NoAutorizado` si no existe o venció.
-2. En `deps.py`, hacer que `get_sesiones` devuelva esa clase.
-3. Agregar los endpoints para iniciar y cerrar sesión.
-
-Las rutas y los servicios no cambian: siguen recibiendo el usuario de `usuario_actual`. Si el encabezado pasa a llamarse de otra forma, se cambia en `usuario_actual` y en `ui/app.js`.
+El adaptador es [`app/adapters/redis.py`](../app/adapters/redis.py), con métodos genéricos (guardar, leer, conjuntos ordenados, contadores, publicar) que puede usar cualquier servicio. Las sesiones están en [`app/puertos/sesiones.py`](../app/puertos/sesiones.py) y el partido en vivo en [`app/services/vivo.py`](../app/services/vivo.py). Las claves que ya se usan están en [modelo_de_datos.md](modelo_de_datos.md#redis): conviene que el ranking use un prefijo propio (`ranking:`).
 
 ## Redis: ranking en vivo
 
@@ -53,38 +39,27 @@ Al iniciar un partido, un hilo prepara los pronósticos en Redis. Al cerrar, se 
 
 El ranking acepta lecturas parciales mientras se calcula. La puntuación se puede reintentar por la API si quedó fallida o si vence la reserva tras una interrupción. Redis usa AOF `everysec`; no hay recuperación automática al reinicio, failover ni Redis Cluster. Se asume un único partido puntuándose a la vez. El límite de memoria local es deliberadamente pequeño: hay que dimensionar y medir antes de usar millones de usuarios. Los desempates y la configuración se detallan en el README.
 
+Usa el mismo Redis que las sesiones y el partido en vivo (con su contraseña): `deps._ranking_redis()` le pasa el cliente de `deps._redis()`. Para leer la tabla desde "la otra región" está la réplica `redis_replica` (`REDIS_REPLICA_URL`); cuánto tarda un cambio en llegarle se mide con `python -m scripts.medir_replica_redis` ([arquitectura por regiones](arquitectura_regiones.md)).
+
+Por qué vale la pena está medido: con 100.000 usuarios, saber el puesto de uno leyendo de MongoDB tarda unos 300 ms y con 50 pedidos a la vez empieza a fallar ([rendimiento.md](rendimiento.md#26-saber-el-puesto-de-un-usuario-en-el-ranking)).
+
 ## Redis: la copia del calendario (opcional)
 
 Hoy cada proceso de la API guarda su copia del calendario ([`app/services/calendario.py`](../app/services/calendario.py)) y un cambio tarda hasta 30 segundos en llegar a todos. Con la copia en Redis sería una sola para todos los procesos. Los servicios usan dos métodos, `partido(id)` y `listar(fase, fecha, estado)`, más `invalidar()`; una clase con esos métodos puede reemplazarla en `get_calendario`.
 
-## InfluxDB: series de la simulación
+## InfluxDB: lo que ya está
 
-El TPO ya incluye InfluxDB 3. [`app/adapters/influx.py`](../app/adapters/influx.py) escribe muestras sintéticas por equipo y minuto; la ruta de estadísticas consulta los agregados durante el vivo. Al terminar, el servicio cruza las muestras con el guion de MongoDB y archiva los resultados y jugadas en Neo4j. Ver [README](../README.md#estadísticas-de-la-simulación-influxdb) y [modelo de datos](modelo_de_datos.md#histórico-de-simulaciones).
+[`app/adapters/influx.py`](../app/adapters/influx.py) escribe las estadísticas de la simulación y, desde el cierre de cada minuto ([`app/services/audiencia.py`](../app/services/audiencia.py)), la audiencia y los comentarios por minuto. El análisis está en [`app/routes/analisis.py`](../app/routes/analisis.py). Las medidas, en [modelo_de_datos.md](modelo_de_datos.md#influxdb--tres-bases).
 
-El puerto [`app/puertos/eventos.py`](../app/puertos/eventos.py) para publicar jugadas registradas manualmente sigue sin implementación InfluxDB: no confundirlo con el flujo de simulación. Si falla una muestra no hay reintento automático; se marca el histórico incompleto.
+El puerto [`app/puertos/eventos.py`](../app/puertos/eventos.py), para publicar en InfluxDB las jugadas cargadas a mano desde administración, sigue sin implementación: no confundirlo con el flujo de la simulación.
 
-## Cassandra: comentarios
+## Cassandra: lo que ya está
 
-El TPO ya incluye Cassandra y su esquema en [`cassandra/esquema.cql`](../cassandra/esquema.cql). Las rutas y la conexión están en [`app/routes/simulaciones.py`](../app/routes/simulaciones.py): `GET /partidos/{id}/comentarios/recientes?pais=ARG` y `POST /partidos/{id}/comentarios`. El POST comprueba el estado en Neo4j y usa el usuario de laboratorio y su país. La tabla particiona por partido, país y ventana de 30 minutos.
+Adaptador con una sesión por región ([`app/adapters/cassandra.py`](../app/adapters/cassandra.py)), servicio de comentarios ([`app/services/comentarios.py`](../app/services/comentarios.py)) y rutas ([`app/routes/comentarios.py`](../app/routes/comentarios.py)). Cada región aparece por separado en `/health/dependencias`.
 
-Pendientes: separar adaptador, servicio y rutas; definir idempotencia de publicación, retención e historial; e incluir Cassandra en el estado de salud. El TPO no implementa la tabla auxiliar de idempotencia del Hito 10.
+## Prometheus y Grafana: lo que ya está
 
-## Prometheus y Grafana
-
-La API ya expone `GET /metrics` en el puerto 8010. En el Compose, el servicio se llama `api`, así que el destino para Prometheus es `api:8010`. Los nombres de las métricas están en [api.md](api.md#métricas).
-
-Dos cosas para tener en cuenta:
-
-- Son métricas de aplicación. Para las internas de MongoDB y de Neo4j hacen falta sus exportadores.
-- La API corre con varios procesos y `/metrics` ya devuelve la suma de todos.
-
-Paneles que salen directo de lo que hay:
-
-- Pedidos por segundo y errores por ruta: `prode_api_pedidos_total`.
-- Latencia por ruta: `prode_api_duracion_segundos`.
-- La API contra cada base: `prode_base_duracion_segundos`, separada por `base`.
-- Cuánto tarda la tabla en quedar actualizada tras un partido: `prode_puntuacion_duracion_segundos`.
-- Si se está pronosticando con un calendario viejo: `prode_calendario_desactualizado`.
+Están en el Compose, con su configuración en [`monitoreo/`](../monitoreo/). Prometheus recolecta la API (`api:8010`) y los exportadores de Redis y MongoDB; Grafana tiene el tablero `Prode Mundial 2030` en http://127.0.0.1:3001. Una métrica nueva de la API aparece sola en Prometheus; para verla en el tablero hay que agregar el panel en [`monitoreo/grafana/tableros/prode2030.json`](../monitoreo/grafana/tableros/prode2030.json). Las métricas de la API están en [api.md](api.md#métricas).
 
 ## Antes de dar por terminado
 

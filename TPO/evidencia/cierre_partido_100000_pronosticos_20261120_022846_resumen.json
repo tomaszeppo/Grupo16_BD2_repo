@@ -1,0 +1,83 @@
+{
+  "escenario": "cierre_partido",
+  "etiqueta": "100000_pronosticos",
+  "inicio": "2026-11-20T02:28:46.447707+00:00",
+  "commit": "9b8f940",
+  "parametros": {
+    "usuarios": 1000,
+    "concurrencia": 20,
+    "duracion": 30,
+    "partido": "P-05",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 200,
+    "comentan": 0.05
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 9e-06,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [],
+  "medicion": {
+    "partido": "P-05",
+    "marcador": {
+      "goles_local": 2,
+      "goles_visitante": 1
+    },
+    "respuesta_del_cierre_ms": 24.3,
+    "hasta_puntuacion_completa_ms": 44985.4,
+    "puntuacion": {
+      "estado": "completa",
+      "pasos": {
+        "puntuar": 12229.7,
+        "sumar": 32201.7,
+        "foto": 12.7
+      },
+      "pronosticos": 100000,
+      "iniciada_en": "2026-11-20T02:28:46.576000Z",
+      "terminada_en": "2026-11-20T02:29:31.035000Z"
+    },
+    "repeticion_del_cierre": {
+      "estado_http": 202,
+      "ranking_sin_cambios": true
+    }
+  },
+  "fin": "2026-11-20T02:29:33.566693+00:00"
+}

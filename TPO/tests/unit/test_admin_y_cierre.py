@@ -3,6 +3,7 @@ from datetime import timedelta
 
 import pytest
 
+from tests.apoyo import entrar
 from tests.conftest import ADMIN
 
 
@@ -12,7 +13,7 @@ def crear_usuario(cliente, nombre="Ana") -> str:
 
 def pronosticar(cliente, usuario, partido, gl, gv):
     resp = cliente.put(f"/partidos/{partido}/pronostico", json={"goles_local": gl, "goles_visitante": gv},
-                       headers={"X-Usuario-Id": usuario})
+                       headers=entrar(cliente, usuario))
     assert resp.status_code in (200, 201), resp.text
 
 
@@ -58,7 +59,7 @@ def test_poner_en_juego_cierra_los_pronosticos_en_este_proceso(cliente):
     pronosticar(cliente, u, "P-03", 1, 0)  # deja cargada la copia del calendario
     poner_en_juego(cliente)
     resp = cliente.put("/partidos/P-03/pronostico", json={"goles_local": 2, "goles_visitante": 0},
-                       headers={"X-Usuario-Id": u})
+                       headers=entrar(cliente, u))
     assert resp.status_code == 409
 
 

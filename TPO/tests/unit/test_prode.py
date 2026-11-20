@@ -3,15 +3,21 @@ from datetime import timedelta
 
 import pytest
 
+from tests.apoyo import entrar
+
+_SESIONES: dict[str, dict] = {}  # usuario → encabezado de su sesión; se pisa en cada prueba al crear el usuario
+
 
 def crear_usuario(cliente, nombre="Ana", pais="ARG") -> str:
     resp = cliente.post("/usuarios", json={"nombre": nombre, "pais": pais})
     assert resp.status_code == 201, resp.text
-    return resp.json()["usuario"]["id"]
+    usuario = resp.json()["usuario"]["id"]
+    _SESIONES[usuario] = entrar(cliente, usuario)
+    return usuario
 
 
 def como(usuario_id: str) -> dict:
-    return {"X-Usuario-Id": usuario_id}
+    return _SESIONES[usuario_id]
 
 
 # --- usuarios y sesiones ---
@@ -36,7 +42,7 @@ def test_usuario_inexistente_404(cliente):
     assert cliente.get("/usuarios/juan").status_code == 422
 
 
-@pytest.mark.parametrize("encabezados", [{}, {"X-Usuario-Id": "U0000099"}, {"X-Usuario-Id": "cualquiera"}])
+@pytest.mark.parametrize("encabezados", [{}, {"X-Sesion": "inexistente"}, {"X-Usuario-Id": "U0000001"}])
 def test_sin_usuario_valido_responde_401(cliente, encabezados):
     resp = cliente.put("/partidos/P-03/pronostico", json={"goles_local": 1, "goles_visitante": 0}, headers=encabezados)
     assert resp.status_code == 401

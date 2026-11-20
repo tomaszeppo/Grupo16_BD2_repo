@@ -6,19 +6,23 @@ corresponda (`get_sesiones`, `get_ranking`, `get_publicador_eventos`). Ver docs/
 import hmac
 from functools import lru_cache
 
-from fastapi import Depends, Header
+from fastapi import Cookie, Depends, Header
 
 from app.adapters.mongo import MongoAdapter
+from app.adapters.cassandra import CassandraAdapter, salud_por_region
 from app.adapters.influx import InfluxAdapter
 from app.adapters.neo4j import Neo4jAdapter
+from app.adapters.redis import RedisAdapter
 from app.config.settings import Settings
 from app.config.settings import get_settings as _settings
-from app.errors import NoAutorizado
+from app.errors import NoAutorizado, NoEncontrado
 from app.puertos.eventos import PublicadorEventos, SinPublicador
 from app.puertos.ranking import RankingMongo, RankingPort
-from app.puertos.sesiones import SesionesPorEncabezado, SesionesPort
+from app.puertos.sesiones import SesionesPort, SesionesRedis
 from app.reloj import Reloj, ahora
 from app.services.calendario import Calendario
+from app.services.comentarios import ComentariosService
+from app.services.vivo import Transmision
 from app.services.fixture import FixtureService
 from app.services.health import HealthService
 from app.services.partidos_admin import PartidosAdminService
@@ -52,9 +56,25 @@ def _neo4j() -> Neo4jAdapter:
 
 
 @lru_cache
+def _redis() -> RedisAdapter:
+    return RedisAdapter(_settings())
+
+
+@lru_cache
+def _cassandra() -> CassandraAdapter:
+    return CassandraAdapter(_settings())
+
+
+@lru_cache
+def _transmision() -> Transmision:
+    return Transmision(_redis(), _settings())
+
+
+@lru_cache
 def _ranking_redis():
+    """El ranking usa el mismo Redis que las sesiones (con su contraseña), por su propio cliente sincrónico."""
     from app.adapters.ranking_redis import RankingRedis
-    return RankingRedis(_mongo(), _settings())
+    return RankingRedis(_mongo(), _settings(), cliente=_redis().cli)
 
 
 @lru_cache
@@ -79,8 +99,25 @@ async def get_influx() -> InfluxAdapter:
     return _influx()
 
 
+async def get_influx_resumenes() -> InfluxAdapter:
+    """InfluxDB, base de resúmenes (sin vencimiento): audiencia y comentarios por minuto."""
+    return _influx().para_resumenes()
+
+
 async def get_neo4j() -> Neo4jAdapter:
     return _neo4j()
+
+
+async def get_redis() -> RedisAdapter:
+    return _redis()
+
+
+async def get_cassandra() -> CassandraAdapter:
+    return _cassandra()
+
+
+async def get_transmision() -> Transmision:
+    return _transmision()
 
 
 async def get_calendario() -> Calendario:
@@ -88,9 +125,10 @@ async def get_calendario() -> Calendario:
 
 
 # --- puertos: acá se enchufan Redis e InfluxDB ---
-async def get_sesiones(mongo=Depends(get_mongo)) -> SesionesPort:
-    """Hoy: encabezado X-Usuario-Id. Con Redis: devolver la implementación que valida la sesión."""
-    return SesionesPorEncabezado(mongo)
+async def get_sesiones(redis=Depends(get_redis), mongo=Depends(get_mongo),
+                       settings: Settings = Depends(get_settings)) -> SesionesPort:
+    """Sesiones en Redis (ver app/puertos/sesiones.py)."""
+    return SesionesRedis(redis, mongo, settings.sesion_ttl_segundos)
 
 
 async def get_ranking(mongo=Depends(get_mongo)) -> RankingPort:
@@ -105,9 +143,20 @@ async def get_publicador_eventos() -> PublicadorEventos:
 
 
 # --- quién hace el pedido ---
-def usuario_actual(x_usuario_id: str | None = Header(None, description="Identificador del usuario, por ejemplo U0000001"),
-                   sesiones: SesionesPort = Depends(get_sesiones)) -> str:
-    return sesiones.usuario_de(x_usuario_id)
+async def credencial(x_sesion: str | None = Header(None, description="Token de la sesión (POST /sesiones)"),
+                     sesion: str | None = Cookie(None, include_in_schema=False)) -> str | None:
+    """El encabezado manda; si no está, la cookie que dejó POST /sesiones."""
+    return x_sesion or sesion
+
+
+def usuario_actual(token: str | None = Depends(credencial), sesiones: SesionesPort = Depends(get_sesiones)) -> str:
+    return sesiones.usuario_de(token)
+
+
+def sesion_actual(token: str | None = Depends(credencial),
+                  sesiones: SesionesPort = Depends(get_sesiones)) -> tuple[str, str]:
+    """(token, usuario). La usa la conexión en vivo para contar espectadores por sesión."""
+    return token, sesiones.usuario_de(token)
 
 
 async def requiere_admin(x_admin_clave: str | None = Header(None, description="Clave de administración"),
@@ -118,13 +167,25 @@ async def requiere_admin(x_admin_clave: str | None = Header(None, description="C
         raise NoAutorizado("Falta el encabezado X-Admin-Clave o no es correcto.")
 
 
+def espectador(partido_id: str, sesion: tuple[str, str] = Depends(sesion_actual), mongo=Depends(get_mongo),
+               calendario=Depends(get_calendario)) -> dict:
+    """Quién abre la conexión en vivo. Corre en un hilo (habla con Redis y MongoDB) antes de abrir el flujo,
+    así una sesión inválida o un partido inexistente responden 401 o 404 y no un flujo vacío."""
+    token, usuario_id = sesion
+    if calendario.partido(partido_id) is None:
+        raise NoEncontrado("No existe el partido.")
+    usuario = mongo.obtener_usuario(usuario_id)
+    if usuario is None:
+        raise NoAutorizado("El usuario de la sesión ya no existe.")
+    return {"token": token, "usuario_id": usuario_id, "pais": usuario["pais"]}
+
+
 # --- servicios ---
-async def get_health_service(mongo=Depends(get_mongo), neo4j=Depends(get_neo4j),
-                       calendario=Depends(get_calendario)) -> HealthService:
-    bases = {"mongodb": mongo, "neo4j": neo4j}
-    if _settings().redis_enabled:
-        bases["redis"] = _ranking_redis()
-    return HealthService(bases, calendario)
+async def get_health_service(mongo=Depends(get_mongo), neo4j=Depends(get_neo4j), redis=Depends(get_redis),
+                             cassandra=Depends(get_cassandra), calendario=Depends(get_calendario)) -> HealthService:
+    # Un solo "redis": sesiones, vivo y ranking usan el mismo servidor.
+    return HealthService({"mongodb": mongo, "neo4j": neo4j, "redis": redis, **salud_por_region(cassandra)},
+                         calendario)
 
 
 async def get_fixture_service(neo4j=Depends(get_neo4j), calendario=Depends(get_calendario)) -> FixtureService:
@@ -166,6 +227,12 @@ async def get_ranking_service(ranking=Depends(get_ranking), mongo=Depends(get_mo
     return RankingService(ranking, mongo)
 
 
+async def get_comentarios_service(cassandra=Depends(get_cassandra), redis=Depends(get_redis), neo4j=Depends(get_neo4j),
+                                  mongo=Depends(get_mongo), reloj=Depends(get_reloj),
+                                  settings: Settings = Depends(get_settings)) -> ComentariosService:
+    return ComentariosService(cassandra, redis, neo4j, mongo, reloj, settings.chat_segundos_entre_comentarios)
+
+
 def precalentar() -> None:
     """Abre las conexiones y deja cargada la copia del calendario al arrancar cada proceso.
 
@@ -179,6 +246,7 @@ def precalentar() -> None:
     def trabajo() -> None:
         pasos = (
             ("mongodb", lambda: _mongo().ping()),
+            ("redis", lambda: _redis().ping()),
             ("calendario", lambda: _calendario().refrescar()),
             ("neo4j", lambda: _neo4j().preparar_consultas()),
         )

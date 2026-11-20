@@ -1,0 +1,91 @@
+{
+  "escenario": "vivo",
+  "etiqueta": "cassandra_europa_corte_brusco",
+  "inicio": "2026-11-20T02:44:53.662126+00:00",
+  "commit": "9b8f940",
+  "parametros": {
+    "usuarios": 1000,
+    "concurrencia": 20,
+    "duracion": 95,
+    "partido": "P-10",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 500,
+    "comentan": 0.1
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio; 2 procesos con conexiones asincrónicas",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 5.28929,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [
+    "Se mató sin aviso (docker compose kill) el contenedor cassandra_europa cerca del segundo 36 de la corrida y se lo volvió a levantar 30 segundos después."
+  ],
+  "medicion": {
+    "espectadores_pedidos": 500,
+    "conexiones": {
+      "abiertas": 633,
+      "fallidas": 0,
+      "reconexiones": 133
+    },
+    "comentarios": {
+      "enviados": 340,
+      "publicados": 218,
+      "modo_lento": 111,
+      "partido_terminado": 10,
+      "errores": 1
+    },
+    "entrega_ms": {
+      "medidas": 218,
+      "p50": 23.08,
+      "p95": 208.85,
+      "p99": 324.43,
+      "max": 388.95
+    },
+    "audiencia_reportada_max": 500,
+    "simulacion": {
+      "estado_simulacion": "completa",
+      "minuto": 90,
+      "audiencia_incompleta": null,
+      "estadisticas_incompletas": null,
+      "archivo_estado": "completo"
+    }
+  },
+  "fin": "2026-11-20T02:46:36.255762+00:00"
+}

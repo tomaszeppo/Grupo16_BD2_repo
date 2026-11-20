@@ -1,5 +1,5 @@
 # Prode Mundial 2030 — proyecto final. Se levanta solo: no depende de las carpetas de los hitos.
-# Cassandra e InfluxDB forman parte del TPO; Redis y monitoreo son puntos de extensión.
+# Redis, Cassandra e InfluxDB forman parte del TPO.
 name: fixture2030-tpo
 
 x-mongo: &mongo
@@ -18,12 +18,35 @@ x-mongo: &mongo
   cpus: ${MONGO_CPUS:-1.0}
   networks: [tpo]
 
+x-cassandra-entorno: &cassandra_entorno
+  MAX_HEAP_SIZE: ${CASSANDRA_HEAP:-384M}
+  HEAP_NEWSIZE: 96M
+  CASSANDRA_CLUSTER_NAME: fixture2030
+  CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+  CASSANDRA_RACK: rack1
+  CASSANDRA_SEEDS: cassandra_america
+
+x-cassandra: &cassandra
+  image: cassandra:4.1
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD-SHELL", "cqlsh -e 'SELECT now() FROM system.local' >/dev/null 2>&1"]
+    interval: 15s
+    timeout: 10s
+    retries: 40
+  mem_limit: ${CASSANDRA_MEMORIA:-900m}
+  cpus: ${CASSANDRA_CPUS:-0.75}
+  networks: [tpo]
+
 x-api-entorno: &api_entorno
   MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:?definir MONGO_PASSWORD en .env}@mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0&authSource=admin
   MONGO_DB: prode2030
   NEO4J_URI: bolt://neo4j:7687
   NEO4J_USER: neo4j
   NEO4J_PASSWORD: ${NEO4J_PASSWORD:?definir NEO4J_PASSWORD en .env}
+  REDIS_URL: redis://redis:6379/0
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}
+  REDIS_REPLICA_URL: redis://redis_replica:6379/0
   ADMIN_CLAVE: ${ADMIN_CLAVE:?definir ADMIN_CLAVE en .env}
   SIMULADOR_API_URL: ${SIMULADOR_API_URL:-http://127.0.0.1:8010}
   PRONOSTICOS_HASTA_INICIO_REAL: ${PRONOSTICOS_HASTA_INICIO_REAL:-true}
@@ -31,7 +54,6 @@ x-api-entorno: &api_entorno
   INFLUX_RAW_DB: ${INFLUX_RAW_DB:-fixture2030_raw}
   INFLUX_RESUMEN_DB: ${INFLUX_RESUMEN_DB:-fixture2030_resumenes}
   REDIS_ENABLED: ${REDIS_ENABLED:-true}
-  REDIS_URL: redis://redis:6379/0
   REDIS_LOTE: ${REDIS_LOTE:-500}
   REDIS_PERSISTENCIA_DEMORA_SEGUNDOS: ${REDIS_PERSISTENCIA_DEMORA_SEGUNDOS:-15}
   CALENDARIO_TTL_SEGUNDOS: ${CALENDARIO_TTL_SEGUNDOS:-30}
@@ -45,20 +67,6 @@ x-api-entorno: &api_entorno
   NEO4J_CPUS: ${NEO4J_CPUS:-1.0}
 
 services:
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "${REDIS_MAXMEMORIA:-192mb}", "--maxmemory-policy", "noeviction"]
-    volumes: [redis_datos:/data]
-    cpus: ${REDIS_CPUS:-0.5}
-    mem_limit: ${REDIS_MEMORIA:-256m}
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-    networks: [tpo]
-
   # Los tres nodos se autentican entre sí con un archivo de clave. Se genera una sola vez y queda en un volumen.
   mongo_clave:
     image: mongo:7.0
@@ -119,28 +127,76 @@ services:
     cpus: ${NEO4J_CPUS:-1.0}
     networks: [tpo]
 
-  cassandra:
-    image: cassandra:4.1
-    cpus: ${CASSANDRA_CPUS:-0.75}
+  # Sesiones, presencia en los partidos en vivo, reparto de comentarios entre procesos y contadores.
+  # AOF cada segundo: un reinicio no cierra las sesiones abiertas.
+  redis:
+    image: redis:7.4
     restart: unless-stopped
+    # Tope de memoria sin desalojo: si se llena, Redis rechaza escrituras en vez de borrar sesiones al azar.
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--requirepass", "${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}",
+              "--maxmemory", "${REDIS_MAXMEMORIA:-192mb}", "--maxmemory-policy", "noeviction"]
     environment:
-      MAX_HEAP_SIZE: 512M
-      HEAP_NEWSIZE: 128M
-    ports: ["127.0.0.1:${CASSANDRA_PUERTO:-9043}:9042"]
-    volumes: ["cassandra_datos:/var/lib/cassandra"]
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}
+    ports: ["127.0.0.1:${REDIS_PUERTO:-6380}:6379"]
+    volumes: [redis_datos:/data]
     healthcheck:
-      test: ["CMD-SHELL", "cqlsh -e 'SELECT now() FROM system.local' >/dev/null 2>&1"]
-      interval: 15s
-      timeout: 10s
-      retries: 30
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: ${REDIS_MEMORIA:-256m}
+    cpus: ${REDIS_CPUS:-0.5}
     networks: [tpo]
 
+  # Copia de solo lectura de Redis: representa "la otra región". En el laboratorio la API escribe y lee en el
+  # primario; la réplica queda para leer el ranking desde otra región. Ver docs/arquitectura_regiones.md.
+  redis_replica:
+    image: redis:7.4
+    restart: unless-stopped
+    command: ["redis-server", "--replicaof", "redis", "6379", "--masterauth", "${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}", "--requirepass", "${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}", "--replica-read-only", "yes"]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}
+    depends_on:
+      redis: {condition: service_healthy}
+    ports: ["127.0.0.1:${REDIS_REPLICA_PUERTO:-6381}:6379"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli info replication | grep -q master_link_status:up"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: ${REDIS_REPLICA_MEMORIA:-256m}
+    cpus: ${REDIS_REPLICA_CPUS:-0.25}
+    networks: [tpo]
+
+  # Comentarios: un datacenter por región (ver docs/arquitectura_regiones.md). Cada nodo guarda una copia
+  # completa; cada usuario escribe y lee en el de su región sin esperar al otro.
+  cassandra_america:
+    <<: *cassandra
+    environment:
+      <<: *cassandra_entorno
+      CASSANDRA_DC: america
+    ports: ["127.0.0.1:${CASSANDRA_AMERICA_PUERTO:-9043}:9042"]
+    volumes: ["cassandra_america_datos:/var/lib/cassandra"]
+
+  cassandra_europa:
+    <<: *cassandra
+    depends_on:
+      cassandra_america: {condition: service_healthy}
+    environment:
+      <<: *cassandra_entorno
+      CASSANDRA_DC: europa
+    ports: ["127.0.0.1:${CASSANDRA_EUROPA_PUERTO:-9044}:9042"]
+    volumes: ["cassandra_europa_datos:/var/lib/cassandra"]
+
+  # Esquema repetible: crea lo que falta y pasa el keyspace a la replicación por región si venía de antes.
   cassandra_inicio:
     image: cassandra:4.1
+    restart: "no"
     depends_on:
-      cassandra: {condition: service_healthy}
-    volumes: ["./cassandra/esquema.cql:/esquema.cql:ro"]
-    entrypoint: ["cqlsh", "cassandra", "-f", "/esquema.cql"]
+      cassandra_america: {condition: service_healthy}
+      cassandra_europa: {condition: service_healthy}
+    volumes: ["./cassandra:/esquema:ro"]
+    entrypoint: ["bash", "/esquema/iniciar.sh"]
     networks: [tpo]
 
   influxdb:
@@ -167,8 +223,12 @@ services:
         done;
         test -s /tmp/bases;
         grep -qx fixture2030_metrics /tmp/bases || influxdb3 create database fixture2030_metrics --host http://influxdb:8181;
+        influxdb3 update database --database fixture2030_metrics --retention-period none --host http://influxdb:8181;
         grep -qx ${INFLUX_RAW_DB:-fixture2030_raw} /tmp/bases || influxdb3 create database ${INFLUX_RAW_DB:-fixture2030_raw} --retention-period ${INFLUX_RAW_RETENCION:-7d} --host http://influxdb:8181;
         grep -qx ${INFLUX_RESUMEN_DB:-fixture2030_resumenes} /tmp/bases || influxdb3 create database ${INFLUX_RESUMEN_DB:-fixture2030_resumenes} --host http://influxdb:8181
+    # Tres bases: la histórica (fixture2030_metrics, sin vencimiento: simulaciones anteriores), la de datos crudos
+    # de cada simulación (vencen a los 7 días; al terminar el partido sus estadísticas se archivan en Neo4j) y la de
+    # resúmenes (sin vencimiento: totales del partido, audiencia y comentarios por minuto).
     networks: [tpo]
 
   api:
@@ -177,9 +237,9 @@ services:
     depends_on:
       mongo_inicio: {condition: service_completed_successfully}
       neo4j: {condition: service_healthy}
+      redis: {condition: service_healthy}
       cassandra_inicio: {condition: service_completed_successfully}
       influx_inicio: {condition: service_completed_successfully}
-      redis: {condition: service_healthy}
     environment:
       <<: *api_entorno
       PROMETHEUS_MULTIPROC_DIR: /tmp/metricas
@@ -203,15 +263,77 @@ services:
     volumes: ["./:/srv"]
     networks: [tpo]
 
+  # --- Monitoreo: Prometheus recolecta, Grafana muestra. Puertos distintos a los del Hito 13 (9091, 3001). ---
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus", "--storage.tsdb.retention.time=15d"]
+    volumes:
+      - ./monitoreo/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_datos:/prometheus
+    ports: ["127.0.0.1:${PROMETHEUS_PUERTO:-9091}:9090"]
+    mem_limit: 512m
+    cpus: 0.5
+    networks: [tpo]
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?definir GRAFANA_PASSWORD en .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # Solo lectura sin ingresar, para proyectar el tablero en la demostración. El puerto escucha solo en
+      # 127.0.0.1; para editar hace falta el usuario admin.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/tableros/prode2030.json
+    volumes:
+      - ./monitoreo/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoreo/grafana/tableros:/var/lib/grafana/tableros:ro
+      - grafana_datos:/var/lib/grafana
+    depends_on: [prometheus]
+    ports: ["127.0.0.1:${GRAFANA_PUERTO:-3001}:3000"]
+    mem_limit: 256m
+    cpus: 0.5
+    networks: [tpo]
+
+  # Exportadores: métricas internas de Redis (primario y réplica) y de MongoDB.
+  redis_exporter:
+    image: oliver006/redis_exporter:v1.75.0
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}
+    mem_limit: 128m
+    cpus: 0.25
+    networks: [tpo]
+
+  mongodb_exporter:
+    image: percona/mongodb_exporter:0.44.0
+    restart: unless-stopped
+    command: ["--collect-all", "--compatible-mode", "--mongodb.direct-connect=false"]
+    environment:
+      MONGODB_URI: mongodb://mongo1:27017,mongo2:27017,mongo3:27017/admin?replicaSet=rs0
+      MONGODB_USER: ${MONGO_USER:-admin}
+      MONGODB_PASSWORD: ${MONGO_PASSWORD:?definir MONGO_PASSWORD en .env}
+    depends_on:
+      mongo_inicio: {condition: service_completed_successfully}
+    mem_limit: 128m
+    cpus: 0.25
+    networks: [tpo]
+
 volumes:
+  redis_datos:
+  prometheus_datos:
+  grafana_datos:
   mongo_clave:
   mongo1_datos:
   mongo2_datos:
   mongo3_datos:
   neo4j_datos:
-  cassandra_datos:
+  cassandra_america_datos:
+  cassandra_europa_datos:
   influx_datos:
-  redis_datos:
 
 networks:
   tpo:

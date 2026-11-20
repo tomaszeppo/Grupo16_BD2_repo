@@ -1,0 +1,101 @@
+{
+  "escenario": "posicion_ranking",
+  "etiqueta": "c10",
+  "inicio": "2026-11-20T02:29:37.011370+00:00",
+  "commit": "9b8f940",
+  "parametros": {
+    "usuarios": 100000,
+    "concurrencia": 10,
+    "duracion": 30.0,
+    "partido": "P-03",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 200,
+    "comentan": 0.05
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio; 2 procesos y 10 hilos",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 7e-06,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [],
+  "duracion_real_segundos": 30.0,
+  "medicion": {
+    "total": 1062,
+    "por_segundo": 35.4,
+    "exitosos": 1062,
+    "errores": 0,
+    "porcentaje_de_error": 0.0,
+    "errores_por_estado": {},
+    "p50_ms": 287.8,
+    "p95_ms": 690.4,
+    "p99_ms": 800.8,
+    "max_ms": 896.9,
+    "max_ms_incluyendo_errores": 896.9,
+    "por_ruta": {
+      "GET /ranking": {
+        "total": 208,
+        "por_segundo": 6.9,
+        "exitosos": 208,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 7.7,
+        "p95_ms": 90.0,
+        "p99_ms": 95.8,
+        "max_ms": 100.7,
+        "max_ms_incluyendo_errores": 100.7
+      },
+      "GET /ranking/usuarios/{id}": {
+        "total": 854,
+        "por_segundo": 28.5,
+        "exitosos": 854,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 310.7,
+        "p95_ms": 696.6,
+        "p99_ms": 803.1,
+        "max_ms": 896.9,
+        "max_ms_incluyendo_errores": 896.9
+      }
+    }
+  },
+  "fin": "2026-11-20T02:30:08.531983+00:00"
+}

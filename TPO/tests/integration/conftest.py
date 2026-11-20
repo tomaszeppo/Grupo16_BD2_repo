@@ -7,6 +7,12 @@ Neo4j: la edición comunitaria tiene una sola base, así que BORRAN el grafo y l
 Por eso piden PERMITIR_REINICIO=1, y después hay que correr `python -m seed.run` otra vez.
 """
 import os
+
+# Estas pruebas cubren el camino de MongoDB (puntuación y ranking) y el cierre de pronósticos a la hora
+# programada. El Compose activa el ranking en Redis y los pronósticos hasta el inicio real; el camino de Redis
+# tiene sus propias pruebas en tests/redis_integration.
+os.environ["REDIS_ENABLED"] = "false"
+os.environ["PRONOSTICOS_HASTA_INICIO_REAL"] = "false"
 from datetime import datetime, timezone
 
 import pytest
@@ -14,6 +20,7 @@ from fastapi.testclient import TestClient
 
 from app.adapters.mongo import MongoAdapter
 from app.adapters.neo4j import Neo4jAdapter
+from app.adapters.redis import RedisAdapter
 from app.config.settings import Settings
 from tests.apoyo import armar_app
 from seed import cargar_mongo, cargar_neo4j, datos
@@ -34,7 +41,10 @@ def pytest_collection_modifyitems(config, items):
 
 @pytest.fixture(scope="session")
 def ajustes():
-    return Settings(mongo_db="prode2030_pruebas", admin_clave="clave-de-prueba", timeout_segundos=10)
+    base = Settings()
+    # Redis: base 1 para las pruebas, la 0 es la del laboratorio.
+    redis_url = base.redis_url.rsplit("/", 1)[0] + "/1"
+    return Settings(mongo_db="prode2030_pruebas", admin_clave="clave-de-prueba", timeout_segundos=10, redis_url=redis_url)
 
 
 @pytest.fixture(scope="session")
@@ -45,6 +55,13 @@ def mongo(ajustes):
 @pytest.fixture(scope="session")
 def neo4j(ajustes):
     return Neo4jAdapter(ajustes)
+
+
+@pytest.fixture(scope="session")
+def redis_real(ajustes):
+    adaptador = RedisAdapter(ajustes)
+    adaptador.cli.flushdb()
+    return adaptador
 
 
 @pytest.fixture(scope="session")
@@ -84,8 +101,8 @@ def reloj():
 
 
 @pytest.fixture
-def app(ajustes, mongo, neo4j, reloj, cargado):
-    return armar_app(ajustes, mongo, neo4j, reloj)
+def app(ajustes, mongo, neo4j, reloj, cargado, redis_real):
+    return armar_app(ajustes, mongo, neo4j, reloj, redis_real)
 
 
 @pytest.fixture

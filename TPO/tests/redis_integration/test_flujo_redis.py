@@ -17,7 +17,9 @@ def entorno():
     if os.environ.get("RUN_REDIS_INTEGRATION") != "1":
         pytest.skip("Requiere Redis y Mongo reales y activación explícita")
     settings = Settings()
-    r = redis.Redis.from_url("redis://redis:6379/15", decode_responses=True)
+    # La base 15 del mismo Redis del laboratorio, con su contraseña.
+    r = redis.Redis.from_url(settings.redis_url.rsplit("/", 1)[0] + "/15", password=settings.redis_password or None,
+                             decode_responses=True)
     if r.dbsize() != 0:
         pytest.fail("Redis DB 15 no está vacía; no se toca información existente")
     client = MongoClient(settings.mongo_uri, tz_aware=True)

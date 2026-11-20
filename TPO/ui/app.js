@@ -19,8 +19,6 @@ const sesion = {
 };
 let claveAdmin = localStorage.getItem("admin_clave") || "";
 let comentariosTimers = [];
-let intervalosTribuna = [];
-let versionTribuna = 0;
 let sondeo = null;        // consulta periódica del avance de la puntuación
 let preparacionAdmin = null;
 let administradorPreparado = false;
@@ -30,7 +28,7 @@ let navegacionActual = 0;
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const base = (fuente) => {
   const clase = fuente === "mongodb" ? "mongodb" : fuente === "neo4j" ? "neo4j" : "otra";
-  const nombre = { mongodb: "MongoDB", neo4j: "Neo4j" }[fuente] || fuente;
+  const nombre = { mongodb: "MongoDB", neo4j: "Neo4j", redis: "Redis", cassandra: "Cassandra", influxdb: "InfluxDB" }[fuente] || fuente;
   return `<span class="base ${clase}" title="Base que respondió este bloque">${esc(nombre)}</span>`;
 };
 const fecha = (iso) => new Date(iso).toLocaleString("es-AR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -46,7 +44,7 @@ class ErrorDeApi extends Error {
 async function api(ruta, { metodo = "GET", cuerpo, admin = false } = {}) {
   const encabezados = {};
   if (cuerpo !== undefined) encabezados["Content-Type"] = "application/json";
-  if (sesion.usuario) encabezados["X-Usuario-Id"] = sesion.usuario.id;
+  // La sesión viaja sola en la cookie HttpOnly que dejó POST /sesiones: el código de la página no la ve.
   if (admin) encabezados["X-Admin-Clave"] = claveAdmin;
   let respuesta;
   try {
@@ -57,6 +55,7 @@ async function api(ruta, { metodo = "GET", cuerpo, admin = false } = {}) {
   const datos = await respuesta.json().catch(() => ({}));
   if (!respuesta.ok) {
     if (admin && respuesta.status === 401) { claveAdmin = ""; localStorage.removeItem("admin_clave"); dibujarQuien(); }
+    else if (respuesta.status === 401 && sesion.usuario) { sesion.usuario = null; dibujarQuien(); location.hash = "#/ingreso"; }
     const e = datos.error || {};
     const detalle = (e.detalle || []).map((d) => `${d.campo}: ${d.motivo}`).join("; ");
     throw new ErrorDeApi(respuesta.status, e.codigo || "ERROR", [e.mensaje || `La API respondió ${respuesta.status}.`, detalle].filter(Boolean).join(" "));
@@ -69,7 +68,9 @@ async function iniciarAdministrador() {
   await api("/administracion/acceso", {admin: true});
   const datos = await api("/administracion/usuario-prueba", {metodo: "POST", admin: true});
   if (!claveAdmin) throw new Error("La sesión administrativa se cerró.");
-  sesion.usuario = datos.usuario;
+  // El usuario de prueba del administrador también entra con sesión (cookie), como cualquier usuario.
+  await api("/sesiones", { metodo: "POST", cuerpo: { usuario_id: datos.usuario.id } });
+  sesion.usuario = { id: datos.usuario.id, nombre: datos.usuario.nombre, pais: datos.usuario.pais };
   administradorPreparado = true;
   localStorage.setItem("admin_clave", claveAdmin);
   dibujarQuien();
@@ -109,7 +110,7 @@ function dibujarQuien() {
   document.getElementById("quien").innerHTML = u
     ? `<span><strong>${esc(u.nombre)}</strong> (${esc(u.id)})</span><button class="boton chico secundario" id="salir" style="border-color:#fff;color:#fff">Cambiar de usuario</button>`
     : claveAdmin ? `<span>Administración</span><button class="boton chico secundario" id="salir" style="border-color:#fff;color:#fff">Salir</button>` : `<a href="#/ingreso">Elegir usuario</a>`;
-  document.getElementById("salir")?.addEventListener("click", () => { sesion.usuario = null; claveAdmin = ""; administradorPreparado = false; localStorage.removeItem("admin_clave"); location.hash = "#/ingreso"; dibujarQuien(); });
+  document.getElementById("salir")?.addEventListener("click", () => { if (sesion.usuario) api("/sesiones/actual", { metodo: "DELETE" }).catch(() => {}); sesion.usuario = null; claveAdmin = ""; administradorPreparado = false; localStorage.removeItem("admin_clave"); location.hash = "#/ingreso"; dibujarQuien(); });
 }
 
 async function dibujarSalud() {
@@ -120,7 +121,9 @@ async function dibujarSalud() {
     const cal = s.calendario;
     const copia = !cal.cargado ? "sin copia del calendario todavía"
       : `copia del calendario de hace ${Math.round(cal.antiguedad_segundos)} s${cal.desactualizado ? " (no se pudo renovar)" : ""}`;
-    caja.innerHTML = `${una("MongoDB", s.mongodb)}${una("Neo4j", s.neo4j)} ${esc(copia)}`;
+    const otras = [["Redis", s.redis], ["Cassandra América", s.cassandra_america], ["Cassandra Europa", s.cassandra_europa]]
+      .filter(([, d]) => d).map(([n, d]) => una(n, d)).join("");
+    caja.innerHTML = `${una("MongoDB", s.mongodb)}${una("Neo4j", s.neo4j)}${otras} ${esc(copia)}`;
   } catch (e) {
     caja.innerHTML = `<b class="caida">API: no responde</b>`;
   }
@@ -144,20 +147,25 @@ async function vistaIngreso() {
     document.getElementById("pais").innerHTML = d.equipos.map((e) => `<option value="${esc(e.codigo)}">${esc(e.nombre)}</option>`).join("");
   }).catch((e) => { document.getElementById("alta-error").innerHTML = cajaDeError(e); });
 
-  const entrarCon = (u) => { claveAdmin = ""; administradorPreparado = false; localStorage.removeItem("admin_clave"); sesion.usuario = u; dibujarQuien(); location.hash = "#/en-vivo"; };
+  // Abre la sesión en Redis; la API deja la cookie. Se guarda aparte solo lo que se muestra (nombre, país).
+  const entrarCon = async (usuarioId) => {
+    const d = await api("/sesiones", { metodo: "POST", cuerpo: { usuario_id: usuarioId } });
+    claveAdmin = ""; administradorPreparado = false; localStorage.removeItem("admin_clave");
+    sesion.usuario = { id: d.usuario.id, nombre: d.usuario.nombre, pais: d.usuario.pais };
+    dibujarQuien(); location.hash = "#/en-vivo";
+  };
   document.getElementById("alta").addEventListener("submit", async (ev) => {
     ev.preventDefault();
     try {
       const d = await api("/usuarios", { metodo: "POST", cuerpo: { nombre: document.getElementById("nombre").value, pais: document.getElementById("pais").value } });
       avisar(`Usuario ${d.usuario.id} creado.`);
-      entrarCon(d.usuario);
+      await entrarCon(d.usuario.id);
     } catch (e) { document.getElementById("alta-error").innerHTML = cajaDeError(e); }
   });
   document.getElementById("entrar").addEventListener("submit", async (ev) => {
     ev.preventDefault();
     try {
-      const usuario = (await api(`/usuarios/${encodeURIComponent(document.getElementById("uid").value.trim().toUpperCase())}`)).usuario;
-      entrarCon(usuario);
+      await entrarCon(document.getElementById("uid").value.trim().toUpperCase());
     } catch (e) { claveAdmin = ""; document.getElementById("entrar-error").innerHTML = cajaDeError(e); }
   });
   document.getElementById("entrar-admin").addEventListener("submit", async (ev) => {
@@ -190,69 +198,134 @@ async function vistaFixture() {
   } catch (e) { lista.innerHTML = cajaDeError(e); }
 }
 
-function iniciarComentarios(id, estadoPartido) {
-  intervalosTribuna.forEach(clearInterval); intervalosTribuna = [];
-  const version = ++versionTribuna;
+// ---------- partido en vivo: conexión, tribuna y audiencia ----------
+// Una conexión abierta por pestaña (eventos del servidor). Trae los comentarios de la tribuna elegida, el estado
+// del partido y la audiencia; mientras está abierta, este usuario cuenta como espectador de su país.
+let conexionVivo = null;
+function cerrarVivo() { if (conexionVivo) { conexionVivo.close(); conexionVivo = null; } }
+
+function abrirVivo(id, alcance, manejadores, alEstadoConexion) {
+  cerrarVivo();
+  const fuente = new EventSource(`/partidos/${encodeURIComponent(id)}/vivo?alcance=${alcance}`);
+  conexionVivo = fuente;
+  const leer = (tipo) => fuente.addEventListener(tipo, (ev) => { try { manejadores[tipo]?.(JSON.parse(ev.data)); } catch { /* mensaje dañado: se ignora */ } });
+  ["comentario", "estado", "audiencia"].forEach(leer);
+  fuente.addEventListener("error", (ev) => {
+    if (ev.data) { try { alEstadoConexion(JSON.parse(ev.data).mensaje); } catch { alEstadoConexion("Sin conexión"); } }
+    else alEstadoConexion(fuente.readyState === EventSource.CLOSED ? "Sin conexión" : "Reconectando…");
+  });
+  fuente.addEventListener("open", () => alEstadoConexion("En vivo"));
+  return fuente;
+}
+
+function iniciarComentarios(id, estadoPartido, vivo) {
   const caja = document.getElementById("comentarios");
   const usuario = sesion.usuario, pais = usuario?.pais || "ARG";
-  const formulario = usuario ? `<form id="comentario-form" style="margin-top:16px"><label for="comentario-texto">Tu comentario</label><textarea id="comentario-texto" maxlength="280" rows="3" required placeholder="Sumate a la conversación"></textarea><button class="boton" id="comentario-enviar" ${estadoPartido === "En juego" ? "" : "disabled"}>Enviar comentario</button><p id="comentario-mensaje" role="status"></p></form>` : `<p><a href="#/ingreso">Ingresá</a> para comentar.</p>`;
-  caja.innerHTML = `<section class="bloque tribuna"><header><div><h2>Comentarios</h2><p class="tribuna-subtitulo">Tribuna · ${esc(pais)}</p></div><span class="tribuna-estado" id="comentarios-estado" role="status">Conectando…</span></header><div id="comentarios-lista" class="comentarios-lista" role="log" aria-label="Comentarios recientes"><p class="vacio">Todavía no hay comentarios.</p></div>${formulario}</section>`;
-  const cola = [], conocidos = new Set(), visibles = [];
-  if (estadoPartido === "Finalizado") {
-    const lista = document.getElementById("comentarios-lista");
-    const estado = document.getElementById("comentarios-estado");
-    const boton = document.createElement("button"); boton.type = "button"; boton.className = "boton secundario"; boton.textContent = "Ver comentarios anteriores"; boton.hidden = true;
-    caja.querySelector("section").appendChild(boton);
-    let cursor = null;
-    async function cargarHistorial() {
-      boton.disabled = true; estado.textContent = "Consultando…";
-      try {
-        const params = new URLSearchParams({pais}); if (cursor) params.set("cursor", cursor);
-        const datos = await api(`/partidos/${encodeURIComponent(id)}/comentarios/historial?${params}`);
-        if (!caja.isConnected) return;
-        const nuevos = datos.items.slice().reverse().filter(c => !conocidos.has(c.comentario_id));
-        nuevos.forEach(c => conocidos.add(c.comentario_id)); visibles.unshift(...nuevos);
-        lista.innerHTML = visibles.map(v => `<article class="comentario"><span class="comentario-avatar" aria-hidden="true">${esc((v.usuario_nombre || "H").slice(0, 1).toUpperCase())}</span><div><strong>${esc(v.usuario_nombre)}</strong><p>${esc(v.contenido)}</p></div></article>`).join("") || `<p class="vacio">No hay comentarios en esta ventana.</p>`;
-        cursor = datos.next_cursor; boton.hidden = !cursor;
-        estado.textContent = visibles.length ? "Historial de comentarios" : "Sin comentarios en esta ventana";
-      } catch (e) { if (caja.isConnected) estado.textContent = e.message; }
-      finally { boton.disabled = false; }
-    }
-    boton.addEventListener("click", cargarHistorial); cargarHistorial(); return;
+  const formulario = usuario ? `<form id="comentario-form" style="margin-top:16px"><label for="comentario-texto">Tu comentario en la tribuna de ${esc(pais)}</label><textarea id="comentario-texto" maxlength="280" rows="3" required placeholder="Sumate a la conversación"></textarea><button class="boton" id="comentario-enviar" ${estadoPartido === "En juego" ? "" : "disabled"}>Enviar comentario</button><p id="comentario-mensaje" role="status"></p></form>` : `<p><a href="#/ingreso">Ingresá</a> para comentar.</p>`;
+  caja.innerHTML = `<section class="bloque tribuna"><header><div><h2>Comentarios</h2><div class="tribuna-pestanas" role="tablist"><button type="button" role="tab" data-alcance="pais" aria-selected="true">Mi país (${esc(pais)})</button><button type="button" role="tab" data-alcance="todos" aria-selected="false">Todos los países</button></div></div><div class="tribuna-lado"><span class="tribuna-estado" id="comentarios-estado" role="status">Conectando…</span>${base("cassandra")}</div></header><div id="comentarios-lista" class="comentarios-lista" role="log" aria-label="Comentarios"><p class="vacio">Todavía no hay comentarios.</p></div>${formulario}</section>`;
+  let alcance = "pais", siguiente = null;
+  const visibles = [], conocidos = new Set();
+  const anteriores = document.createElement("button");
+  anteriores.type = "button"; anteriores.className = "boton secundario chico"; anteriores.textContent = "Ver comentarios anteriores"; anteriores.hidden = true;
+  caja.querySelector("#comentarios-lista").before(anteriores);
+  const estado = (texto) => { const e = document.getElementById("comentarios-estado"); if (e) e.textContent = texto; };
+  function dibujar() {
+    const lista = document.getElementById("comentarios-lista"); if (!lista) return;
+    const seguir = lista.scrollHeight - lista.scrollTop - lista.clientHeight < 48, anterior = lista.scrollTop;
+    lista.innerHTML = visibles.length ? visibles.map(v => `<article class="comentario"><span class="comentario-avatar" aria-hidden="true">${esc((v.usuario_nombre || "H").slice(0, 1).toUpperCase())}</span><div><strong>${esc(v.usuario_nombre)}</strong>${alcance === "todos" ? ` <span class="comentario-pais">${esc(v.pais)}</span>` : ""}<p>${esc(v.contenido)}</p></div></article>`).join("") : `<p class="vacio">Todavía no hay comentarios.</p>`;
+    lista.scrollTop = seguir ? lista.scrollHeight : anterior;
   }
-  async function cargar() {
+  function sumar(c) {
+    if (conocidos.has(c.comentario_id)) return;
+    conocidos.add(c.comentario_id); visibles.push(c);
+    if (visibles.length > 40) visibles.shift();
+    dibujar();
+  }
+  async function cambiar(nuevo) {
+    alcance = nuevo; visibles.length = 0; conocidos.clear(); dibujar();
+    caja.querySelectorAll("[data-alcance]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.alcance === alcance)));
+    const consulta = alcance === "todos" ? "alcance=todos" : `pais=${encodeURIComponent(pais)}`;
     try {
-      const datos = await api(`/partidos/${encodeURIComponent(id)}/comentarios/recientes?pais=${encodeURIComponent(pais)}`);
-      if (!caja.isConnected || version !== versionTribuna) return;
-      caja.hidden = estadoPartido !== "En juego" && datos.items.length === 0;
-      datos.items.slice().reverse().forEach(c => { if (!conocidos.has(c.comentario_id)) { conocidos.add(c.comentario_id); cola.push(c); } });
-      if (cola.length > 40) cola.splice(0, cola.length - 40);
-      if (conocidos.size > 500) { const conservar = Array.from(conocidos).slice(-250); conocidos.clear(); conservar.forEach(id => conocidos.add(id)); }
-      document.getElementById("comentarios-estado").textContent = datos.items.length ? "Actualizado" : "Todavía no hay comentarios.";
-    } catch (e) { const estado = document.getElementById("comentarios-estado"); if (estado) estado.textContent = e.message; }
+      const datos = await api(`/partidos/${encodeURIComponent(id)}/comentarios?${consulta}&limit=20`);
+      if (!caja.isConnected) return;
+      datos.items.slice().reverse().forEach(sumar);
+      siguiente = datos.siguiente; anteriores.hidden = !siguiente;
+    } catch (e) { estado(e.message); }
+    if (usuario && estadoPartido !== "Finalizado") abrirVivo(id, alcance, { ...vivo, comentario: sumar }, estado);
+    else estado(estadoPartido === "Finalizado" ? "Partido terminado" : "Ingresá para seguirlo en vivo");
   }
+  caja.querySelectorAll("[data-alcance]").forEach(b => b.addEventListener("click", () => { if (b.dataset.alcance !== alcance) cambiar(b.dataset.alcance); }));
+  anteriores.addEventListener("click", async () => {
+    if (!siguiente) return;
+    anteriores.disabled = true;
+    const consulta = alcance === "todos" ? "alcance=todos" : `pais=${encodeURIComponent(pais)}`;
+    try {
+      const datos = await api(`/partidos/${encodeURIComponent(id)}/comentarios?${consulta}&limit=20&antes_de=${encodeURIComponent(siguiente)}`);
+      const viejos = datos.items.slice().reverse().filter(c => !conocidos.has(c.comentario_id));
+      viejos.forEach(c => conocidos.add(c.comentario_id));
+      visibles.unshift(...viejos);
+      const lista = document.getElementById("comentarios-lista"), alto = lista?.scrollHeight || 0;
+      dibujar();
+      if (lista) lista.scrollTop = lista.scrollHeight - alto;  // conserva lo que se estaba leyendo
+      siguiente = datos.siguiente; anteriores.hidden = !siguiente;
+    } catch (e) { estado(e.message); }
+    finally { anteriores.disabled = false; }
+  });
   document.getElementById("comentario-form")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    const texto = document.getElementById("comentario-texto"), boton = document.getElementById("comentario-enviar"), mensaje = document.getElementById("comentario-mensaje");
+    const form = ev.currentTarget, texto = document.getElementById("comentario-texto"), boton = document.getElementById("comentario-enviar"), mensaje = document.getElementById("comentario-mensaje");
     const contenido = texto.value.trim(); if (!contenido) { mensaje.textContent = "Escribí un comentario."; return; }
+    // El mismo identificador en cada reintento del mismo texto: si el primero llegó, la API no lo duplica.
+    if (form.dataset.texto !== contenido) { form.dataset.texto = contenido; form.dataset.id = crypto.randomUUID(); }
     boton.disabled = true; boton.dataset.enviando = "si"; mensaje.textContent = "Enviando…";
     try {
-      const comentario = await api(`/partidos/${encodeURIComponent(id)}/comentarios`, {metodo:"POST", cuerpo:{contenido}});
+      const comentario = await api(`/partidos/${encodeURIComponent(id)}/comentarios`, { metodo: "POST", cuerpo: { comentario_id: form.dataset.id, contenido } });
       if (!caja.isConnected) return;
-      conocidos.add(comentario.comentario_id); cola.unshift(comentario); texto.value = ""; mensaje.textContent = "Comentario enviado.";
-    } catch (e) { if (caja.isConnected) mensaje.textContent = e.message; }
+      sumar(comentario);
+      texto.value = ""; delete form.dataset.texto; mensaje.textContent = "Comentario enviado.";
+    } catch (e) { if (caja.isConnected) mensaje.textContent = e.estado === 429 ? "Modo lento: esperá unos segundos y volvé a enviar." : e.message; }
     finally { if (boton.isConnected) { boton.dataset.enviando = "no"; boton.disabled = boton.dataset.cerrado === "si"; } }
   });
-  cargar(); if (estadoPartido === "En juego") intervalosTribuna.push(setInterval(cargar, 8000));
-  intervalosTribuna.push(setInterval(() => {
-    const c = cola.shift(), lista = document.getElementById("comentarios-lista");
-    if (!c || !lista) return; visibles.push(c); if (visibles.length > 20) visibles.shift();
-    const seguir = lista.scrollHeight - lista.scrollTop - lista.clientHeight < 48;
-    const anterior = lista.scrollTop;
-    lista.innerHTML = visibles.map(v => `<article class="comentario"><span class="comentario-avatar" aria-hidden="true">${esc((v.usuario_nombre || "H").slice(0, 1).toUpperCase())}</span><div><strong>${esc(v.usuario_nombre)}</strong><p>${esc(v.contenido)}</p></div></article>`).join("");
-    lista.scrollTop = seguir ? lista.scrollHeight : anterior;
-  }, 500));
-  comentariosTimers.push(...intervalosTribuna);
+  cambiar("pais");
+}
+
+// Curva de espectadores simultáneos minuto a minuto, con los goles marcados.
+function curvaAudiencia(puntos, goles = []) {
+  if (!puntos.length) return `<p class="vacio">Todavía no hay audiencia medida.</p>`;
+  const ancho = 600, alto = 140, maximo = Math.max(1, ...puntos.map(p => p.total));
+  const x = (m) => (m / 90) * ancho, y = (v) => alto - 6 - (v / maximo) * (alto - 16);
+  const linea = puntos.map(p => `${x(p.minuto).toFixed(1)},${y(p.total).toFixed(1)}`).join(" ");
+  const area = `0,${alto} ${linea} ${x(puntos[puntos.length - 1].minuto).toFixed(1)},${alto}`;
+  const marcas = goles.map(g => `<line class="curva-gol" x1="${x(g.minuto)}" x2="${x(g.minuto)}" y1="0" y2="${alto}"><title>Gol ${esc(g.equipo_id)} ${g.minuto}′</title></line>`).join("");
+  // Las etiquetas van fuera del SVG: el gráfico se estira a lo ancho y deformaría el texto.
+  const etiquetas = goles.map(g => `<span class="curva-gol-texto" style="left:${(g.minuto / 90 * 100).toFixed(1)}%">Gol ${esc(g.equipo_id)} ${g.minuto}′</span>`).join("");
+  return `<div class="curva-caja"><div class="curva-goles">${etiquetas}</div><svg class="curva-audiencia" viewBox="0 0 ${ancho} ${alto}" preserveAspectRatio="none" role="img" aria-label="Espectadores por minuto, máximo ${maximo}"><polygon class="curva-area" points="${area}"/><polyline class="curva-linea" points="${linea}"/>${marcas}</svg></div><div class="curva-eje"><span>0′</span><span>45′</span><span>90′</span></div>`;
+}
+
+function iniciarAudiencia(id, estadoPartido) {
+  const caja = document.getElementById("audiencia");
+  const pais = sesion.usuario?.pais;
+  const puntos = [];
+  caja.innerHTML = bloque("Audiencia", "redis", `<div class="audiencia-ahora" id="aud-ahora" ${estadoPartido === "Finalizado" ? "hidden" : ""}><div><span>Mirando ahora</span><strong id="aud-total">—</strong></div>${pais ? `<div><span>Desde ${esc(pais)}</span><strong id="aud-pais">—</strong></div>` : ""}</div><div id="aud-curva">${curvaAudiencia([])}</div><div id="aud-resumen"></div>`);
+  const fijar = (sel, v) => { const e = document.getElementById(sel); if (e) e.textContent = v; };
+  async function analisis() {
+    try {
+      const d = await api(`/partidos/${encodeURIComponent(id)}/audiencia`);
+      if (!caja.isConnected) return;
+      document.getElementById("aud-curva").innerHTML = curvaAudiencia(d.curva, d.goles);
+      const tarjeta = (titulo, valor) => `<div><span>${esc(titulo)}</span><strong>${esc(valor)}</strong></div>`;
+      document.getElementById("aud-resumen").innerHTML = `<div class="audiencia-resumen">${tarjeta("Pico", d.pico ? `${d.pico.espectadores} en el ${d.pico.minuto}′` : "—")}${tarjeta("Promedio", d.promedio ?? "—")}${tarjeta("Minutos vistos", d.minutos_vistos)}${tarjeta("Espectadores únicos", d.unicos.total)}${tarjeta("Tiempo medio", d.tiempo_medio_min == null ? "—" : `${d.tiempo_medio_min} min`)}</div><p class="nota">Análisis guardado en InfluxDB${d.incompleta ? "; faltan algunos minutos por una falla" : ""}. ${base("influxdb")}</p>`;
+    } catch (e) { if (e.estado !== 404 && caja.isConnected) document.getElementById("aud-resumen").innerHTML = cajaDeError(e); }
+  }
+  if (estadoPartido === "Finalizado") analisis();
+  return {
+    audiencia(a) { fijar("aud-total", a.total); fijar("aud-pais", a.mi_pais); },
+    minuto(m, total) {
+      if (puntos.length && puntos[puntos.length - 1].minuto >= m) return;
+      puntos.push({ minuto: m, total }); const c = document.getElementById("aud-curva"); if (c) c.innerHTML = curvaAudiencia(puntos);
+    },
+    terminado() { const ahora = document.getElementById("aud-ahora"); if (ahora) ahora.hidden = true; analisis(); },
+  };
 }
 
 function iniciarRelato(id, partido) {
@@ -359,7 +432,7 @@ async function vistaPartido(id) {
       <div class="ranking-accion" id="ranking-accion" ${partido.estado === "Finalizado" ? "" : "hidden"}><button class="boton secundario" id="abrir-ranking">Ver rankings</button></div>
     </section>
     <dialog id="ranking-modal" class="ranking-modal" aria-labelledby="ranking-modal-titulo"><div class="ranking-modal-cabecera"><div><h2 id="ranking-modal-titulo">Rankings</h2><p>Puntos acumulados en todos los partidos puntuados.</p></div><button class="boton secundario chico" id="cerrar-ranking" aria-label="Cerrar rankings">Cerrar</button></div><label for="ranking-selector">Elegí un ranking</label><select id="ranking-selector"><option value="general">General</option></select><div id="ranking-contenido" role="status"><p>Consultando ranking…</p></div></dialog>
-    <div class="partido-en-vivo"><div id="pronostico"></div><div id="estadisticas"></div><section class="bloque relato" aria-labelledby="relato-titulo"><header><div><h2 id="relato-titulo">Minuto a minuto</h2><p class="relato-subtitulo">Las últimas acciones del partido</p></div><span id="relato-estado" class="relato-estado" role="status">Conectando…</span></header><div id="relato-lista" class="relato-lista" tabindex="0" aria-label="Historial de jugadas" aria-live="polite"><p class="vacio">Esperando la primera jugada.</p></div></section><div id="comentarios"></div><details class="partido-detalles"><summary>Recorrido de jugadas</summary><div id="jugadas"></div></details></div>`;
+    <div class="partido-en-vivo"><div id="pronostico"></div><div id="estadisticas"></div><div id="audiencia"></div><section class="bloque relato" aria-labelledby="relato-titulo"><header><div><h2 id="relato-titulo">Minuto a minuto</h2><p class="relato-subtitulo">Las últimas acciones del partido</p></div><span id="relato-estado" class="relato-estado" role="status">Conectando…</span></header><div id="relato-lista" class="relato-lista" tabindex="0" aria-label="Historial de jugadas" aria-live="polite"><p class="vacio">Esperando la primera jugada.</p></div></section><div id="comentarios"></div><details class="partido-detalles"><summary>Recorrido de jugadas</summary><div id="jugadas"></div></details></div>`;
 
   const modal = document.getElementById("ranking-modal");
   const selector = document.getElementById("ranking-selector");
@@ -387,7 +460,19 @@ async function vistaPartido(id) {
   });
   document.getElementById("cerrar-ranking").addEventListener("click", () => modal.close());
   selector.addEventListener("change", cargarRankingModal);
-  iniciarComentarios(id, partido.estado);
+  const audiencia = iniciarAudiencia(id, partido.estado);
+  let ultimoMinuto = 0;
+  iniciarComentarios(id, partido.estado, {
+    estado(e) {
+      ultimoMinuto = e.minuto ?? ultimoMinuto;
+      pintarEstado(e);
+      if (e.estado === "Finalizado") {
+        cerrarVivo(); const t = document.getElementById("comentarios-estado"); if (t) t.textContent = "Partido terminado";
+        audiencia.terminado(); setTimeout(actualizarVivo, 4000);
+      }
+    },
+    audiencia(a) { audiencia.audiencia(a); audiencia.minuto(ultimoMinuto, a.total); },
+  });
   const estadisticas = document.getElementById("estadisticas");
   estadisticas.innerHTML = bloque("Estadísticas", "influxdb", "<p>Consultando estadísticas…</p>");
   async function actualizarEstadisticas() {
@@ -425,19 +510,23 @@ async function vistaPartido(id) {
   iniciarRelato(id, partido);
   const marcadorVivo = document.getElementById("marcador-vivo");
   let jugadasArchivadas = false;
-  let comentariosFinalizados = partido.estado === "Finalizado";
+  function pintarEstado(d) {
+    if (!marcadorVivo.isConnected) return;
+    marcadorVivo.textContent = `${d.marcador?.local ?? "—"} - ${d.marcador?.visitante ?? "—"}`;
+    const estado = document.getElementById("estado-vivo"); if (estado) estado.textContent = `${d.estado} · ${d.minuto ?? 0}′`;
+    const boton = document.getElementById("comentario-enviar"); if (boton) { boton.dataset.cerrado = d.estado === "En juego" ? "no" : "si"; boton.disabled = boton.dataset.cerrado === "si" || boton.dataset.enviando === "si"; }
+    if (d.estado && d.estado !== partido.estado) { partido.estado = d.estado; dibujarPronostico(partido); }
+    if (d.estado === "Finalizado") document.getElementById("ranking-accion").hidden = false;
+  }
   async function actualizarVivo() {
-    try { const d=await api(`/en-vivo/partidos/${encodeURIComponent(id)}`); if (!marcadorVivo.isConnected) return;
-      marcadorVivo.textContent = `${d.marcador?.local ?? "—"} - ${d.marcador?.visitante ?? "—"}`;
-      const estado=document.getElementById("estado-vivo"); if (estado) estado.textContent = `${d.estado} · ${d.minuto ?? 0}′`;
+    try { const d = await api(`/en-vivo/partidos/${encodeURIComponent(id)}`); if (!marcadorVivo.isConnected) return;
+      pintarEstado(d);
       if (d.archivo_estado === "completo" && !jugadasArchivadas) { jugadasArchivadas = true; dibujarJugadas(partido); }
-      if (d.estado === "Finalizado" && !comentariosFinalizados) { comentariosFinalizados = true; iniciarComentarios(id, "Finalizado"); }
-      if (d.estado && d.estado !== partido.estado) { partido.estado = d.estado; dibujarPronostico(partido); }
-      if (d.estado === "Finalizado") document.getElementById("ranking-accion").hidden = false;
-      const boton=document.getElementById("comentario-enviar"); if (boton) { boton.dataset.cerrado = d.estado === "En juego" ? "no" : "si"; boton.disabled = boton.dataset.cerrado === "si" || boton.dataset.enviando === "si"; }
+      else if (d.estado === "Finalizado" && !jugadasArchivadas) setTimeout(actualizarVivo, 4000);
     } catch (e) { if (e.estado !== 404 && marcadorVivo.isConnected) avisar(e.message, true); }
   }
-  actualizarVivo(); comentariosTimers.push(setInterval(actualizarVivo, 3000));
+  // Con sesión, el estado llega por la conexión en vivo; esta consulta solo trae el punto de partida.
+  actualizarVivo(); if (!sesion.usuario) comentariosTimers.push(setInterval(actualizarVivo, 3000));
   dibujarPronostico(partido);
   let revisionesPronostico = 0;
   const relojPronostico = setInterval(() => {
@@ -810,7 +899,7 @@ const RUTAS = { ingreso: vistaIngreso, fixture: vistaFixture, "en-vivo": vistaEn
 
 async function navegar() {
   const version = ++navegacionActual;
-  comentariosTimers.forEach(clearInterval); comentariosTimers = [];
+  comentariosTimers.forEach(clearInterval); comentariosTimers = []; cerrarVivo();
   clearInterval(sondeo);
   const [, seccion = "", parametro] = location.hash.split("/");
   if (claveAdmin && !administradorPreparado && seccion !== "ingreso") {

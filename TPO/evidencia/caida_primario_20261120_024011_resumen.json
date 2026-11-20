@@ -1,0 +1,857 @@
+{
+  "escenario": "caida",
+  "etiqueta": "primario",
+  "inicio": "2026-11-20T02:40:11.908659+00:00",
+  "commit": "9b8f940",
+  "parametros": {
+    "usuarios": 100000,
+    "concurrencia": 20,
+    "duracion": 90.0,
+    "partido": "P-03",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 200,
+    "comentan": 0.05
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio; 4 procesos y 20 hilos",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 8e-06,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [
+    "Se apagó con orden (docker compose stop) el contenedor mongo1 cerca del segundo 30 y se lo volvió a levantar 30 segundos después."
+  ],
+  "duracion_real_segundos": 90.0,
+  "medicion": {
+    "total": 17183,
+    "por_segundo": 190.9,
+    "exitosos": 17123,
+    "errores": 60,
+    "porcentaje_de_error": 0.35,
+    "errores_por_estado": {
+      "503": 60
+    },
+    "p50_ms": 95.4,
+    "p95_ms": 163.2,
+    "p99_ms": 198.8,
+    "max_ms": 830.2,
+    "max_ms_incluyendo_errores": 3596.2,
+    "por_ruta": {
+      "PUT /partidos/{id}/pronostico": {
+        "total": 17183,
+        "por_segundo": 190.9,
+        "exitosos": 17123,
+        "errores": 60,
+        "porcentaje_de_error": 0.35,
+        "errores_por_estado": {
+          "503": 60
+        },
+        "p50_ms": 95.4,
+        "p95_ms": 163.2,
+        "p99_ms": 198.8,
+        "max_ms": 830.2,
+        "max_ms_incluyendo_errores": 3596.2
+      }
+    }
+  },
+  "linea_de_tiempo": [
+    {
+      "segundo": 0,
+      "total": 149,
+      "errores": 0,
+      "estados": {
+        "200": 149
+      }
+    },
+    {
+      "segundo": 1,
+      "total": 190,
+      "errores": 0,
+      "estados": {
+        "200": 190
+      }
+    },
+    {
+      "segundo": 2,
+      "total": 199,
+      "errores": 0,
+      "estados": {
+        "200": 199
+      }
+    },
+    {
+      "segundo": 3,
+      "total": 234,
+      "errores": 0,
+      "estados": {
+        "200": 234
+      }
+    },
+    {
+      "segundo": 4,
+      "total": 204,
+      "errores": 0,
+      "estados": {
+        "200": 204
+      }
+    },
+    {
+      "segundo": 5,
+      "total": 183,
+      "errores": 0,
+      "estados": {
+        "200": 183
+      }
+    },
+    {
+      "segundo": 6,
+      "total": 196,
+      "errores": 0,
+      "estados": {
+        "200": 196
+      }
+    },
+    {
+      "segundo": 7,
+      "total": 191,
+      "errores": 0,
+      "estados": {
+        "200": 191
+      }
+    },
+    {
+      "segundo": 8,
+      "total": 176,
+      "errores": 0,
+      "estados": {
+        "200": 176
+      }
+    },
+    {
+      "segundo": 9,
+      "total": 205,
+      "errores": 0,
+      "estados": {
+        "200": 205
+      }
+    },
+    {
+      "segundo": 10,
+      "total": 209,
+      "errores": 0,
+      "estados": {
+        "200": 209
+      }
+    },
+    {
+      "segundo": 11,
+      "total": 178,
+      "errores": 0,
+      "estados": {
+        "200": 178
+      }
+    },
+    {
+      "segundo": 12,
+      "total": 190,
+      "errores": 0,
+      "estados": {
+        "200": 190
+      }
+    },
+    {
+      "segundo": 13,
+      "total": 197,
+      "errores": 0,
+      "estados": {
+        "200": 197
+      }
+    },
+    {
+      "segundo": 14,
+      "total": 200,
+      "errores": 0,
+      "estados": {
+        "200": 200
+      }
+    },
+    {
+      "segundo": 15,
+      "total": 221,
+      "errores": 0,
+      "estados": {
+        "200": 221
+      }
+    },
+    {
+      "segundo": 16,
+      "total": 164,
+      "errores": 0,
+      "estados": {
+        "200": 164
+      }
+    },
+    {
+      "segundo": 17,
+      "total": 187,
+      "errores": 0,
+      "estados": {
+        "200": 187
+      }
+    },
+    {
+      "segundo": 18,
+      "total": 217,
+      "errores": 0,
+      "estados": {
+        "200": 217
+      }
+    },
+    {
+      "segundo": 19,
+      "total": 219,
+      "errores": 0,
+      "estados": {
+        "200": 219
+      }
+    },
+    {
+      "segundo": 20,
+      "total": 197,
+      "errores": 0,
+      "estados": {
+        "200": 197
+      }
+    },
+    {
+      "segundo": 21,
+      "total": 252,
+      "errores": 0,
+      "estados": {
+        "200": 252
+      }
+    },
+    {
+      "segundo": 22,
+      "total": 200,
+      "errores": 0,
+      "estados": {
+        "200": 200
+      }
+    },
+    {
+      "segundo": 23,
+      "total": 226,
+      "errores": 0,
+      "estados": {
+        "200": 226
+      }
+    },
+    {
+      "segundo": 24,
+      "total": 207,
+      "errores": 0,
+      "estados": {
+        "200": 207
+      }
+    },
+    {
+      "segundo": 25,
+      "total": 213,
+      "errores": 0,
+      "estados": {
+        "200": 213
+      }
+    },
+    {
+      "segundo": 26,
+      "total": 232,
+      "errores": 0,
+      "estados": {
+        "200": 232
+      }
+    },
+    {
+      "segundo": 27,
+      "total": 218,
+      "errores": 0,
+      "estados": {
+        "200": 215,
+        "201": 3
+      }
+    },
+    {
+      "segundo": 28,
+      "total": 196,
+      "errores": 0,
+      "estados": {
+        "200": 166,
+        "201": 30
+      }
+    },
+    {
+      "segundo": 29,
+      "total": 192,
+      "errores": 0,
+      "estados": {
+        "200": 163,
+        "201": 29
+      }
+    },
+    {
+      "segundo": 30,
+      "total": 147,
+      "errores": 0,
+      "estados": {
+        "200": 125,
+        "201": 22
+      }
+    },
+    {
+      "segundo": 31,
+      "total": 150,
+      "errores": 0,
+      "estados": {
+        "200": 130,
+        "201": 20
+      }
+    },
+    {
+      "segundo": 32,
+      "total": 201,
+      "errores": 0,
+      "estados": {
+        "200": 174,
+        "201": 27
+      }
+    },
+    {
+      "segundo": 33,
+      "total": 202,
+      "errores": 0,
+      "estados": {
+        "200": 166,
+        "201": 36
+      }
+    },
+    {
+      "segundo": 34,
+      "total": 246,
+      "errores": 0,
+      "estados": {
+        "200": 198,
+        "201": 48
+      }
+    },
+    {
+      "segundo": 35,
+      "total": 217,
+      "errores": 0,
+      "estados": {
+        "200": 179,
+        "201": 38
+      }
+    },
+    {
+      "segundo": 36,
+      "total": 233,
+      "errores": 0,
+      "estados": {
+        "200": 190,
+        "201": 43
+      }
+    },
+    {
+      "segundo": 37,
+      "total": 236,
+      "errores": 0,
+      "estados": {
+        "200": 189,
+        "201": 47
+      }
+    },
+    {
+      "segundo": 38,
+      "total": 242,
+      "errores": 0,
+      "estados": {
+        "200": 194,
+        "201": 48
+      }
+    },
+    {
+      "segundo": 39,
+      "total": 234,
+      "errores": 0,
+      "estados": {
+        "200": 187,
+        "201": 47
+      }
+    },
+    {
+      "segundo": 40,
+      "total": 216,
+      "errores": 0,
+      "estados": {
+        "200": 177,
+        "201": 39
+      }
+    },
+    {
+      "segundo": 41,
+      "total": 244,
+      "errores": 0,
+      "estados": {
+        "200": 203,
+        "201": 41
+      }
+    },
+    {
+      "segundo": 42,
+      "total": 228,
+      "errores": 0,
+      "estados": {
+        "200": 177,
+        "201": 51
+      }
+    },
+    {
+      "segundo": 43,
+      "total": 227,
+      "errores": 0,
+      "estados": {
+        "200": 181,
+        "201": 46
+      }
+    },
+    {
+      "segundo": 44,
+      "total": 244,
+      "errores": 0,
+      "estados": {
+        "200": 183,
+        "201": 61
+      }
+    },
+    {
+      "segundo": 45,
+      "total": 247,
+      "errores": 0,
+      "estados": {
+        "200": 184,
+        "201": 63
+      }
+    },
+    {
+      "segundo": 46,
+      "total": 226,
+      "errores": 0,
+      "estados": {
+        "200": 174,
+        "201": 52
+      }
+    },
+    {
+      "segundo": 47,
+      "total": 217,
+      "errores": 0,
+      "estados": {
+        "200": 161,
+        "201": 56
+      }
+    },
+    {
+      "segundo": 48,
+      "total": 240,
+      "errores": 0,
+      "estados": {
+        "200": 157,
+        "201": 83
+      }
+    },
+    {
+      "segundo": 49,
+      "total": 258,
+      "errores": 0,
+      "estados": {
+        "200": 163,
+        "201": 95
+      }
+    },
+    {
+      "segundo": 50,
+      "total": 226,
+      "errores": 0,
+      "estados": {
+        "200": 152,
+        "201": 74
+      }
+    },
+    {
+      "segundo": 51,
+      "total": 238,
+      "errores": 0,
+      "estados": {
+        "200": 141,
+        "201": 97
+      }
+    },
+    {
+      "segundo": 52,
+      "total": 231,
+      "errores": 0,
+      "estados": {
+        "200": 154,
+        "201": 77
+      }
+    },
+    {
+      "segundo": 53,
+      "total": 216,
+      "errores": 0,
+      "estados": {
+        "200": 137,
+        "201": 79
+      }
+    },
+    {
+      "segundo": 54,
+      "total": 225,
+      "errores": 0,
+      "estados": {
+        "200": 150,
+        "201": 75
+      }
+    },
+    {
+      "segundo": 55,
+      "total": 236,
+      "errores": 0,
+      "estados": {
+        "200": 128,
+        "201": 108
+      }
+    },
+    {
+      "segundo": 56,
+      "total": 236,
+      "errores": 0,
+      "estados": {
+        "200": 114,
+        "201": 122
+      }
+    },
+    {
+      "segundo": 57,
+      "total": 247,
+      "errores": 0,
+      "estados": {
+        "200": 124,
+        "201": 123
+      }
+    },
+    {
+      "segundo": 58,
+      "total": 226,
+      "errores": 0,
+      "estados": {
+        "200": 106,
+        "201": 120
+      }
+    },
+    {
+      "segundo": 59,
+      "total": 228,
+      "errores": 0,
+      "estados": {
+        "200": 105,
+        "201": 123
+      }
+    },
+    {
+      "segundo": 60,
+      "total": 221,
+      "errores": 0,
+      "estados": {
+        "200": 112,
+        "201": 109
+      }
+    },
+    {
+      "segundo": 61,
+      "total": 228,
+      "errores": 0,
+      "estados": {
+        "200": 118,
+        "201": 110
+      }
+    },
+    {
+      "segundo": 62,
+      "total": 233,
+      "errores": 0,
+      "estados": {
+        "200": 127,
+        "201": 106
+      }
+    },
+    {
+      "segundo": 63,
+      "total": 215,
+      "errores": 0,
+      "estados": {
+        "200": 110,
+        "201": 105
+      }
+    },
+    {
+      "segundo": 64,
+      "total": 219,
+      "errores": 0,
+      "estados": {
+        "200": 101,
+        "201": 118
+      }
+    },
+    {
+      "segundo": 65,
+      "total": 222,
+      "errores": 0,
+      "estados": {
+        "200": 117,
+        "201": 105
+      }
+    },
+    {
+      "segundo": 66,
+      "total": 229,
+      "errores": 0,
+      "estados": {
+        "200": 117,
+        "201": 112
+      }
+    },
+    {
+      "segundo": 67,
+      "total": 211,
+      "errores": 0,
+      "estados": {
+        "200": 104,
+        "201": 107
+      }
+    },
+    {
+      "segundo": 68,
+      "total": 237,
+      "errores": 0,
+      "estados": {
+        "200": 122,
+        "201": 115
+      }
+    },
+    {
+      "segundo": 69,
+      "total": 214,
+      "errores": 0,
+      "estados": {
+        "200": 108,
+        "201": 106
+      }
+    },
+    {
+      "segundo": 70,
+      "total": 227,
+      "errores": 0,
+      "estados": {
+        "200": 104,
+        "201": 123
+      }
+    },
+    {
+      "segundo": 71,
+      "total": 185,
+      "errores": 0,
+      "estados": {
+        "200": 84,
+        "201": 101
+      }
+    },
+    {
+      "segundo": 72,
+      "total": 232,
+      "errores": 0,
+      "estados": {
+        "200": 98,
+        "201": 134
+      }
+    },
+    {
+      "segundo": 73,
+      "total": 206,
+      "errores": 0,
+      "estados": {
+        "200": 99,
+        "201": 107
+      }
+    },
+    {
+      "segundo": 74,
+      "total": 225,
+      "errores": 0,
+      "estados": {
+        "200": 101,
+        "201": 124
+      }
+    },
+    {
+      "segundo": 75,
+      "total": 191,
+      "errores": 0,
+      "estados": {
+        "200": 85,
+        "201": 106
+      }
+    },
+    {
+      "segundo": 76,
+      "total": 203,
+      "errores": 0,
+      "estados": {
+        "200": 94,
+        "201": 109
+      }
+    },
+    {
+      "segundo": 77,
+      "total": 178,
+      "errores": 20,
+      "estados": {
+        "200": 73,
+        "201": 85,
+        "503": 20
+      }
+    },
+    {
+      "segundo": 78,
+      "total": 0,
+      "errores": 0,
+      "estados": {}
+    },
+    {
+      "segundo": 79,
+      "total": 0,
+      "errores": 0,
+      "estados": {}
+    },
+    {
+      "segundo": 80,
+      "total": 0,
+      "errores": 0,
+      "estados": {}
+    },
+    {
+      "segundo": 81,
+      "total": 20,
+      "errores": 20,
+      "estados": {
+        "503": 20
+      }
+    },
+    {
+      "segundo": 82,
+      "total": 0,
+      "errores": 0,
+      "estados": {}
+    },
+    {
+      "segundo": 83,
+      "total": 0,
+      "errores": 0,
+      "estados": {}
+    },
+    {
+      "segundo": 84,
+      "total": 20,
+      "errores": 20,
+      "estados": {
+        "503": 20
+      }
+    },
+    {
+      "segundo": 85,
+      "total": 0,
+      "errores": 0,
+      "estados": {}
+    },
+    {
+      "segundo": 86,
+      "total": 0,
+      "errores": 0,
+      "estados": {}
+    },
+    {
+      "segundo": 87,
+      "total": 20,
+      "errores": 0,
+      "estados": {
+        "200": 12,
+        "201": 8
+      }
+    },
+    {
+      "segundo": 88,
+      "total": 210,
+      "errores": 0,
+      "estados": {
+        "200": 90,
+        "201": 120
+      }
+    },
+    {
+      "segundo": 89,
+      "total": 231,
+      "errores": 0,
+      "estados": {
+        "200": 104,
+        "201": 127
+      }
+    }
+  ],
+  "fin": "2026-11-20T02:41:43.677049+00:00"
+}

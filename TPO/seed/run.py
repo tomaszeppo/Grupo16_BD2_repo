@@ -4,7 +4,8 @@
     python -m seed.run --inicio 2030-06-13T15:00:00+00:00
     python -m seed.run --dias-hasta-inicio 3
     python -m seed.run --verificar          carga dos veces y falla si los totales cambian
-    python -m seed.run --reiniciar          BORRA los datos de laboratorio de las dos bases y carga de nuevo
+    python -m seed.run --reiniciar          BORRA los datos de laboratorio (MongoDB, Neo4j y lo que cuenta la
+                                            audiencia en Redis) y carga de nuevo
 """
 import argparse
 import sys
@@ -18,7 +19,20 @@ from seed import cargar_mongo, cargar_neo4j, datos
 
 
 COLECCIONES = ["usuarios", "prodes", "pronosticos", "resultados", "puntajes", "rankings_historicos",
-               "equipos", "jugadores", "contadores"]
+               "equipos", "jugadores", "contadores",
+               "simulaciones"]  # estado de cada simulación: sin borrarlo, un partido reiniciado no se puede volver a simular
+
+
+# Lo que la audiencia y los comentarios dejan en Redis por partido. Las sesiones no se tocan.
+PREFIJOS_DE_PARTIDO = ("unicos:", "paises:", "audiencia:", "cuenta:", "visto:", "lento:", "prode:ranking")
+
+
+def borrar_audiencia_de_redis(redis) -> int:
+    """Sin esto, volver a simular un partido sumaría los espectadores únicos de la corrida anterior."""
+    claves = [c for prefijo in PREFIJOS_DE_PARTIDO for c in redis.scan_iter(match=f"{prefijo}*")]
+    for desde in range(0, len(claves), 1000):
+        redis.delete(*claves[desde:desde + 1000])
+    return len(claves)
 
 
 def _inicio(args, driver, base: str) -> datetime:
@@ -52,7 +66,11 @@ def main() -> int:
                 db.drop_collection(nombre)
             with driver.session(database=s.neo4j_db) as sesion:
                 sesion.run("MATCH (n) DETACH DELETE n").consume()
-            print(f"Datos de laboratorio borrados (base {s.mongo_db} de MongoDB y grafo de Neo4j).")
+            from app.adapters.redis import RedisAdapter
+
+            borradas = borrar_audiencia_de_redis(RedisAdapter(s).cli)
+            print(f"Datos de laboratorio borrados (base {s.mongo_db} de MongoDB, grafo de Neo4j y {borradas} claves "
+                  "de audiencia en Redis).")
         inicio = _inicio(args, driver, s.neo4j_db)
         fixture = datos.generar(inicio, args.semilla)
         print(f"Primer partido sin jugar (P-03): {inicio.isoformat()}")

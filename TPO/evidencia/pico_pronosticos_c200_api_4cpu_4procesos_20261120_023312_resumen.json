@@ -1,0 +1,88 @@
+{
+  "escenario": "pico_pronosticos",
+  "etiqueta": "c200_api_4cpu_4procesos",
+  "inicio": "2026-11-20T02:33:12.694706+00:00",
+  "commit": "9b8f940",
+  "parametros": {
+    "usuarios": 100000,
+    "concurrencia": 200,
+    "duracion": 30.0,
+    "partido": "P-03",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 200,
+    "comentan": 0.05
+  },
+  "entorno": {
+    "api_procesos": "4",
+    "api_memoria": "512m",
+    "api_cpus": "4.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio; 6 procesos y 200 hilos",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 5.23101,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [],
+  "duracion_real_segundos": 30.0,
+  "medicion": {
+    "total": 24396,
+    "por_segundo": 813.2,
+    "exitosos": 24396,
+    "errores": 0,
+    "porcentaje_de_error": 0.0,
+    "errores_por_estado": {},
+    "p50_ms": 234.2,
+    "p95_ms": 362.7,
+    "p99_ms": 455.9,
+    "max_ms": 798.2,
+    "max_ms_incluyendo_errores": 798.2,
+    "por_ruta": {
+      "PUT /partidos/{id}/pronostico": {
+        "total": 24396,
+        "por_segundo": 813.2,
+        "exitosos": 24396,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 234.2,
+        "p95_ms": 362.7,
+        "p99_ms": 455.9,
+        "max_ms": 798.2,
+        "max_ms_incluyendo_errores": 798.2
+      }
+    }
+  },
+  "fin": "2026-11-20T02:33:44.491787+00:00"
+}

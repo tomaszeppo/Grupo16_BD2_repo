@@ -12,14 +12,18 @@ from app.observability import configurar_logging, crear_middleware
 
 DESCRIPCION = (
     "API del prode del Mundial 2030. Cada endpoint resuelve un caso de uso contra la base que gobierna ese dato: "
-    "MongoDB para el prode y Neo4j para el fixture y los partidos. No acepta consultas libres. "
+    "MongoDB para el prode, Neo4j para el fixture y los partidos y Redis para las sesiones. No acepta consultas libres. "
     "Todos los errores usan el formato {error:{codigo,mensaje,request_id}}."
 )
 
 TAGS = [
     {"name": "Neo4j · Fixture y partidos", "description": "Calendario, jugadas y recorridos del grafo."},
+    {"name": "Redis · Sesiones", "description": "Entrar y salir. Las demás rutas piden X-Sesion o la cookie de sesión."},
     {"name": "MongoDB · Prode", "description": "Usuarios, prodes, pronósticos y ranking."},
     {"name": "MongoDB · Equipos", "description": "Catálogo de equipos y planteles."},
+    {"name": "Redis · En vivo", "description": "Conexión abierta durante el partido: comentarios, estado y audiencia."},
+    {"name": "Cassandra · Comentarios", "description": "Tribuna de cada país durante el partido. Se guarda en la región del país."},
+    {"name": "InfluxDB · Audiencia", "description": "Análisis de audiencia y comentarios por minuto, como el de una transmisión."},
     {"name": "Administración", "description": "Operación del partido para la demostración. Requiere X-Admin-Clave."},
     {"name": "Sistema", "description": "Salud y métricas."},
 ]
@@ -42,12 +46,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     registrar_manejadores(app)
     instrumentar(app)
 
-    from app.routes import admin, fixture, health, prode, ranking, simulaciones
+    from app.routes import admin, analisis, comentarios, fixture, health, prode, ranking, sesiones, simulaciones, vivo
 
+    app.include_router(sesiones.router)
     app.include_router(fixture.router)
     app.include_router(prode.router)
     app.include_router(ranking.router)
     app.include_router(admin.router)
+    app.include_router(vivo.router)
+    app.include_router(analisis.router)
+    app.include_router(comentarios.router)
     app.include_router(simulaciones.router)
     app.include_router(prode.equipos_router)
     app.include_router(health.router)

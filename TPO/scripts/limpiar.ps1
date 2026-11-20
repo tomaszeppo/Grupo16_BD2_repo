@@ -7,6 +7,8 @@ Set-Location (Join-Path $PSScriptRoot "..")
 
 if ($BorrarDatos) {
     docker compose --profile herramientas down --volumes
+    # Volumen de la versión anterior con un solo nodo de Cassandra, si quedó.
+    docker volume rm fixture2030-tpo_cassandra_datos 2>$null | Out-Null
 } else {
     docker compose --profile herramientas down
 }

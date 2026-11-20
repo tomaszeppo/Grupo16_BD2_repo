@@ -9,6 +9,7 @@ FUENTE = "influxdb"
 _RE_PARTIDO = re.compile(r"^P-\d{2,3}$")
 _RE_EQUIPO = re.compile(r"^[A-Z]{3}$")
 _INTERVALOS = {"1m": "1 minute", "5m": "5 minutes"}
+TIPOS_DE_CORRIDA = ("demo", "carga")  # demostración o prueba de carga: se separan en el análisis
 
 
 def _iso(dt: datetime) -> str:
@@ -38,6 +39,39 @@ def construir_sql(
         "MAX(velocidad_kmh) AS velocidad_kmh_max "
         f"FROM estadisticas_partido WHERE {filtro} GROUP BY 1, 2, 3 ORDER BY 1, 2, 3 LIMIT {int(limite)}"
     )
+
+
+def _filtro_audiencia(partido_id: str, corrida_id: str, desde: int, hasta: int, pais: str | None) -> str:
+    if not _RE_PARTIDO.fullmatch(partido_id) or not re.fullmatch(r"[0-9a-f]{32}", corrida_id or ""):
+        raise ValidacionError("Partido o corrida inválidos.")
+    if pais is not None and not _RE_EQUIPO.fullmatch(pais):
+        raise ValidacionError("País inválido.")
+    filtro = (f"partido_id = '{partido_id}' AND corrida_id = '{corrida_id}' "
+              f"AND minuto >= {int(desde)} AND minuto <= {int(hasta)}")
+    return filtro + (f" AND pais = '{pais}'" if pais else "")
+
+
+def sql_audiencia(partido_id: str, corrida_id: str, desde: int, hasta: int, pais: str | None) -> str:
+    return ("SELECT minuto, pais, espectadores FROM audiencia_partido WHERE "
+            f"{_filtro_audiencia(partido_id, corrida_id, desde, hasta, pais)} ORDER BY minuto, pais LIMIT 20000")
+
+
+def sql_comentarios(partido_id: str, corrida_id: str, desde: int, hasta: int, pais: str | None) -> str:
+    return ("SELECT minuto, pais, origen, comentarios FROM comentarios_partido WHERE "
+            f"{_filtro_audiencia(partido_id, corrida_id, desde, hasta, pais)} ORDER BY minuto, pais, origen LIMIT 40000")
+
+
+def sql_audiencia_promedio(pais: str | None, tipo: str | None) -> str:
+    """Promedio entre partidos, por minuto de partido: primero el total de cada corrida, después el promedio."""
+    if pais is not None and not _RE_EQUIPO.fullmatch(pais):
+        raise ValidacionError("País inválido.")
+    if tipo is not None and tipo not in TIPOS_DE_CORRIDA:
+        raise ValidacionError("Tipo de corrida inválido.")
+    condiciones = [c for c in (f"pais = '{pais}'" if pais else None, f"tipo = '{tipo}'" if tipo else None) if c]
+    donde = (" WHERE " + " AND ".join(condiciones)) if condiciones else ""
+    return ("SELECT minuto, AVG(total) AS promedio, COUNT(*) AS corridas FROM ("
+            f"SELECT corrida_id, minuto, SUM(espectadores) AS total FROM audiencia_partido{donde} "
+            "GROUP BY corrida_id, minuto) GROUP BY minuto ORDER BY minuto")
 
 
 def _traducir(exc: Exception) -> ApiError | None:
@@ -132,11 +166,88 @@ class InfluxAdapter:
                           f"pases_intentados={intentados}i,tiros={tiros}i,tiros_arco={tiros_arco}i,"
                           f"faltas={faltas}i,corners={corners}i,goles={gol}i {timestamp}")
         with operacion(FUENTE, "guardar_minuto", _traducir):
-            respuesta = self._cli().post("/api/v3/write_lp", params={"db": self._s.influx_db, "precision": "nanosecond"},
+            respuesta = self._cli().post("/api/v3/write_lp", params=self._parametros_escritura(),
                                          content="\n".join(lineas) + "\n")
             if respuesta.status_code not in (200, 204):
                 raise DependenciaNoDisponible(FUENTE)
 
+
+    def _parametros_escritura(self) -> dict:
+        """no_sync: InfluxDB confirma sin esperar el volcado de su registro a disco. Esperándolo, cada escritura
+        tarda cerca de 1 s (medido) y el partido simula un minuto por segundo con dos escrituras por minuto: se
+        atrasaba al doble. A cambio, una caída de InfluxDB puede perder el último segundo de muestras, que el
+        archivo del partido detecta como muestras faltantes."""
+        return {"db": self._s.influx_db, "precision": "nanosecond", "no_sync": "true"}
+
+    def _escribir(self, nombre: str, lineas: list[str]) -> None:
+        with operacion(FUENTE, nombre, _traducir):
+            respuesta = self._cli().post("/api/v3/write_lp", params=self._parametros_escritura(),
+                                         content="\n".join(lineas) + "\n")
+            if respuesta.status_code not in (200, 204):
+                raise DependenciaNoDisponible(FUENTE)
+
+    @staticmethod
+    def _validar_audiencia(partido_id, corrida_id, tipo, paises) -> None:
+        if not _RE_PARTIDO.fullmatch(partido_id) or not re.fullmatch(r"[0-9a-f]{32}", corrida_id or ""):
+            raise ValidacionError("Partido o corrida inválidos.")
+        if tipo not in TIPOS_DE_CORRIDA or any(not _RE_EQUIPO.fullmatch(p) for p in paises):
+            raise ValidacionError("Tipo de corrida o país inválido.")
+
+    def guardar_audiencia(self, partido_id: str, minuto: int, corrida_id: str, tipo: str,
+                          espectadores: dict[str, int], comentarios: dict[tuple[str, str], int], instante) -> None:
+        """Espectadores y comentarios de un minuto, por país. Mismo instante que las estadísticas del minuto."""
+        self._validar_audiencia(partido_id, corrida_id, tipo, list(espectadores) + [p for p, _ in comentarios])
+        if any(origen not in ("usuario", "simulacion") for _, origen in comentarios):
+            raise ValidacionError("Origen de comentario inválido.")
+        ts = int(instante.timestamp() * 1_000_000_000)
+        etiquetas = f"corrida_id={corrida_id},tipo={tipo}"
+        lineas = [f"audiencia_partido,partido_id={partido_id},pais={pais},{etiquetas} "
+                  f"espectadores={int(n)}i,minuto={int(minuto)}i {ts}" for pais, n in espectadores.items()]
+        lineas += [f"comentarios_partido,partido_id={partido_id},pais={pais},origen={origen},{etiquetas} "
+                   f"comentarios={int(n)}i,minuto={int(minuto)}i {ts}" for (pais, origen), n in comentarios.items()]
+        if lineas:
+            self._escribir("guardar_audiencia", lineas)
+
+    def guardar_resumen_audiencia(self, partido_id: str, corrida_id: str, tipo: str, unicos: dict[str, int],
+                                  instante) -> None:
+        self._validar_audiencia(partido_id, corrida_id, tipo, list(unicos))
+        ts = int(instante.timestamp() * 1_000_000_000)
+        lineas = [f"audiencia_resumen,partido_id={partido_id},pais={pais},corrida_id={corrida_id},tipo={tipo} "
+                  f"unicos={int(n)}i {ts}" for pais, n in unicos.items()]
+        if lineas:
+            self._escribir("guardar_resumen_audiencia", lineas)
+
+    def audiencia_por_minuto(self, partido_id, corrida_id, desde, hasta, pais=None) -> list[dict]:
+        sql = sql_audiencia(partido_id, corrida_id, desde, hasta, pais)
+        with operacion(FUENTE, "audiencia_por_minuto", _traducir):
+            return self._consultar_tolerante(sql)
+
+    def comentarios_por_minuto(self, partido_id, corrida_id, desde, hasta, pais=None) -> list[dict]:
+        sql = sql_comentarios(partido_id, corrida_id, desde, hasta, pais)
+        with operacion(FUENTE, "comentarios_por_minuto", _traducir):
+            return self._consultar_tolerante(sql)
+
+    def resumen_audiencia(self, partido_id, corrida_id) -> dict[str, int]:
+        filtro = _filtro_audiencia(partido_id, corrida_id, 0, 0, None).split(" AND minuto")[0]
+        sql = f"SELECT pais, unicos FROM audiencia_resumen WHERE {filtro} ORDER BY pais"
+        with operacion(FUENTE, "resumen_audiencia", _traducir):
+            return {f["pais"]: int(f["unicos"]) for f in self._consultar_tolerante(sql)}
+
+    def audiencia_promedio_por_minuto(self, pais=None, tipo=None) -> list[dict]:
+        sql = sql_audiencia_promedio(pais, tipo)
+        with operacion(FUENTE, "audiencia_promedio_por_minuto", _traducir):
+            filas = self._consultar_tolerante(sql)
+        return [{"minuto": int(f["minuto"]), "promedio": round(float(f["promedio"]), 1), "corridas": int(f["corridas"])}
+                for f in filas]
+
+    def _consultar_tolerante(self, sql: str) -> list[dict]:
+        """Si la medición todavía no existe (nadie miró aún ningún partido), InfluxDB responde error: es vacío."""
+        resp = self._cli().post("/api/v3/query_sql", json={"db": self._s.influx_db, "q": sql, "format": "json"})
+        if resp.status_code == 200:
+            return resp.json()
+        if resp.status_code in (400, 404) and "not found" in resp.text.lower():
+            return []
+        raise DependenciaNoDisponible(FUENTE)
 
     def guardar_jugadores(self, partido_id, minuto, plantel, jugadas, instante, corrida_id=None):
         """Una muestra por jugador/minuto; un único lote por minuto."""
@@ -189,7 +300,7 @@ class InfluxAdapter:
                 lineas.append(f"jugadas_partido,partido_id={partido_id},equipo_id={equipo},jugador_id={jugador},categoria={categoria},corrida_id={corrida_id} "
                               f"minuto={minuto}i,orden={orden}i,evento_id=\"{evento_id}\",resultado=\"{resultado}\" {tiempo_evento}")
         with operacion(FUENTE, "guardar_jugadores", _traducir):
-            respuesta = self._cli().post("/api/v3/write_lp", params={"db": self._s.influx_db, "precision": "nanosecond"}, content="\n".join(lineas) + "\n")
+            respuesta = self._cli().post("/api/v3/write_lp", params=self._parametros_escritura(), content="\n".join(lineas) + "\n")
             if respuesta.status_code not in (200, 204):
                 raise DependenciaNoDisponible(FUENTE)
 
@@ -285,6 +396,15 @@ class InfluxAdapter:
                f"WHERE partido_id = '{partido_id}' AND fuente = 'simulacion' ORDER BY equipo_id, minuto LIMIT 500")
         with operacion(FUENTE, "muestras_partido", _traducir):
             return self.consultar(sql)
+
+    def para_resumenes(self):
+        """La misma conexión, apuntando a la base de resúmenes (sin vencimiento): audiencia y comentarios por minuto."""
+        import copy
+
+        self._cli()  # las vistas comparten el pool HTTP
+        adaptador = copy.copy(self)
+        adaptador._s = self._s.model_copy(update={"influx_db": self._s.influx_resumen_db})
+        return adaptador
 
     def guardar_resumenes(self, partido_id, corrida_id, instante, equipos, jugadores):
         """Materializa los totales finales con un timestamp estable para permitir reintentos."""

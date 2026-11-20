@@ -1,3 +1,6 @@
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field
 from fastapi import APIRouter, BackgroundTasks, Depends, Response
 
 from app.deps import get_mongo, get_partidos_admin_service, get_puntuacion_service, requiere_admin
@@ -55,10 +58,17 @@ def usuario_prueba_admin(mongo=Depends(get_mongo)) -> dict:
         config.update_one({"_id": clave, "reserva_token": token}, {"$unset": {"reserva_token": "", "reserva_hasta": ""}})
 
 
+class PedidoHinchas(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    paises: list[Annotated[str, Field(pattern=r"^[A-Z]{3}$")]] = Field(default=["ARG", "BRA", "ESP", "URU"], max_length=48)
+    cantidad: int = Field(default=8, ge=1, le=50)
+
+
 @router.post("/administracion/hinchas-demo", summary="Preparar hinchas sintéticos para los comentarios")
-def hinchas_demo(mongo=Depends(get_mongo)) -> dict:
+def hinchas_demo(cuerpo: PedidoHinchas | None = None, mongo=Depends(get_mongo)) -> dict:
     from app.services.hinchas_demo import asegurar_hinchas
-    return {"usuarios": asegurar_hinchas(mongo, ("ARG", "BRA", "ESP", "URU"))}
+    cuerpo = cuerpo or PedidoHinchas()
+    return {"usuarios": asegurar_hinchas(mongo, tuple(dict.fromkeys(cuerpo.paises)), cuerpo.cantidad)}
 
 
 @router.post("/partidos/{partido_id}/estado", summary="Poner un partido en juego")

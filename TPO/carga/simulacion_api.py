@@ -60,8 +60,9 @@ def ejecutar(args):
             usuario = pedir("POST", "/usuarios", "POST /usuarios", json={"nombre": f"Prueba API {args.partido} {n}", "pais": "ARG"})["usuario"]["id"]
             rng = random.Random(2030 + n)
             pronostico = (rng.randint(0, 3), rng.randint(0, 3))
+            token = pedir("POST", "/sesiones", "POST /sesiones", json={"usuario_id": usuario})["token"]
             pedir("PUT", f"/partidos/{args.partido}/pronostico", "PUT /partidos/{id}/pronostico",
-                  headers={"X-Usuario-Id": usuario}, json={"goles_local": pronostico[0], "goles_visitante": pronostico[1]})
+                  headers={"X-Sesion": token}, json={"goles_local": pronostico[0], "goles_visitante": pronostico[1]})
             return usuario, pronostico
         print(f"Creando {args.usuarios} usuarios y pronósticos mediante la API...", flush=True)
         with ThreadPoolExecutor(max_workers=args.concurrencia) as pool:

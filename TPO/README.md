@@ -10,21 +10,25 @@ Esta carpeta es independiente de los hitos: se levanta sola y no usa nada de las
 |---|---|---|
 | Usuarios, prodes, pronósticos, puntuación, ranking | MongoDB (tres nodos) | Construido |
 | Fixture, partidos, jugadas y sus cadenas | Neo4j | Construido |
+| Sesiones, presencia en los partidos en vivo, reparto de comentarios | Redis (primario y réplica) | Construido |
+| Ranking en vivo y puntuación por lotes | Redis | Construido |
+| Comentarios por partido y país | Cassandra (dos regiones) | Construido |
+| Estadísticas de la simulación, audiencia y comentarios por minuto | InfluxDB | Construido |
+| Monitoreo | Prometheus y Grafana | Construido |
 | API y interfaz de demostración | — | Construido |
-| Ranking en vivo y puntuación temporal | Redis | Implementado; sesiones aún no |
-| Comentarios por partido y región | Cassandra | Lectura reciente y publicación |
-| Series temporales de simulación | InfluxDB | Posesión, tiros, pases, faltas y córners por equipo |
-| Monitoreo | Prometheus y Grafana | La API ya expone `/metrics` |
 
 IRIS no forma parte del proyecto final: [por qué](docs/por_que_no_iris.md).
+
+Cómo se reparten los datos entre regiones y qué se prioriza en cada caso: [arquitectura por regiones](docs/arquitectura_regiones.md).
 
 ## Documentación
 
 - [Decisiones sobre las bases](docs/decisiones.md): qué guarda cada una, por qué, qué pasa si falla y qué cuesta.
+- [Arquitectura por regiones](docs/arquitectura_regiones.md): qué se escribe en un solo lugar, qué en cada región y qué se sacrifica.
 - [Rendimiento](docs/rendimiento.md): qué medimos, qué mejoramos y qué no podemos afirmar.
 - [Modelo de datos](docs/modelo_de_datos.md)
 - [La API](docs/api.md)
-- [Cómo sumar una base](docs/como_sumar_una_base.md): para Redis, Cassandra, InfluxDB y el monitoreo.
+- [Cómo sumar una base](docs/como_sumar_una_base.md): cómo está organizada la API y dónde vive cada base.
 - [Por qué IRIS no entra](docs/por_que_no_iris.md)
 - [Evidencia de las mediciones](evidencia/README.md)
 
@@ -36,13 +40,14 @@ Hace falta Docker Desktop. Todos los comandos se corren desde esta carpeta (`TPO
 .\scripts\levantar.ps1
 ```
 
-La primera vez crea el archivo `.env` y se detiene: hay que completar ahí `MONGO_PASSWORD`, `NEO4J_PASSWORD` (8 caracteres o más) y `ADMIN_CLAVE` con valores propios, y volver a correr el script. El archivo `.env` no se versiona.
+La primera vez crea el archivo `.env` y se detiene: hay que completar ahí `MONGO_PASSWORD`, `NEO4J_PASSWORD` (8 caracteres o más), `ADMIN_CLAVE`, `REDIS_PASSWORD` y `GRAFANA_PASSWORD` con valores propios, y volver a correr el script. El archivo `.env` no se versiona.
 
-Levanta tres nodos de MongoDB, Neo4j, Cassandra, InfluxDB y la API. El chequeo de salud del TPO informa MongoDB y Neo4j; Cassandra e InfluxDB todavía no aparecen allí. Cuando termina:
+Levanta tres nodos de MongoDB, Neo4j, Redis y su réplica, Cassandra en dos regiones, InfluxDB, la API, Prometheus y Grafana. Todo junto ocupa unos 3,7 GB de memoria en reposo (medido con `docker stats`); si hay contenedores de los hitos levantados, conviene detenerlos. Cuando termina:
 
 - Interfaz de demostración: http://127.0.0.1:8010/demo/
 - Contrato de la API: http://127.0.0.1:8010/docs
 - Estado de las bases: http://127.0.0.1:8010/health/dependencias
+- Tablero de Grafana: http://127.0.0.1:3001 (se ve sin ingresar; para editar, usuario `admin` y la `GRAFANA_PASSWORD`)
 
 Después, cargar los datos de laboratorio:
 
@@ -56,9 +61,22 @@ Carga 48 equipos, sus planteles y los 104 partidos, con el primer partido sin ju
 docker compose run --rm herramientas python -m seed.run --verificar
 ```
 
-Puertos en el equipo: 8010 (API), 27217 a 27219 (MongoDB), 7475 y 7688 (Neo4j) y 9043 (Cassandra). InfluxDB no publica puerto al equipo. Si alguno está ocupado, cambiarlo en `.env`; los hitos pueden usar algunos de los mismos puertos.
+Puertos en el equipo: 8010 (API), 27217 a 27219 (MongoDB), 7475 y 7688 (Neo4j), 6380 y 6381 (Redis y su réplica), 9043 y 9044 (Cassandra América y Europa), 9091 (Prometheus) y 3001 (Grafana). InfluxDB no publica puerto al equipo. Si alguno está ocupado, cambiarlo en `.env`; los hitos pueden usar algunos de los mismos puertos.
 
 ## Recorrer la demostración
+
+### El partido en vivo, con dos hinchas de países distintos
+
+1. Abrir http://127.0.0.1:8010/demo/ en dos navegadores distintos (o uno normal y una ventana privada: cada uno guarda su propia sesión). En uno crear un usuario de Argentina; en el otro, uno de España.
+2. Los dos entran al mismo partido programado (por ejemplo, desde **Fixture**). La página abre la conexión en vivo: el bloque **Audiencia** muestra cuántos están mirando, en total y desde su país.
+3. En un tercer navegador (o en el de uno de ellos, después), entrar a **Administración** con la `ADMIN_CLAVE` y tocar **Iniciar simulación** en ese partido. Cada segundo real es un minuto de partido.
+4. Cada uno comenta y ve, al instante, la tribuna de su país. La pestaña **Todos los países** muestra las dos. Comentar dos veces seguidas muestra el modo lento.
+5. La curva de audiencia se dibuja minuto a minuto. Al terminar, el bloque muestra el análisis: pico, promedio, minutos vistos, espectadores únicos y tiempo medio, con los goles marcados sobre la curva.
+6. En Grafana se ven las conexiones abiertas, los comentarios por segundo, la demora de entrega y la audiencia por país.
+
+Para mostrar que se cae una región sin que se corten los comentarios: `.\scripts\prueba_de_falla.ps1 europa -Brusco -Partido P-10` (ver [arquitectura por regiones](docs/arquitectura_regiones.md#demostración-se-cae-una-región)).
+
+### El prode
 
 1. Abrir http://127.0.0.1:8010/demo/ y crear un usuario.
 2. En **Fixture**, entrar a un partido programado y cargar un pronóstico.
@@ -89,13 +107,13 @@ python -m venv .venv
 .venv\Scripts\python -m pytest tests/unit -q
 ```
 
-Las de integración corren contra MongoDB y Neo4j reales, dentro de Docker:
+Las de integración corren contra las bases reales, dentro de Docker:
 
 ```powershell
 docker compose run --rm -e PERMITIR_REINICIO=1 herramientas python -m pytest tests/integration -q
 ```
 
-En MongoDB usan una base aparte y no tocan los datos del laboratorio. En Neo4j no se puede (la edición comunitaria tiene una sola base), así que **borran el grafo**; por eso piden `PERMITIR_REINICIO=1`. Después hay que volver a cargar los datos con `seed.run --reiniciar`.
+En MongoDB usan una base aparte y en Redis la base 1; no tocan los datos del laboratorio. En Neo4j no se puede (la edición comunitaria tiene una sola base), así que **borran el grafo**; por eso piden `PERMITIR_REINICIO=1`. Después hay que volver a cargar los datos con `seed.run --reiniciar`.
 
 ## Mediciones y pruebas de falla
 
@@ -104,6 +122,9 @@ En MongoDB usan una base aparte y no tocan los datos del laboratorio. En Neo4j n
 .\scripts\prueba_de_falla.ps1 primario           # apaga con orden el primario de MongoDB durante una carga
 .\scripts\prueba_de_falla.ps1 primario -Brusco   # lo corta de golpe
 .\scripts\prueba_de_falla.ps1 neo4j -Brusco      # corta Neo4j
+.\scripts\prueba_de_falla.ps1 europa -Brusco -Partido P-10   # corta la región Europa de Cassandra durante un partido en vivo
+docker compose run --rm herramientas python -m carga.ejecutar vivo --espectadores 1000 --partido P-07   # partido en vivo con espectadores
+docker compose run --rm herramientas python -m scripts.medir_replica_redis   # atraso de la réplica de Redis
 ```
 
 Cada corrida deja su resultado en [`evidencia/`](evidencia/README.md). Las pruebas de falla detienen un contenedor de este proyecto y lo vuelven a levantar; no borran datos. Los resultados y cómo leerlos están en [docs/rendimiento.md](docs/rendimiento.md).
@@ -118,6 +139,19 @@ docker compose exec mongo1 mongosh -u admin -p --authenticationDatabase admin pr
 
 # Neo4j (pide la contraseña del .env); también en http://127.0.0.1:7475
 docker compose exec neo4j cypher-shell -u neo4j
+
+# Redis (toma la contraseña del contenedor)
+docker compose exec redis redis-cli
+#   KEYS audiencia:*            quién está mirando cada partido, por país
+#   ZRANGE audiencia:P-07:ARG 0 -1 WITHSCORES
+
+# Cassandra: cada región por separado
+docker compose exec cassandra_america cqlsh
+docker compose exec cassandra_europa cqlsh
+#   SELECT * FROM fixture2030.comentarios_por_partido_pais WHERE partido_id='P-07' ALLOW FILTERING;
+
+# InfluxDB
+docker compose exec influxdb influxdb3 query --database fixture2030_metrics "SELECT * FROM audiencia_partido LIMIT 10"
 ```
 
 Desde fuera de Docker (Compass, por ejemplo) se puede entrar a un nodo de MongoDB con conexión directa: `mongodb://admin:<contraseña>@127.0.0.1:27217/?directConnection=true&authSource=admin`. No se puede usar la dirección del conjunto de réplicas completo, porque los nodos se anuncian con sus nombres internos de Docker.
@@ -135,6 +169,9 @@ Desde fuera de Docker (Compass, por ejemplo) se puede entrar a un nodo de MongoD
 - **"Falta el encabezado X-Admin-Clave o no es correcto".** La clave es la `ADMIN_CLAVE` del `.env`. Si se cambió, hay que correr `docker compose up -d api`.
 - **Un puerto está ocupado.** Cambiarlo en `.env` (están listados en `.env.example`).
 - **El fixture muestra un partido con el estado viejo.** El listado sale de una copia que se renueva cada 30 segundos; el detalle del partido está siempre al día.
+- **La interfaz manda a "Entrá al Prode" al abrir una página.** La sesión venció (dura 24 horas desde el último uso) o se reinició Redis sin sus datos: volver a entrar.
+- **"Modo lento: esperá unos segundos".** Cada usuario puede comentar una vez cada 5 segundos (`CHAT_SEGUNDOS_ENTRE_COMENTARIOS`).
+- **No se puede simular un partido que ya se simuló.** Volver a cargar los datos con `seed.run --reiniciar`, que también borra el estado de las simulaciones.
 
 ## Estructura
 
@@ -148,6 +185,8 @@ TPO/
 ├── tests/        pruebas unitarias y de integración
 ├── docs/         documentación
 ├── evidencia/    resultados de las mediciones
+├── monitoreo/    configuración de Prometheus y el tablero de Grafana
+├── cassandra/    esquema de Cassandra (dos regiones)
 └── mongo/        arranque del conjunto de réplicas
 ```
 
@@ -159,9 +198,9 @@ TPO/
 3. El ranking se consulta desde Redis por puntaje, cantidad de exactos, anticipación acumulada y, ante igualdad, ID de usuario ascendente. `GET /ranking`, `GET /ranking/usuarios/{id}` y las tablas de prodes leen Redis; los nombres también se copian allí. Mientras se procesa, la tabla puede mostrar resultados parciales; `GET /partidos/{id}/puntuacion` informa el estado.
 4. Después de una espera configurable (15 segundos por defecto) se vuelcan los resultados a `pronosticos` y `puntajes` de MongoDB por lotes idempotentes; se guarda la foto histórica y se marca el proceso completo. Solo entonces se eliminan los hashes temporales del partido. Si se pierde Redis, se reconstruye el ranking desde MongoDB y se puede reintentar el cierre. Para una puntuación que quedó en curso, la reserva se puede recuperar tras su vencimiento; un administrador debe repetir el pedido de cierre. No hay recuperación automática al reiniciar.
 
-Compose activa Redis con AOF (`everysec`), sin expulsión automática y con volumen persistente. Esto reduce, pero no elimina, la posibilidad de perder escrituras recientes ante una falla. La implementación usa una instancia Redis y asume que no hay partidos puntuándose simultáneamente; no es Redis Cluster ni garantiza disponibilidad ante caída. El límite local por defecto de 256 MB protege la máquina y no está dimensionado para millones de usuarios: hay que medir memoria, carga, duración y dimensionar infraestructura antes de esa escala. Los IDs existentes admiten siete dígitos.
+Compose activa Redis con contraseña, AOF (`everysec`), sin expulsión automática, con volumen persistente y una réplica de lectura. Es el mismo Redis de las sesiones y del partido en vivo. Esto reduce, pero no elimina, la posibilidad de perder escrituras recientes ante una falla. La implementación escribe en el primario y asume que no hay partidos puntuándose simultáneamente; no es Redis Cluster y la réplica no toma el lugar del primario si se cae. El límite local por defecto de 256 MB protege la máquina y no está dimensionado para millones de usuarios: hay que medir memoria, carga, duración y dimensionar infraestructura antes de esa escala. Los IDs existentes admiten siete dígitos.
 
-Se pueden ajustar `REDIS_ENABLED`, `REDIS_MEMORIA`, `REDIS_CPUS`, `REDIS_LOTE` y `REDIS_PERSISTENCIA_DEMORA_SEGUNDOS` en `.env`. Con `REDIS_ENABLED=false` se conserva la puntuación y el ranking anteriores en MongoDB. Para ejecutar pruebas aisladas sobre Mongo y Redis reales: `docker compose exec -T -e RUN_REDIS_INTEGRATION=1 api python -m pytest tests/redis_integration -q -p no:cacheprovider`. Las pruebas exigen que la DB 15 de Redis esté vacía y crean una base Mongo de prueba de nombre único.
+Se pueden ajustar `REDIS_ENABLED`, `REDIS_MEMORIA`, `REDIS_CPUS`, `REDIS_LOTE` y `REDIS_PERSISTENCIA_DEMORA_SEGUNDOS` en `.env`. Con `REDIS_ENABLED=false` se conserva la puntuación y el ranking anteriores en MongoDB (las sesiones y el partido en vivo siguen usando Redis). Para ejecutar pruebas aisladas sobre Mongo y Redis reales: `docker compose exec -T -e RUN_REDIS_INTEGRATION=1 api python -m pytest tests/redis_integration -q -p no:cacheprovider`. Las pruebas exigen que la DB 15 de Redis esté vacía y crean una base Mongo de prueba de nombre único.
 
 ### Simular pronósticos y lecturas por la API
 
@@ -177,13 +216,24 @@ Elegir un partido programado de laboratorio: la prueba crea usuarios y pronósti
 
 Las simulaciones nuevas registran cada jugada en `jugadas_partido` con categoría, jugador y timestamp; además escriben posesión por jugador y minuto. La API agrega las acciones por jugador y selección desde las jugadas y calcula la posesión a partir de los segundos atribuidos a cada equipo. Las simulaciones anteriores conservan su lectura histórica. La precisión de pases se calcula dividiendo pases completados por intentados. Los datos son sintéticos y no representan mediciones reales del partido.
 
-Al pulsar «Iniciar simulación», el generador utiliza HTTP contra la propia API: prepara y reutiliza ocho hinchas sintéticos por región, registrados en MongoDB, e ingresa pronósticos para los hinchas argentinos antes del inicio. Si el partido ya no admite pronósticos, omite esos intentos. Luego inicia el partido con `/estado`, publica cada comentario mediante el mismo `POST /partidos/{id}/comentarios` que utiliza la pantalla, envía una muestra por minuto a `POST /administracion/simulaciones/{id}/muestras`, cierra con `/resultado` y solicita el archivo en Neo4j. La preparación del guion, los planteles y los metadatos internos todavía accede a las bases desde el proceso servidor. La creación de usuarios y comentarios es persistente. El generador utiliza por defecto `http://127.0.0.1:8010`; se puede configurar con `SIMULADOR_API_URL` en el entorno del proceso de la API.
+Al pulsar «Iniciar simulación», el generador utiliza HTTP contra la propia API: prepara y reutiliza 25 hinchas sintéticos por país (los cuatro fijos y los de quienes ya estén mirando), registrados en MongoDB; cada uno abre su sesión como un usuario real. Ingresa pronósticos para algunos hinchas argentinos antes del inicio. Si el partido ya no admite pronósticos, omite esos intentos. Luego inicia el partido con `/estado`, publica cada comentario mediante el mismo `POST /partidos/{id}/comentarios` que utiliza la pantalla (con su sesión y su `comentario_id`; los hinchas comentan por turno para no chocar con el modo lento), envía cada minuto a `POST /administracion/simulaciones/{id}/muestras` —que guarda la muestra, cierra la audiencia del minuto y avisa el estado a quienes miran—, cierra con `/resultado` y solicita el archivo en Neo4j. La preparación del guion, los planteles y los metadatos internos todavía accede a las bases desde el proceso servidor. La creación de usuarios y comentarios es persistente. El generador utiliza por defecto `http://127.0.0.1:8010`; se puede configurar con `SIMULADOR_API_URL` en el entorno del proceso de la API.
 
-Por defecto se generan 4 comentarios por región y segundo (unos 1.440 en total en cuatro regiones), además de una muestra por segundo. Se puede ajustar `SIMULADOR_COMENTARIOS_POR_REGION_SEGUNDO` entre 1 y 10; aumentar el valor consume más recursos. La vista solo pide los 20 más recientes cada 8 segundos y muestra uno cada 0,5 segundos, por lo que no muestra todos durante el vivo; quedan en Cassandra para el historial. Recorrer la API permite observar esas operaciones en sus métricas, pero por sí solo no demuestra cuántos espectadores concurrentes soporta. Para medir lecturas adicionales se usa el escenario `vista_partido` descrito más abajo.
+Por defecto se generan 4 comentarios por país y segundo (1.440 en total con cuatro países), además de una muestra por segundo. Se puede ajustar `SIMULADOR_COMENTARIOS_POR_REGION_SEGUNDO` entre 1 y 10; con más de 4, cada hincha comenta más seguido que el modo lento y parte de los comentarios se rechaza con 429. Los comentarios llegan a la pantalla por la conexión en vivo; la tribuna muestra los últimos 40 y el resto queda en Cassandra para el historial. Un comentario o un minuto que falla no corta el partido: queda marcado (`comentarios_incompletos`, `audiencia_incompleta`). Recorrer la API permite observar esas operaciones en sus métricas, pero por sí solo no demuestra cuántos espectadores concurrentes soporta. Para medir lecturas adicionales se usa el escenario `vista_partido` descrito más abajo.
 
 La pantalla consulta `GET /partidos/{id}/estadisticas`; los totales individuales están en `GET /partidos/{id}/estadisticas/jugadores` y las jugadas en `GET /partidos/{id}/jugadas/temporales`. Al finalizar, se validan las muestras, el guion y el marcador antes de archivar resúmenes de jugadores, equipos y minutos en Neo4j. Ante una falla, el archivo queda pendiente. Detalle y limitaciones en [estadísticas por jugador](docs/diseno_estadisticas_jugador.md).
 
-Compose inicia InfluxDB 3 con una base local y límites configurables. En este laboratorio no publica el puerto ni usa autenticación; no usar esa configuración en un entorno compartido.
+Compose inicia InfluxDB 3 con una base local, sin vencimiento de datos y límites configurables. En este laboratorio no publica el puerto ni usa autenticación; no usar esa configuración en un entorno compartido.
+
+## Audiencia y comentarios por minuto (InfluxDB)
+
+Mientras alguien tiene un partido abierto en la interfaz, su conexión en vivo cuenta como un espectador de su país. En cada minuto simulado, el simulador cuenta en Redis los espectadores de cada país y los comentarios del minuto, y lo guarda en la base de resúmenes de InfluxDB, que no vence (`audiencia_partido`, `comentarios_partido`); al terminar, guarda los espectadores únicos (`audiencia_resumen`). Con eso:
+
+- `GET /partidos/{id}/audiencia` arma el análisis del partido como el de una transmisión: curva de espectadores simultáneos, pico, promedio, minutos vistos, únicos y tiempo medio. Acepta un tramo de minutos y un país.
+- `GET /partidos/{id}/comentarios/por-minuto` cuenta los comentarios por minuto, país y origen.
+- `GET /analisis/audiencia-por-minuto` promedia la audiencia por minuto de partido entre todas las simulaciones: es la consulta pensada para decidir cuándo poner publicidad.
+- `GET /partidos/{id}/estadisticas?desde_minuto=&hasta_minuto=` da posesión, pases, tiros y faltas de un tramo.
+
+Cada simulación es de tipo `demo` o `carga` (la de las pruebas de carga); las consultas de análisis aceptan `tipo=` para separarlas.
 
 ## Histórico en Neo4j
 
@@ -197,7 +247,7 @@ La retención se aplica por tiempo desde la muestra, no inmediatamente al cerrar
 
 `INFLUX_RAW_DB`, `INFLUX_RESUMEN_DB` e `INFLUX_RAW_RETENCION` permiten configurar los nombres y la duración al crear las bases. Cambiar la duración en el entorno no modifica una base ya creada: requiere una operación administrativa separada. La retención de datos crudos no se aplica a Cassandra.
 
-Los comentarios permanecen en Cassandra, particionados por partido, país y ventanas de 30 minutos, sin vencimiento automático configurado. Para partidos finalizados, `GET /partidos/{id}/comentarios/historial?pais=ARG` devuelve páginas de hasta 20 comentarios y un `next_cursor` para solicitar la siguiente página, incluso entre ventanas. Se usa el rango temporal de la simulación guardado en MongoDB; para simulaciones anteriores se intenta reconstruir ese rango a partir del inicio y cierre registrados. La pantalla cambia al historial cuando detecta el fin del partido.
+Los comentarios permanecen en Cassandra, particionados por partido, país y ventanas de 30 minutos, sin vencimiento automático configurado. `GET /partidos/{id}/comentarios?pais=ARG` (o `alcance=todos`) devuelve páginas de hasta 20 comentarios, del más nuevo al más viejo, durante y después del partido; para la página siguiente se manda `antes_de` con el valor `siguiente` de la anterior, incluso entre ventanas. La pantalla lo usa en el botón «Ver comentarios anteriores».
 
 ### Medir la vista de partido por la API
 

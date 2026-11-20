@@ -1,0 +1,89 @@
+{
+  "escenario": "vivo",
+  "etiqueta": "2000_espectadores",
+  "inicio": "2026-11-20T02:37:51.420710+00:00",
+  "commit": "9b8f940",
+  "parametros": {
+    "usuarios": 1000,
+    "concurrencia": 20,
+    "duracion": 95,
+    "partido": "P-09",
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 2000,
+    "comentan": 0.05
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "nodos_de_mongodb": 3,
+    "generador": "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio; 6 procesos con conexiones asincrónicas",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 8e-06,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; todos los pedidos medidos pasan por la API",
+  "notas": [],
+  "medicion": {
+    "espectadores_pedidos": 2000,
+    "conexiones": {
+      "abiertas": 2833,
+      "fallidas": 368,
+      "reconexiones": 489
+    },
+    "comentarios": {
+      "enviados": 502,
+      "publicados": 388,
+      "modo_lento": 90,
+      "partido_terminado": 24,
+      "errores": 0
+    },
+    "entrega_ms": {
+      "medidas": 362,
+      "p50": 2039.28,
+      "p95": 7671.0,
+      "p99": 9707.46,
+      "max": 10365.8
+    },
+    "audiencia_reportada_max": 2000,
+    "simulacion": {
+      "estado_simulacion": "completa",
+      "minuto": 90,
+      "audiencia_incompleta": null,
+      "estadisticas_incompletas": null,
+      "archivo_estado": "completo"
+    }
+  },
+  "fin": "2026-11-20T02:39:41.668698+00:00"
+}

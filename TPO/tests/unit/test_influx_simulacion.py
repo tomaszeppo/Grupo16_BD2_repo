@@ -83,6 +83,43 @@ def test_contadores_incluyen_jugadas_y_goles_del_guion():
     assert "goles=1i" in linea and "tiros=2i" in linea and "pases_completados=9i" in linea
 
 
+def test_linea_de_audiencia_y_comentarios():
+    pedidos = []
+    adaptador = InfluxAdapter(Settings(_env_file=None))
+    adaptador._http = httpx.Client(base_url="http://influx", transport=httpx.MockTransport(
+        lambda req: pedidos.append(req) or httpx.Response(204)))
+    instante = datetime(2030, 6, 13, 15, 0, tzinfo=timezone.utc)
+    adaptador.guardar_audiencia("P-03", 23, "a" * 32, "demo", {"ARG": 2}, {("ARG", "usuario"): 3}, instante)
+    ts = int(instante.timestamp() * 1_000_000_000)
+    assert pedidos[0].content.decode().splitlines() == [
+        f"audiencia_partido,partido_id=P-03,pais=ARG,corrida_id={'a' * 32},tipo=demo espectadores=2i,minuto=23i {ts}",
+        f"comentarios_partido,partido_id=P-03,pais=ARG,origen=usuario,corrida_id={'a' * 32},tipo=demo comentarios=3i,minuto=23i {ts}",
+    ]
+
+
+def test_audiencia_rechaza_valores_que_romperian_la_linea():
+    adaptador = InfluxAdapter(Settings(_env_file=None))
+    instante = datetime(2030, 6, 13, 15, 0, tzinfo=timezone.utc)
+    with pytest.raises(ValidacionError):
+        adaptador.guardar_audiencia("P-03", 1, "a" * 32, "demo", {"AR G": 1}, {}, instante)
+    with pytest.raises(ValidacionError):
+        adaptador.guardar_audiencia("P-03", 1, "a" * 32, "otro", {"ARG": 1}, {}, instante)
+
+
+def test_las_escrituras_de_la_simulacion_no_esperan_el_volcado_a_disco():
+    """InfluxDB 3 tarda ~1 s en confirmar si espera el volcado del registro (medido); el partido simula un minuto
+    por segundo, así que las escrituras confirman sin esperarlo (no_sync)."""
+    pedidos = []
+    adaptador = InfluxAdapter(Settings(_env_file=None))
+    adaptador._http = httpx.Client(base_url="http://influx", transport=httpx.MockTransport(
+        lambda req: pedidos.append(req) or httpx.Response(204)))
+    instante = datetime(2030, 6, 13, 15, 0, tzinfo=timezone.utc)
+    adaptador.guardar_audiencia("P-03", 1, "a" * 32, "demo", {"ARG": 1}, {}, instante)
+    adaptador.guardar_jugadores("P-03", 1, {"ARG": ["J-ARG-01"]}, [], instante, "a" * 32)
+    adaptador.guardar_minuto("P-03", 1, "ARG", "BRA", instante)
+    assert len(pedidos) == 3 and all(p.url.params.get("no_sync") == "true" for p in pedidos)
+
+
 def test_resumenes_se_guardan_en_influx_con_id_y_timestamp_estables():
     pedidos=[]
     adaptador=InfluxAdapter(Settings(_env_file=None))
@@ -107,3 +144,14 @@ def test_base_de_corrida_y_compatibilidad_con_simulaciones_anteriores():
     adaptador.para_simulacion({}).consultar("SELECT 1")
     adaptador.para_simulacion({"influx_raw_db": "fixture2030_raw"}).consultar("SELECT 1")
     assert [__import__("json").loads(req.content)["db"] for req in pedidos] == ["fixture2030_metrics", "fixture2030_raw"]
+
+
+def test_la_audiencia_va_a_la_base_de_resumenes_que_no_vence():
+    pedidos = []
+    adaptador = InfluxAdapter(Settings(_env_file=None))
+    adaptador._http = httpx.Client(base_url="http://influx", transport=httpx.MockTransport(
+        lambda req: pedidos.append(req) or httpx.Response(204)))
+    instante = datetime(2030, 6, 13, 15, 0, tzinfo=timezone.utc)
+    adaptador.para_resumenes().guardar_audiencia("P-03", 1, "a" * 32, "demo", {"ARG": 1}, {}, instante)
+    assert pedidos[0].url.params["db"] == "fixture2030_resumenes"
+    assert adaptador._s.influx_db == "fixture2030_metrics"  # la vista no cambia el adaptador original

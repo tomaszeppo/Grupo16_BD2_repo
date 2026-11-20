@@ -12,9 +12,18 @@ NOMBRES_DEMO = {
     "ESP": ("Lucía", "Dani", "Pablo", "Alba", "Mario", "Clara", "Álex", "Irene"),
     "URU": ("Pato", "Cami", "Nacho", "Flor", "Mati", "Juli", "Santi", "Pau"),
 }
+# Para los países sin nombres propios (cuando alguien de ese país está mirando el partido).
+NOMBRES_GENERICOS = ("Ana", "Leo", "Sara", "Iván", "Eva", "Hugo", "Noa", "Teo")
 
 
-def asegurar_hinchas(mongo, paises):
+def _nombre(pais: str, indice: int) -> str:
+    nombres = NOMBRES_DEMO.get(pais, NOMBRES_GENERICOS)
+    vuelta = indice // len(nombres)
+    return nombres[indice % len(nombres)] + (f" {vuelta + 1}" if vuelta else "")
+
+
+def asegurar_hinchas(mongo, paises, cantidad: int = 8):
+    """`cantidad` hinchas por país, los mismos en cada simulación (se crean la primera vez)."""
     config = mongo.db.configuracion
     clave = "hinchas_demo"
     config.update_one({"_id": clave}, {"$setOnInsert": {}}, upsert=True)
@@ -36,7 +45,8 @@ def asegurar_hinchas(mongo, paises):
         for pais in paises:
             salida[pais] = []
             guardados = reserva.get("hinchas", {}).get(pais, {})
-            for indice, nombre in enumerate(NOMBRES_DEMO[pais]):
+            for indice in range(cantidad):
+                nombre = _nombre(pais, indice)
                 identificador = guardados.get(str(indice))
                 usuario = mongo.obtener_usuario(identificador) if identificador else None
                 if usuario is None:

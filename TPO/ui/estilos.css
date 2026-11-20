@@ -332,6 +332,28 @@ tr.yo td { background: var(--amarilla-fondo); font-weight: 700; }
 .relato-accion.sin-animacion { animation:none; }
 .inicio-vivo .partido { color: var(--tinta); }
 
+/* Tribuna en vivo: pestañas Mi país / Todos los países. */
+.tribuna-pestanas { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.tribuna-pestanas button { border: 2px solid var(--linea); background: var(--papel); border-radius: 999px; padding: 4px 12px; font-size: .82rem; font-weight: 700; cursor: pointer; }
+.tribuna-pestanas button[aria-selected="true"] { background: var(--cesped); border-color: var(--cesped); color: #fff; }
+.tribuna-lado { display: flex; align-items: center; gap: 8px; }
+.comentario-pais { font-size: .72rem; font-weight: 700; color: var(--neo); background: var(--neo-fondo); border-radius: 4px; padding: 1px 6px; margin-left: 4px; }
+
+/* Audiencia: espectadores ahora y curva minuto a minuto, como el panel de una transmisión. */
+.audiencia-ahora, .audiencia-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.audiencia-ahora div, .audiencia-resumen div { background: var(--fondo); border-radius: 8px; padding: 10px 12px; }
+.audiencia-ahora span, .audiencia-resumen span { display: block; font-size: .76rem; color: var(--apagado); }
+.audiencia-ahora strong { font-family: var(--marcador); font-size: 2rem; }
+.audiencia-resumen strong { font-family: var(--marcador); font-size: 1.2rem; }
+.curva-audiencia { width: 100%; height: 140px; display: block; }
+.curva-area { fill: var(--mongo-fondo); }
+.curva-linea { fill: none; stroke: var(--cesped); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.curva-gol { stroke: var(--roja); stroke-width: 1.5; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.curva-caja { position: relative; padding-top: 22px; }
+.curva-goles { position: absolute; inset: 0 0 auto 0; height: 20px; }
+.curva-gol-texto { position: absolute; top: 0; transform: translateX(-50%); font-size: .72rem; font-weight: 700; color: var(--roja); white-space: nowrap; }
+.curva-eje { display: flex; justify-content: space-between; font-size: .72rem; color: var(--apagado); margin: 4px 0 12px; }
+
 /* Mis prodes: selección de grupo, posiciones y acciones sin desbordes. */
 .prodes-pagina { max-width: 1240px; margin: 0 auto; }
 .prodes-encabezado { display:flex; justify-content:space-between; align-items:end; gap:24px; margin-bottom:30px; }
