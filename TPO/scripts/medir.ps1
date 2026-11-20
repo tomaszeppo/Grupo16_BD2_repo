@@ -70,4 +70,13 @@ Remove-Item Env:API_CPUS; Remove-Item Env:API_PROCESOS
 docker compose up -d api | Out-Null
 Esperar-Api
 
-Write-Host "Listo. Las pruebas de falla se corren aparte:  .\scripts\prueba_de_falla.ps1 primario   y   .\scripts\prueba_de_falla.ps1 neo4j -Brusco"
+Write-Host "== 8. Partido en vivo: espectadores con la conexión abierta y comentarios =="
+# Cada nivel usa un partido distinto (una simulación terminada no se repite). Los usuarios ya los creó la preparación.
+Herramienta python -m carga.ejecutar vivo --espectadores 500 --comentan 0.05 --partido P-07 --etiqueta "500_espectadores"
+Herramienta python -m carga.ejecutar vivo --espectadores 1000 --comentan 0.05 --partido P-08 --etiqueta "1000_espectadores"
+Herramienta python -m carga.ejecutar vivo --espectadores 2000 --comentan 0.05 --partido P-09 --etiqueta "2000_espectadores"
+
+Write-Host "== 9. Atraso de la réplica de Redis =="
+Herramienta python -m scripts.medir_replica_redis --muestras 1000
+
+Write-Host "Listo. Las pruebas de falla se corren aparte:  .\scripts\prueba_de_falla.ps1 primario,  .\scripts\prueba_de_falla.ps1 neo4j -Brusco  y  .\scripts\prueba_de_falla.ps1 europa -Brusco -Partido P-10"

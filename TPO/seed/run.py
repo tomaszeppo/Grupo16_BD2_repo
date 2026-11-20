@@ -18,7 +18,8 @@ from seed import cargar_mongo, cargar_neo4j, datos
 
 
 COLECCIONES = ["usuarios", "prodes", "pronosticos", "resultados", "puntajes", "rankings_historicos",
-               "equipos", "jugadores", "contadores"]
+               "equipos", "jugadores", "contadores",
+               "simulaciones"]  # estado de cada simulación: sin borrarlo, un partido reiniciado no se puede volver a simular
 
 
 def _inicio(args, driver, base: str) -> datetime:
