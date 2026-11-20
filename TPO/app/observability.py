@@ -20,7 +20,15 @@ def configurar_logging() -> None:
     logging.basicConfig(level=os.environ.get("LOG_NIVEL", "INFO").upper(), format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
 
-def crear_middleware(deadline_segundos: float):
+_FLUJO_EN_VIVO = re.compile(r"^/partidos/[^/]+/vivo$")
+
+
+def es_flujo_en_vivo(path: str) -> bool:
+    """La conexión en vivo dura todo el partido: no se le aplica el tope de duración por pedido."""
+    return bool(_FLUJO_EN_VIVO.match(path))
+
+
+def crear_middleware(deadline_segundos: float, sin_tope=es_flujo_en_vivo):
     """Middleware de correlación (X-Request-ID), log de cada request y tope duro de duración."""
 
     async def request_id_middleware(request: Request, call_next):
@@ -30,6 +38,10 @@ def crear_middleware(deadline_segundos: float):
         token = request_id_var.set(rid)
         inicio = time.perf_counter()
         try:
+            if sin_tope(request.url.path):
+                response = await call_next(request)
+                response.headers["X-Request-ID"] = rid
+                return response
             tarea = asyncio.ensure_future(call_next(request))
             # asyncio.wait (no wait_for): al vencer, no espera a que termine el hilo bloqueado en el driver.
             hechas, _ = await asyncio.wait({tarea}, timeout=deadline_segundos)

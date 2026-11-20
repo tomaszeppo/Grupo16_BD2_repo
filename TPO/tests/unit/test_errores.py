@@ -76,3 +76,32 @@ def test_las_operaciones_contra_una_base_se_anotan_solo_si_fallan(caplog):
             pass
     assert _registros(caplog) == [("WARNING", "dependencia=mongodb")]
     assert "secreta" not in caplog.text and "causa=ConnectionError" in caplog.text
+
+
+def test_flujo_en_vivo_no_corta_por_el_tope_de_duracion():
+    """La conexión en vivo dura todo el partido: el tope por pedido no puede cortarla. El resto sí se corta."""
+    import asyncio
+
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from app.observability import crear_middleware, es_flujo_en_vivo
+
+    app = FastAPI()
+    app.middleware("http")(crear_middleware(0.1))
+
+    @app.get("/partidos/{partido_id}/vivo")
+    async def vivo(partido_id: str):
+        await asyncio.sleep(0.3)
+        return {"ok": True}
+
+    @app.get("/lento")
+    async def lento():
+        await asyncio.sleep(0.3)
+        return {"ok": True}
+
+    cliente = TestClient(app)
+    respuesta = cliente.get("/partidos/P-01/vivo")
+    assert respuesta.status_code == 200 and respuesta.headers["X-Request-ID"]
+    assert cliente.get("/lento").status_code == 504
+    assert es_flujo_en_vivo("/partidos/P-01/vivo") and not es_flujo_en_vivo("/partidos/P-01/vivo/otra")
