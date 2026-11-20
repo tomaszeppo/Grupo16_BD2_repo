@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends
 
-from app.deps import get_ranking_service, usuario_actual
+from app.deps import get_fixture_service, get_ranking_service, usuario_actual
+from app.errors import Conflicto
 from app.schemas.comunes import Limite, PartidoId, ProdeId, UsuarioId
+from app.services.fixture import FixtureService
 from app.services.ranking import RankingService
 
 router = APIRouter(tags=["MongoDB · Prode"])
@@ -29,3 +31,15 @@ def tabla_de_prode(prode_id: ProdeId, actual: str = Depends(usuario_actual),
                    svc: RankingService = Depends(get_ranking_service)) -> dict:
     prode, tabla = svc.tabla_de_prode(prode_id, actual)
     return {"fuente": svc.fuente, "prode": {"id": prode["id"], "nombre": prode["nombre"]}, "tabla": tabla}
+
+
+@router.get("/prodes/{prode_id}/tabla/{partido_id}", summary="Ranking del prode con pronósticos de un partido")
+def tabla_de_prode_del_partido(prode_id: ProdeId, partido_id: PartidoId, actual: str = Depends(usuario_actual),
+                               svc: RankingService = Depends(get_ranking_service),
+                               fixture: FixtureService = Depends(get_fixture_service)) -> dict:
+    prode, tabla = svc.tabla_de_prode(prode_id, actual)
+    if fixture.partido(partido_id)["estado"] not in ("En juego", "Finalizado"):
+        raise Conflicto("Los pronósticos del grupo son privados hasta que empieza el partido.")
+    return {"fuente": svc.fuente, "partido_id": partido_id, "fuente_pronosticos": "mongodb",
+            "prode": {"id": prode["id"], "nombre": prode["nombre"]},
+            "tabla": svc.con_pronosticos_del_partido(tabla, partido_id)}

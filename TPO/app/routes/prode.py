@@ -60,6 +60,12 @@ def guardar_pronostico(partido_id: PartidoId, cuerpo: PronosticoCuerpo, respuest
     return {"fuente": FUENTE, "pronostico": pronostico}
 
 
+@router.get("/partidos/{partido_id}/pronostico", summary="Pronóstico de la sesión para este partido")
+def obtener_pronostico(partido_id: PartidoId, actual: str = Depends(usuario_actual),
+                       svc: PronosticosService = Depends(get_pronosticos_service)) -> dict:
+    return {"fuente": FUENTE, "pronostico": svc.del_partido(actual, partido_id)}
+
+
 @router.get("/usuarios/{usuario_id}/pronosticos", summary="Pronósticos del usuario")
 def pronosticos_de_usuario(usuario_id: UsuarioId, limit: Limite = 100, offset: Desplazamiento = 0,
                            actual: str = Depends(usuario_actual),

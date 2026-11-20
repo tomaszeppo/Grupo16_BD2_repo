@@ -30,5 +30,8 @@ class PronosticosService:
             raise Conflicto("Ya pasó el horario de inicio del partido: no se puede cargar ni corregir el pronóstico.")
         return self._mongo.guardar_pronostico(usuario_id, partido_id, goles_local, goles_visitante, ahora)
 
+    def del_partido(self, usuario_id: str, partido_id: str) -> dict | None:
+        return self._mongo.obtener_pronostico(usuario_id, partido_id)
+
     def de_usuario(self, usuario_id: str, limit: int, offset: int) -> tuple[list[dict], int]:
         return self._mongo.pronosticos_de(usuario_id, limit, offset)

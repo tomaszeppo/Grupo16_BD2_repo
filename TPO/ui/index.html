@@ -4,29 +4,33 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Prode Mundial 2030</title>
-  <link rel="stylesheet" href="estilos.css">
+  <link rel="stylesheet" href="/demo/vendor/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="/demo/estilos.css?v=2">
 </head>
-<body>
-  <a class="saltar" href="#contenido">Ir al contenido</a>
-  <header class="cabecera">
-    <a class="marca" href="#/en-vivo">Prode <span>Mundial 2030</span></a>
-    <nav id="menu" aria-label="Secciones">
-      <a href="#/fixture">Fixture</a>
-      <a href="#/ranking">Ranking</a>
-      <a href="#/prodes">Mis prodes</a>
-      <a id="menu-admin" href="#/admin" hidden>Administración</a>
-    </nav>
-    <div id="quien" class="quien"></div>
+<body class="d-flex flex-column min-vh-100">
+  <a class="saltar visually-hidden-focusable" href="#contenido">Ir al contenido</a>
+  <header class="cabecera navbar">
+    <div class="container-xl cabecera-interior">
+      <a class="marca navbar-brand me-0" href="#/en-vivo">Prode <span>Mundial 2030</span></a>
+      <nav id="menu" class="nav nav-pills" aria-label="Secciones">
+        <a class="nav-link" href="#/fixture">Fixture</a>
+        <a class="nav-link" href="#/ranking">Ranking</a>
+        <a class="nav-link" href="#/prodes">Mis prodes</a>
+        <a class="nav-link" id="menu-admin" href="#/admin" hidden>Administración</a>
+      </nav>
+      <div id="quien" class="quien"></div>
+    </div>
   </header>
 
-  <main id="contenido" tabindex="-1"></main>
+  <main class="container-xl flex-grow-1 py-4 py-lg-5" id="contenido" tabindex="-1"></main>
 
-  <footer class="pie">
+  <footer class="pie border-top py-3"><div class="container-xl d-flex flex-wrap gap-2 justify-content-between">
     <span id="salud" class="salud">Consultando el estado de las bases…</span>
     <span>Datos de laboratorio. Cada bloque indica qué base respondió.</span>
-  </footer>
+  </div></footer>
 
-  <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
-  <script src="app.js"></script>
+  <div id="aviso" class="alert aviso" role="status" aria-live="polite" hidden></div>
+  <script src="/demo/vendor/gsap/gsap.min.js" defer></script>
+  <script src="/demo/app.js?v=2" defer></script>
 </body>
 </html>

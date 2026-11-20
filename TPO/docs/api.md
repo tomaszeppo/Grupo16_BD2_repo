@@ -38,6 +38,7 @@ Los tramos son de 0 a 90, con `desde_minuto` menor o igual a `hasta_minuto`; si 
 | `POST /prodes/unirse` | Se une con un código de invitación | Usuario |
 | `GET /usuarios/{id}/prodes` | Prodes del usuario | El propio usuario |
 | `GET /prodes/{id}/tabla` | Tabla de un prode privado | Sus integrantes |
+| `GET /prodes/{id}/tabla/{partido_id}` | Tabla acumulada con el pronóstico de cada integrante para ese partido, o `null` | Sus integrantes, desde que el partido está en juego |
 | `GET /ranking?limit=` | Primeros puestos del prode general | Cualquiera |
 | `GET /ranking/usuarios/{id}` | Puesto de un usuario | Cualquiera |
 | `GET /ranking/historico/{partido_id}` | El ranking como quedó al cerrar ese partido | Cualquiera |

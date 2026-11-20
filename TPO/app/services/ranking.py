@@ -44,3 +44,7 @@ class RankingService:
             raise Prohibido("Solo los integrantes pueden ver la tabla del prode.")
         filas = sorted(self._ranking.puntajes_de(prode["integrantes"]), key=_orden)
         return prode, [{"puesto": n, **f} for n, f in enumerate(filas, start=1)]
+
+    def con_pronosticos_del_partido(self, tabla: list[dict], partido_id: str) -> list[dict]:
+        pronosticos = self._mongo.pronosticos_del_partido(partido_id, [fila["usuario_id"] for fila in tabla])
+        return [{**fila, "pronostico": pronosticos.get(fila["usuario_id"])} for fila in tabla]

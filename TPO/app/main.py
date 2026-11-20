@@ -2,8 +2,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.types import Scope
 
 from app.config.settings import Settings, get_settings
 from app.manejadores import registrar_manejadores
@@ -38,6 +39,15 @@ async def _arranque(app: FastAPI):
     yield
 
 
+class DemoStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        response = await super().get_response(path, scope)
+        # El HTML, el JS y el CSS se despliegan juntos. Revalidar evita mezclar versiones.
+        if response.status_code in (200, 304):
+            response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configurar_logging()
@@ -66,5 +76,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def raiz() -> RedirectResponse:
         return RedirectResponse("/demo/")
 
-    app.mount("/demo", StaticFiles(directory=Path(__file__).resolve().parent.parent / "ui", html=True), name="demo")
+    app.mount("/demo", DemoStaticFiles(directory=Path(__file__).resolve().parent.parent / "ui", html=True), name="demo")
     return app

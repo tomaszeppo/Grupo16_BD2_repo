@@ -182,6 +182,19 @@ class MongoAdapter:
                     if intento == 2:
                         raise
 
+    def obtener_pronostico(self, usuario_id: str, partido_id: str) -> dict | None:
+        with operacion(FUENTE, "obtener_pronostico", _traducir):
+            return _publico(self.db.pronosticos.find_one({"_id": id_pronostico(usuario_id, partido_id)}))
+
+    def pronosticos_del_partido(self, partido_id: str, usuario_ids: list[str]) -> dict[str, dict]:
+        claves = [id_pronostico(usuario_id, partido_id) for usuario_id in usuario_ids]
+        with operacion(FUENTE, "pronosticos_del_partido", _traducir):
+            docs = self.db.pronosticos.find(
+                {"_id": {"$in": claves}},
+                {"_id": 0, "usuario_id": 1, "goles_local": 1, "goles_visitante": 1, "anulado": 1, "puntos": 1},
+            )
+            return {doc.pop("usuario_id"): doc for doc in docs}
+
     def pronosticos_de(self, usuario_id: str, limit: int, offset: int) -> tuple[list[dict], int]:
         with operacion(FUENTE, "pronosticos_de", _traducir):  # índice sobre pronosticos.usuario_id
             total = self.db.pronosticos.count_documents({"usuario_id": usuario_id})
