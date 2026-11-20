@@ -56,15 +56,16 @@ class Audiencia:
         return {**aviso, "incompleto": incompleto}
 
     def cerrar_partido(self, partido_id: str, corrida_id: str, tipo: str, instante, marcador: dict | None = None) -> None:
-        """Avisa el final a quienes miran y guarda los espectadores únicos por país."""
-        try:
-            self._redis.publicar(f"estado:{partido_id}", json.dumps(
-                {"tipo": "estado", "minuto": 90, "marcador": marcador or {}, "estado": "Finalizado"}))
-        except Exception:
-            logger.warning("audiencia_aviso_final_fallido partido=%s", partido_id)
+        """Guarda los espectadores únicos por país y después avisa el final a quienes miran (en ese orden: al
+        recibir el aviso, la interfaz pide el análisis y los únicos tienen que estar)."""
         try:
             unicos = {pais: self._redis.contar_unicos(f"unicos:{partido_id}:{pais}")
                       for pais in sorted(self.paises_de(partido_id))}
             self._influx.guardar_resumen_audiencia(partido_id, corrida_id, tipo, unicos, instante)
         except Exception:
             logger.warning("audiencia_resumen_fallido partido=%s", partido_id)
+        try:
+            self._redis.publicar(f"estado:{partido_id}", json.dumps(
+                {"tipo": "estado", "minuto": 90, "marcador": marcador or {}, "estado": "Finalizado"}))
+        except Exception:
+            logger.warning("audiencia_aviso_final_fallido partido=%s", partido_id)

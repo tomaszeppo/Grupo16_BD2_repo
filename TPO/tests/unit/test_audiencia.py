@@ -77,3 +77,17 @@ def test_cerrar_partido_guarda_los_unicos():
         redis.agregar_unico("unicos:P-03:ARG", usuario)
     _audiencia(redis, influx).cerrar_partido("P-03", CORRIDA, "demo", INSTANTE)
     assert influx.resumenes[0][3]["ARG"] == 2
+
+
+def test_el_aviso_de_final_sale_despues_de_guardar_los_unicos():
+    """La interfaz pide el análisis al recibir "Finalizado": los únicos ya tienen que estar en InfluxDB."""
+    redis = RedisFalso()
+    avisos_al_guardar = []
+
+    class Influx(InfluxQueAnota):
+        def guardar_resumen_audiencia(self, *args):
+            avisos_al_guardar.append(len(redis.publicados))
+
+    _audiencia(redis, Influx()).cerrar_partido("P-03", CORRIDA, "demo", INSTANTE, {"local": 1, "visitante": 0})
+    assert avisos_al_guardar == [0]
+    assert json.loads(redis.publicados[-1][1])["estado"] == "Finalizado"

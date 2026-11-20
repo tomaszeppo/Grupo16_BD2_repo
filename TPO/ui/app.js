@@ -181,45 +181,114 @@ async function vistaFixture() {
   } catch (e) { lista.innerHTML = cajaDeError(e); }
 }
 
-function iniciarComentarios(id, estadoPartido) {
-  comentariosTimers.forEach(clearInterval); comentariosTimers = [];
+// ---------- partido en vivo: conexión, tribuna y audiencia ----------
+// Una conexión abierta por pestaña (eventos del servidor). Trae los comentarios de la tribuna elegida, el estado
+// del partido y la audiencia; mientras está abierta, este usuario cuenta como espectador de su país.
+let conexionVivo = null;
+function cerrarVivo() { if (conexionVivo) { conexionVivo.close(); conexionVivo = null; } }
+
+function abrirVivo(id, alcance, manejadores, alEstadoConexion) {
+  cerrarVivo();
+  const fuente = new EventSource(`/partidos/${encodeURIComponent(id)}/vivo?alcance=${alcance}`);
+  conexionVivo = fuente;
+  const leer = (tipo) => fuente.addEventListener(tipo, (ev) => { try { manejadores[tipo]?.(JSON.parse(ev.data)); } catch { /* mensaje dañado: se ignora */ } });
+  ["comentario", "estado", "audiencia"].forEach(leer);
+  fuente.addEventListener("error", (ev) => {
+    if (ev.data) { try { alEstadoConexion(JSON.parse(ev.data).mensaje); } catch { alEstadoConexion("Sin conexión"); } }
+    else alEstadoConexion(fuente.readyState === EventSource.CLOSED ? "Sin conexión" : "Reconectando…");
+  });
+  fuente.addEventListener("open", () => alEstadoConexion("En vivo"));
+  return fuente;
+}
+
+function iniciarComentarios(id, estadoPartido, vivo) {
   const caja = document.getElementById("comentarios");
   const usuario = sesion.usuario, pais = usuario?.pais || "ARG";
-  const formulario = usuario ? `<form id="comentario-form" style="margin-top:16px"><label for="comentario-texto">Tu comentario</label><textarea id="comentario-texto" maxlength="280" rows="3" required placeholder="Sumate a la conversación"></textarea><button class="boton" id="comentario-enviar" ${estadoPartido === "En juego" ? "" : "disabled"}>Enviar comentario</button><p id="comentario-mensaje" role="status"></p></form>` : `<p><a href="#/ingreso">Ingresá</a> para comentar.</p>`;
-  caja.innerHTML = `<section class="bloque tribuna"><header><div><h2>Comentarios</h2><p class="tribuna-subtitulo">Tribuna · ${esc(pais)}</p></div><span class="tribuna-estado" id="comentarios-estado" role="status">Conectando…</span></header><div id="comentarios-lista" class="comentarios-lista" role="log" aria-label="Comentarios recientes"><p class="vacio">Todavía no hay comentarios.</p></div>${formulario}</section>`;
-  const cola = [], conocidos = new Set(), visibles = [];
-  async function cargar() {
-    try {
-      const datos = await api(`/partidos/${encodeURIComponent(id)}/comentarios/recientes?pais=${encodeURIComponent(pais)}`);
-      if (!caja.isConnected) return;
-      caja.hidden = estadoPartido !== "En juego" && datos.items.length === 0;
-      datos.items.slice().reverse().forEach(c => { if (!conocidos.has(c.comentario_id)) { conocidos.add(c.comentario_id); cola.push(c); } });
-      if (cola.length > 40) cola.splice(0, cola.length - 40);
-      if (conocidos.size > 500) { const conservar = Array.from(conocidos).slice(-250); conocidos.clear(); conservar.forEach(id => conocidos.add(id)); }
-      document.getElementById("comentarios-estado").textContent = datos.items.length ? "Actualizado" : "Todavía no hay comentarios.";
-    } catch (e) { const estado = document.getElementById("comentarios-estado"); if (estado) estado.textContent = e.message; }
+  const formulario = usuario ? `<form id="comentario-form" style="margin-top:16px"><label for="comentario-texto">Tu comentario en la tribuna de ${esc(pais)}</label><textarea id="comentario-texto" maxlength="280" rows="3" required placeholder="Sumate a la conversación"></textarea><button class="boton" id="comentario-enviar" ${estadoPartido === "En juego" ? "" : "disabled"}>Enviar comentario</button><p id="comentario-mensaje" role="status"></p></form>` : `<p><a href="#/ingreso">Ingresá</a> para comentar.</p>`;
+  caja.innerHTML = `<section class="bloque tribuna"><header><div><h2>Comentarios</h2><div class="tribuna-pestanas" role="tablist"><button type="button" role="tab" data-alcance="pais" aria-selected="true">Mi país (${esc(pais)})</button><button type="button" role="tab" data-alcance="todos" aria-selected="false">Todos los países</button></div></div><div class="tribuna-lado"><span class="tribuna-estado" id="comentarios-estado" role="status">Conectando…</span>${base("cassandra")}</div></header><div id="comentarios-lista" class="comentarios-lista" role="log" aria-label="Comentarios"><p class="vacio">Todavía no hay comentarios.</p></div>${formulario}</section>`;
+  let alcance = "pais";
+  const visibles = [], conocidos = new Set();
+  const estado = (texto) => { const e = document.getElementById("comentarios-estado"); if (e) e.textContent = texto; };
+  function dibujar() {
+    const lista = document.getElementById("comentarios-lista"); if (!lista) return;
+    const seguir = lista.scrollHeight - lista.scrollTop - lista.clientHeight < 48, anterior = lista.scrollTop;
+    lista.innerHTML = visibles.length ? visibles.map(v => `<article class="comentario"><span class="comentario-avatar" aria-hidden="true">${esc((v.usuario_nombre || "H").slice(0, 1).toUpperCase())}</span><div><strong>${esc(v.usuario_nombre)}</strong>${alcance === "todos" ? ` <span class="comentario-pais">${esc(v.pais)}</span>` : ""}<p>${esc(v.contenido)}</p></div></article>`).join("") : `<p class="vacio">Todavía no hay comentarios.</p>`;
+    lista.scrollTop = seguir ? lista.scrollHeight : anterior;
   }
+  function sumar(c) {
+    if (conocidos.has(c.comentario_id)) return;
+    conocidos.add(c.comentario_id); visibles.push(c);
+    if (visibles.length > 40) visibles.shift();
+    dibujar();
+  }
+  async function cambiar(nuevo) {
+    alcance = nuevo; visibles.length = 0; conocidos.clear(); dibujar();
+    caja.querySelectorAll("[data-alcance]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.alcance === alcance)));
+    const consulta = alcance === "todos" ? "alcance=todos" : `pais=${encodeURIComponent(pais)}`;
+    try {
+      const datos = await api(`/partidos/${encodeURIComponent(id)}/comentarios?${consulta}&limit=20`);
+      if (!caja.isConnected) return;
+      datos.items.slice().reverse().forEach(sumar);
+    } catch (e) { estado(e.message); }
+    if (usuario && estadoPartido !== "Finalizado") abrirVivo(id, alcance, { ...vivo, comentario: sumar }, estado);
+    else estado(estadoPartido === "Finalizado" ? "Partido terminado" : "Ingresá para seguirlo en vivo");
+  }
+  caja.querySelectorAll("[data-alcance]").forEach(b => b.addEventListener("click", () => { if (b.dataset.alcance !== alcance) cambiar(b.dataset.alcance); }));
   document.getElementById("comentario-form")?.addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    const texto = document.getElementById("comentario-texto"), boton = document.getElementById("comentario-enviar"), mensaje = document.getElementById("comentario-mensaje");
+    const form = ev.currentTarget, texto = document.getElementById("comentario-texto"), boton = document.getElementById("comentario-enviar"), mensaje = document.getElementById("comentario-mensaje");
     const contenido = texto.value.trim(); if (!contenido) { mensaje.textContent = "Escribí un comentario."; return; }
+    // El mismo identificador en cada reintento del mismo texto: si el primero llegó, la API no lo duplica.
+    if (form.dataset.texto !== contenido) { form.dataset.texto = contenido; form.dataset.id = crypto.randomUUID(); }
     boton.disabled = true; boton.dataset.enviando = "si"; mensaje.textContent = "Enviando…";
     try {
-      const comentario = await api(`/partidos/${encodeURIComponent(id)}/comentarios`, {metodo:"POST", cuerpo:{contenido}});
+      const comentario = await api(`/partidos/${encodeURIComponent(id)}/comentarios`, { metodo: "POST", cuerpo: { comentario_id: form.dataset.id, contenido } });
       if (!caja.isConnected) return;
-      conocidos.add(comentario.comentario_id); cola.unshift(comentario); texto.value = ""; mensaje.textContent = "Comentario enviado.";
-    } catch (e) { if (caja.isConnected) mensaje.textContent = e.message; }
+      sumar(comentario);
+      texto.value = ""; delete form.dataset.texto; mensaje.textContent = "Comentario enviado.";
+    } catch (e) { if (caja.isConnected) mensaje.textContent = e.estado === 429 ? "Modo lento: esperá unos segundos y volvé a enviar." : e.message; }
     finally { if (boton.isConnected) { boton.dataset.enviando = "no"; boton.disabled = boton.dataset.cerrado === "si"; } }
   });
-  cargar(); if (estadoPartido === "En juego") comentariosTimers.push(setInterval(cargar, 8000));
-  comentariosTimers.push(setInterval(() => {
-    const c = cola.shift(), lista = document.getElementById("comentarios-lista");
-    if (!c || !lista) return; visibles.push(c); if (visibles.length > 20) visibles.shift();
-    const seguir = lista.scrollHeight - lista.scrollTop - lista.clientHeight < 48;
-    const anterior = lista.scrollTop;
-    lista.innerHTML = visibles.map(v => `<article class="comentario"><span class="comentario-avatar" aria-hidden="true">${esc((v.usuario_nombre || "H").slice(0, 1).toUpperCase())}</span><div><strong>${esc(v.usuario_nombre)}</strong><p>${esc(v.contenido)}</p></div></article>`).join("");
-    lista.scrollTop = seguir ? lista.scrollHeight : anterior;
-  }, 500));
+  cambiar("pais");
+}
+
+// Curva de espectadores simultáneos minuto a minuto, con los goles marcados.
+function curvaAudiencia(puntos, goles = []) {
+  if (!puntos.length) return `<p class="vacio">Todavía no hay audiencia medida.</p>`;
+  const ancho = 600, alto = 140, maximo = Math.max(1, ...puntos.map(p => p.total));
+  const x = (m) => (m / 90) * ancho, y = (v) => alto - 6 - (v / maximo) * (alto - 16);
+  const linea = puntos.map(p => `${x(p.minuto).toFixed(1)},${y(p.total).toFixed(1)}`).join(" ");
+  const area = `0,${alto} ${linea} ${x(puntos[puntos.length - 1].minuto).toFixed(1)},${alto}`;
+  const marcas = goles.map(g => `<line class="curva-gol" x1="${x(g.minuto)}" x2="${x(g.minuto)}" y1="0" y2="${alto}"><title>Gol ${esc(g.equipo_id)} ${g.minuto}′</title></line>`).join("");
+  // Las etiquetas van fuera del SVG: el gráfico se estira a lo ancho y deformaría el texto.
+  const etiquetas = goles.map(g => `<span class="curva-gol-texto" style="left:${(g.minuto / 90 * 100).toFixed(1)}%">Gol ${esc(g.equipo_id)} ${g.minuto}′</span>`).join("");
+  return `<div class="curva-caja"><div class="curva-goles">${etiquetas}</div><svg class="curva-audiencia" viewBox="0 0 ${ancho} ${alto}" preserveAspectRatio="none" role="img" aria-label="Espectadores por minuto, máximo ${maximo}"><polygon class="curva-area" points="${area}"/><polyline class="curva-linea" points="${linea}"/>${marcas}</svg></div><div class="curva-eje"><span>0′</span><span>45′</span><span>90′</span></div>`;
+}
+
+function iniciarAudiencia(id, estadoPartido) {
+  const caja = document.getElementById("audiencia");
+  const pais = sesion.usuario?.pais;
+  const puntos = [];
+  caja.innerHTML = bloque("Audiencia", "redis", `<div class="audiencia-ahora" id="aud-ahora" ${estadoPartido === "Finalizado" ? "hidden" : ""}><div><span>Mirando ahora</span><strong id="aud-total">—</strong></div>${pais ? `<div><span>Desde ${esc(pais)}</span><strong id="aud-pais">—</strong></div>` : ""}</div><div id="aud-curva">${curvaAudiencia([])}</div><div id="aud-resumen"></div>`);
+  const fijar = (sel, v) => { const e = document.getElementById(sel); if (e) e.textContent = v; };
+  async function analisis() {
+    try {
+      const d = await api(`/partidos/${encodeURIComponent(id)}/audiencia`);
+      if (!caja.isConnected) return;
+      document.getElementById("aud-curva").innerHTML = curvaAudiencia(d.curva, d.goles);
+      const tarjeta = (titulo, valor) => `<div><span>${esc(titulo)}</span><strong>${esc(valor)}</strong></div>`;
+      document.getElementById("aud-resumen").innerHTML = `<div class="audiencia-resumen">${tarjeta("Pico", d.pico ? `${d.pico.espectadores} en el ${d.pico.minuto}′` : "—")}${tarjeta("Promedio", d.promedio ?? "—")}${tarjeta("Minutos vistos", d.minutos_vistos)}${tarjeta("Espectadores únicos", d.unicos.total)}${tarjeta("Tiempo medio", d.tiempo_medio_min == null ? "—" : `${d.tiempo_medio_min} min`)}</div><p class="nota">Análisis guardado en InfluxDB${d.incompleta ? "; faltan algunos minutos por una falla" : ""}. ${base("influxdb")}</p>`;
+    } catch (e) { if (e.estado !== 404 && caja.isConnected) document.getElementById("aud-resumen").innerHTML = cajaDeError(e); }
+  }
+  if (estadoPartido === "Finalizado") analisis();
+  return {
+    audiencia(a) { fijar("aud-total", a.total); fijar("aud-pais", a.mi_pais); },
+    minuto(m, total) {
+      if (puntos.length && puntos[puntos.length - 1].minuto >= m) return;
+      puntos.push({ minuto: m, total }); const c = document.getElementById("aud-curva"); if (c) c.innerHTML = curvaAudiencia(puntos);
+    },
+    terminado() { const ahora = document.getElementById("aud-ahora"); if (ahora) ahora.hidden = true; analisis(); },
+  };
 }
 
 function iniciarRelato(id, partido) {
@@ -321,9 +390,18 @@ async function vistaPartido(id) {
       </div>
       <div class="meta"><span class="estado marcador-estado" id="estado-vivo">${esc(partido.estado)}</span><span>${partido.inicio_real ? "Empezó " + esc(fecha(partido.inicio_real)) : ""}</span></div>
     </section>
-    <div class="partido-en-vivo"><div id="estadisticas"></div><section class="bloque relato" aria-labelledby="relato-titulo"><header><div><h2 id="relato-titulo">Minuto a minuto</h2><p class="relato-subtitulo">Las últimas acciones del partido</p></div><span id="relato-estado" class="relato-estado" role="status">Conectando…</span></header><div id="relato-lista" class="relato-lista" tabindex="0" aria-label="Historial de jugadas" aria-live="polite"><p class="vacio">Esperando la primera jugada.</p></div></section><div id="comentarios"></div><details class="partido-detalles"><summary>Pronóstico y recorrido de jugadas</summary><div class="columnas"><div id="pronostico"></div><div id="jugadas"></div></div></details></div>`;
+    <div class="partido-en-vivo"><div id="estadisticas"></div><div id="audiencia"></div><section class="bloque relato" aria-labelledby="relato-titulo"><header><div><h2 id="relato-titulo">Minuto a minuto</h2><p class="relato-subtitulo">Las últimas acciones del partido</p></div><span id="relato-estado" class="relato-estado" role="status">Conectando…</span></header><div id="relato-lista" class="relato-lista" tabindex="0" aria-label="Historial de jugadas" aria-live="polite"><p class="vacio">Esperando la primera jugada.</p></div></section><div id="comentarios"></div><details class="partido-detalles"><summary>Pronóstico y recorrido de jugadas</summary><div class="columnas"><div id="pronostico"></div><div id="jugadas"></div></div></details></div>`;
 
-  iniciarComentarios(id, partido.estado);
+  const audiencia = iniciarAudiencia(id, partido.estado);
+  let ultimoMinuto = 0;
+  iniciarComentarios(id, partido.estado, {
+    estado(e) {
+      ultimoMinuto = e.minuto ?? ultimoMinuto;
+      pintarEstado(e);
+      if (e.estado === "Finalizado") { cerrarVivo(); const t = document.getElementById("comentarios-estado"); if (t) t.textContent = "Partido terminado"; audiencia.terminado(); setTimeout(actualizarVivo, 4000); }
+    },
+    audiencia(a) { audiencia.audiencia(a); audiencia.minuto(ultimoMinuto, a.total); },
+  });
   const estadisticas = document.getElementById("estadisticas");
   estadisticas.innerHTML = bloque("Estadísticas", "influxdb", "<p>Consultando estadísticas…</p>");
   async function actualizarEstadisticas() {
@@ -361,15 +439,21 @@ async function vistaPartido(id) {
   iniciarRelato(id, partido);
   const marcadorVivo = document.getElementById("marcador-vivo");
   let jugadasArchivadas = false;
+  function pintarEstado(d) {
+    if (!marcadorVivo.isConnected) return;
+    marcadorVivo.textContent = `${d.marcador?.local ?? "—"} - ${d.marcador?.visitante ?? "—"}`;
+    const estado = document.getElementById("estado-vivo"); if (estado) estado.textContent = `${d.estado} · ${d.minuto ?? 0}′`;
+    const boton = document.getElementById("comentario-enviar"); if (boton) { boton.dataset.cerrado = d.estado === "En juego" ? "no" : "si"; boton.disabled = boton.dataset.cerrado === "si" || boton.dataset.enviando === "si"; }
+  }
   async function actualizarVivo() {
-    try { const d=await api(`/en-vivo/partidos/${encodeURIComponent(id)}`); if (!marcadorVivo.isConnected) return;
-      marcadorVivo.textContent = `${d.marcador?.local ?? "—"} - ${d.marcador?.visitante ?? "—"}`;
-      const estado=document.getElementById("estado-vivo"); if (estado) estado.textContent = `${d.estado} · ${d.minuto ?? 0}′`;
+    try { const d = await api(`/en-vivo/partidos/${encodeURIComponent(id)}`); if (!marcadorVivo.isConnected) return;
+      pintarEstado(d);
       if (d.archivo_estado === "completo" && !jugadasArchivadas) { jugadasArchivadas = true; dibujarJugadas(partido); }
-      const boton=document.getElementById("comentario-enviar"); if (boton) { boton.dataset.cerrado = d.estado === "En juego" ? "no" : "si"; boton.disabled = boton.dataset.cerrado === "si" || boton.dataset.enviando === "si"; }
+      else if (d.estado === "Finalizado" && !jugadasArchivadas) setTimeout(actualizarVivo, 4000);
     } catch (e) { if (e.estado !== 404 && marcadorVivo.isConnected) avisar(e.message, true); }
   }
-  actualizarVivo(); comentariosTimers.push(setInterval(actualizarVivo, 3000));
+  // Con sesión, el estado llega por la conexión en vivo; esta consulta solo trae el punto de partida.
+  actualizarVivo(); if (!sesion.usuario) comentariosTimers.push(setInterval(actualizarVivo, 3000));
   dibujarPronostico(partido);
   dibujarJugadas(partido);
 }
@@ -661,7 +745,7 @@ async function operar(id) {
 const RUTAS = { ingreso: vistaIngreso, fixture: vistaFixture, "en-vivo": vistaEnVivo, ranking: vistaRanking, prodes: vistaProdes, admin: vistaAdmin };
 
 function navegar() {
-  comentariosTimers.forEach(clearInterval); comentariosTimers = [];
+  comentariosTimers.forEach(clearInterval); comentariosTimers = []; cerrarVivo();
   clearInterval(sondeo);
   const [, seccion = "", parametro] = location.hash.split("/");
   document.querySelectorAll("#menu a").forEach((a) => {
