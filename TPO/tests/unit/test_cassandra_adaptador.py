@@ -60,3 +60,27 @@ def test_cambio_de_region_real_traduce_y_reintenta(monkeypatch):
     monkeypatch.setattr(adaptador, "_preparada", lambda sesion, nombre: nombre)
     assert adaptador.guardar_comentario("europa", _comentario()) == "america"
     assert usadas == ["europa", "america"]
+
+
+def test_region_caida_desde_antes_de_conectarse_tambien_cambia_de_region(monkeypatch):
+    """Si la región ya estaba caída la primera vez que el proceso la usa, falla al conectar (por ejemplo, Docker
+    no resuelve el nombre: UnresolvableContactPoints) y también tiene que atender la otra (revisión final, hallazgo 5)."""
+    from app.adapters.cassandra import CassandraAdapter
+    from app.config.settings import Settings
+
+    class UnresolvableContactPoints(Exception):
+        pass
+
+    class Sesion:
+        def execute(self, consulta, parametros):
+            return []
+
+    def conectar(region):
+        if region == "europa":
+            raise UnresolvableContactPoints("cassandra_europa")
+        return Sesion()
+
+    adaptador = CassandraAdapter(Settings(_env_file=None))
+    monkeypatch.setattr(adaptador, "_conectar", conectar)
+    monkeypatch.setattr(adaptador, "_preparada", lambda sesion, nombre: nombre)
+    assert adaptador.guardar_comentario("europa", _comentario()) == "america"

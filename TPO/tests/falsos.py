@@ -500,10 +500,17 @@ class _PubSubFalso:
         self._cola = asyncio.Queue()
 
     async def subscribe(self, *canales):
-        self._redis._verificar()
+        import asyncio
+
+        if self._redis.caida:  # como el driver real: su propia excepción, no la de la API
+            raise ConnectionError("redis caído")
+        await asyncio.sleep(0)
         self.canales.update(canales)
 
     async def unsubscribe(self, *canales):
+        import asyncio
+
+        await asyncio.sleep(self._redis.demora_desuscribir)  # viaje de red: deja intercalar a otro espectador
         self.canales.difference_update(canales)
 
     async def get_message(self, ignore_subscribe_messages=True, timeout=1.0):
@@ -528,6 +535,7 @@ class RedisAsincronoFalso(_Base):
         self.zsets: dict[str, dict[str, float]] = {}
         self.conjuntos: dict[str, set] = {}
         self.suscripciones: list[_PubSubFalso] = []
+        self.demora_desuscribir = 0.0
 
     async def suscriptor(self):
         pubsub = _PubSubFalso(self)
@@ -544,8 +552,23 @@ class RedisAsincronoFalso(_Base):
         self.zsets.setdefault(clave, {})[miembro] = puntaje
 
     async def aquitar(self, clave, miembro):
+        import asyncio
+
+        await asyncio.sleep(0)  # viaje de red: un punto donde llega una cancelación
         self._verificar()
         self.zsets.get(clave, {}).pop(miembro, None)
+
+    async def asuscribir(self, pubsub, *canales):
+        try:
+            await pubsub.subscribe(*canales)
+        except ConnectionError as exc:
+            raise DependenciaNoDisponible(self.fuente) from exc
+
+    async def adesuscribir(self, pubsub, *canales):
+        await pubsub.unsubscribe(*canales)
+
+    async def aleer(self, pubsub, timeout):
+        return await pubsub.get_message(ignore_subscribe_messages=True, timeout=timeout)
 
     async def aagregar(self, clave_conjunto, miembro, clave_unicos, usuario):
         self._verificar()

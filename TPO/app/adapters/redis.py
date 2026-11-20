@@ -138,6 +138,21 @@ class RedisAdapter:
         """Una suscripción nueva. La conexión en vivo usa una sola por proceso."""
         return self.acli.pubsub(ignore_subscribe_messages=True)
 
+    async def asuscribir(self, pubsub, *canales: str) -> None:
+        with operacion(FUENTE, "suscribir", _traducir):
+            await pubsub.subscribe(*canales)
+
+    async def adesuscribir(self, pubsub, *canales: str) -> None:
+        with operacion(FUENTE, "desuscribir", _traducir):
+            await pubsub.unsubscribe(*canales)
+
+    async def aleer(self, pubsub, timeout: float):
+        """Próximo mensaje de la suscripción, o None si no llegó ninguno en `timeout` segundos."""
+        try:
+            return await pubsub.get_message(ignore_subscribe_messages=True, timeout=timeout)
+        except Exception as exc:  # sin `operacion`: se llama sin pausa y llenaría las métricas de esperas vacías
+            raise (_traducir(exc) or exc) from exc
+
     async def amarcar(self, clave: str, miembro: str, puntaje: float) -> None:
         with operacion(FUENTE, "marcar", _traducir):
             await self.acli.zadd(clave, {miembro: puntaje})

@@ -16,11 +16,13 @@ el primer interesado y se desuscribe con el último. Así un comentario que entr
 """
 import asyncio
 import hashlib
+
+import anyio
 import json
 import time
 
 from app import metricas
-from app.errors import ApiError, DependenciaNoDisponible
+from app.errors import ApiError
 from app.observability import logger
 
 TAMANO_COLA = 200  # por conexión; un espectador lento pierde lo más viejo, no frena a los demás
@@ -56,7 +58,7 @@ class Transmision:
                 self._colas.setdefault(canal, set()).add(cola)
             if nuevos:
                 try:
-                    await self._pubsub.subscribe(*nuevos)
+                    await self._redis.asuscribir(self._pubsub, *nuevos)
                 except Exception:
                     for canal in canales:
                         self._sacar(cola, canal)
@@ -75,17 +77,21 @@ class Transmision:
         return True
 
     async def _borrar(self, cola: asyncio.Queue, canales: list[str]) -> None:
-        vacios = [canal for canal in canales if self._sacar(cola, canal)]
-        if vacios and self._pubsub is not None:
-            try:
-                await self._pubsub.unsubscribe(*vacios)
-            except Exception:  # la suscripción se rehace con el próximo espectador
-                logger.warning("vivo desuscripcion_fallida canales=%s", len(vacios))
+        # Con el candado: si alguien entra a un canal mientras otro se desuscribe, su suscripción sale después
+        # de la desuscripción y no queda anulada por ella.
+        self._candado = self._candado or asyncio.Lock()
+        async with self._candado:
+            vacios = [canal for canal in canales if self._sacar(cola, canal)]
+            if vacios and self._pubsub is not None:
+                try:
+                    await self._redis.adesuscribir(self._pubsub, *vacios)
+                except Exception:  # la suscripción se rehace con el próximo espectador
+                    logger.warning("vivo desuscripcion_fallida canales=%s", len(vacios))
 
     async def _leer(self) -> None:
         while self._colas:
             try:
-                mensaje = await self._pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                mensaje = await self._redis.aleer(self._pubsub, 1.0)
             except asyncio.CancelledError:
                 raise
             except Exception:
@@ -145,16 +151,19 @@ class Transmision:
                 elif reloj() - ultimo_envio >= self._latido:
                     yield ": latido\n\n"
                     ultimo_envio = reloj()
-        except DependenciaNoDisponible as exc:
+        except ApiError as exc:
             yield _evento("error", {"codigo": exc.codigo, "mensaje": exc.mensaje})
         finally:
             self.conexiones -= 1
             metricas.VIVO_CONEXIONES.dec()
-            await self._borrar(cola, canales)
-            try:
-                await self._redis.aquitar(clave, miembro)
-            except Exception:  # si Redis no está, la marca vence sola en `presencia_vencimiento_segundos`
-                pass
+            # Starlette corta el flujo con un ámbito de cancelación de anyio, que vuelve a cancelar cada espera:
+            # sin protegerla, la limpieza no llegaría a Redis y el espectador seguiría contando 15 s más.
+            with anyio.CancelScope(shield=True):
+                await self._borrar(cola, canales)
+                try:
+                    await self._redis.aquitar(clave, miembro)
+                except Exception:  # si Redis no está, la marca vence sola en `presencia_vencimiento_segundos`
+                    pass
 
     def _traducir(self, dato, pais: str):
         try:

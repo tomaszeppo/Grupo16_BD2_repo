@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -192,3 +193,33 @@ def test_audiencia_incompleta_queda_marcada(monkeypatch, sin_redis):
     simulaciones._ejecutar("P-03", mongo, admin, SimpleNamespace(cerrar=Mock(), ejecutar=Mock()))
     marcas = [c.args[1]["$set"] for c in col.update_one.call_args_list if "audiencia_incompleta" in c.args[1].get("$set", {})]
     assert marcas and col.update_one.call_args_list[-1].args[1]["$set"]["estado_simulacion"] == "completa"
+
+
+def test_redis_caido_a_mitad_del_partido_no_corta_la_simulacion(monkeypatch):
+    """Con los servicios reales (no reemplazados): el comentario automático se guarda en Cassandra aunque
+    Redis no pueda repartirlo, la audiencia queda marcada incompleta y el partido termina (revisión final, hallazgo 1)."""
+    from app.config.settings import Settings
+    from app.services.audiencia import Audiencia
+    from app.services.comentarios import ComentariosService
+    from tests.falsos import CassandraFalso, RedisFalso
+
+    redis, cassandra = RedisFalso(), CassandraFalso()
+    redis.caida = True
+    servicio = ComentariosService(cassandra, redis, None, None, lambda: datetime.now(timezone.utc), 5.0)
+    influx = SimpleNamespace(guardar_jugadores=lambda *a: None, guardar_audiencia=lambda *a: None,
+                             guardar_resumen_audiencia=lambda *a: None)
+    monkeypatch.setattr(simulaciones, "_audiencia", lambda: Audiencia(redis, influx, Settings(_env_file=None)))
+    monkeypatch.setattr(simulaciones, "_comentarios", lambda: servicio)
+    monkeypatch.setattr(simulaciones, "_influx", lambda: influx)
+    monkeypatch.setattr(simulaciones, "archivar_estadisticas", lambda *args: None)
+    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas": []})
+    monkeypatch.setattr(simulaciones.time, "sleep", lambda _: None)
+    col = Mock()
+    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=PlantelFalso()))
+    partido = {"id": "P-03", "fase": "Fase de grupos", "local": {"codigo": "ARG"}, "visitante": {"codigo": "BRA"}}
+    admin = SimpleNamespace(_partido=lambda _: partido, poner_en_juego=lambda _: partido)
+    simulaciones._ejecutar("P-03", mongo, admin, SimpleNamespace(cerrar=Mock(), ejecutar=Mock()))
+    cambios = [c.args[1]["$set"] for c in col.update_one.call_args_list]
+    assert cambios[-1]["estado_simulacion"] == "completa"
+    assert any(c.get("audiencia_incompleta") for c in cambios)
+    assert len(cassandra.filas) == 4 * 90  # los comentarios automáticos se guardaron igual

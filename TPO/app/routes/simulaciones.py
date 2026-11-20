@@ -122,7 +122,12 @@ def _ejecutar(partido_id, mongo, admin, puntuacion, neo=None, tipo="demo"):
             col.update_one({"_id":partido_id}, {"$set":{"minuto":minuto, "marcador":{"local":local,"visitante":visitante}}})
             guardar_estadisticas(minuto)
             if minuto < 90:
-                for pais in _paises(audiencia, partido_id): escribir(partido_id, pais, minuto, any(j["tipo"] == "Gol" and j["minuto"] == minuto for j in jugadas))
+                for pais in _paises(audiencia, partido_id):
+                    try:
+                        escribir(partido_id, pais, minuto, any(j["tipo"] == "Gol" and j["minuto"] == minuto for j in jugadas))
+                    except Exception:  # con el partido en juego, un comentario que no se pudo guardar no lo corta
+                        logger.warning("comentario_simulado_fallido partido=%s minuto=%s pais=%s", partido_id, minuto, pais)
+                        col.update_one({"_id": partido_id}, {"$set": {"comentarios_incompletos": True}})
             cerrar_minuto(minuto, {"local": local, "visitante": visitante})
         clasificado = partido["local"]["codigo"] if partido["fase"] != "Fase de grupos" and local == visitante else None
         puntuacion.cerrar(partido_id, local, visitante, clasificado)

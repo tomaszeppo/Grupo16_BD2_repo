@@ -12,7 +12,12 @@ from app.errors import ApiError, DependenciaNoDisponible, DependenciaTimeout
 
 FUENTE = "cassandra"
 # Por nombre: el módulo del driver que las define (cassandra.cluster) no carga en Windows sin libev.
-_SIN_REGION = {"NoHostAvailable", "Unavailable", "ConnectionException", "ConnectionShutdown"}
+_SIN_REGION = {"NoHostAvailable", "Unavailable", "ConnectionException", "ConnectionShutdown",
+               "UnresolvableContactPoints", "RegionSinConexion"}
+
+
+class RegionSinConexion(Exception):
+    """No se pudo conectar a la región (caída antes del primer uso, nombre que no resuelve, etc.)."""
 _DEMORA = {"OperationTimedOut", "ReadTimeout", "WriteTimeout"}
 
 _CONSULTAS = {
@@ -47,19 +52,26 @@ class CassandraAdapter:
 
     def _sesion(self, region: str):
         if region not in self._sesiones:
-            from cassandra import ConsistencyLevel
-            from cassandra.cluster import EXEC_PROFILE_DEFAULT, Cluster, ExecutionProfile
-            from cassandra.policies import DCAwareRoundRobinPolicy, TokenAwarePolicy
-
-            perfil = ExecutionProfile(
-                load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy(local_dc=region)),
-                consistency_level=ConsistencyLevel.LOCAL_ONE, request_timeout=self._s.timeout_segundos)
-            contacto = self._s.cassandra_america if region == "america" else self._s.cassandra_europa
-            cluster = Cluster([contacto], port=self._s.cassandra_puerto, protocol_version=4,
-                              connect_timeout=self._s.timeout_segundos,
-                              execution_profiles={EXEC_PROFILE_DEFAULT: perfil})
-            self._sesiones[region] = cluster.connect()
+            try:
+                self._sesiones[region] = self._conectar(region)
+            except Exception as exc:  # cualquier falla al conectar cuenta como región caída: atiende la otra
+                raise RegionSinConexion(region) from exc
         return self._sesiones[region]
+
+    def _conectar(self, region: str):
+        """Conexión a una región, al primer uso. Si falla, `_sesion` la informa como región caída."""
+        from cassandra import ConsistencyLevel
+        from cassandra.cluster import EXEC_PROFILE_DEFAULT, Cluster, ExecutionProfile
+        from cassandra.policies import DCAwareRoundRobinPolicy, TokenAwarePolicy
+
+        perfil = ExecutionProfile(
+            load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy(local_dc=region)),
+            consistency_level=ConsistencyLevel.LOCAL_ONE, request_timeout=self._s.timeout_segundos)
+        contacto = self._s.cassandra_america if region == "america" else self._s.cassandra_europa
+        cluster = Cluster([contacto], port=self._s.cassandra_puerto, protocol_version=4,
+                          connect_timeout=self._s.timeout_segundos,
+                          execution_profiles={EXEC_PROFILE_DEFAULT: perfil})
+        return cluster.connect()
 
     def _preparada(self, sesion, nombre: str):
         clave = (id(sesion), nombre)

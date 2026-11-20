@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, timezone
 from app import metricas
 from app.dominio.regiones import region_de
 from app.errors import Conflicto, DemasiadosPedidos, NoEncontrado
+from app.observability import logger
 
 PAISES_SIMULADOR = ("ARG", "BRA", "ESP", "URU")
 VENTANAS_HACIA_ATRAS = 6  # tres horas: alcanza para un partido con alargue y la previa
@@ -84,9 +85,14 @@ class ComentariosService:
         return comentario, False
 
     def publicar_automatico(self, partido_id: str, pais: str, nombre: str, contenido: str) -> dict:
-        """Comentario del simulador: sin modo lento ni control de estado (lo llama el propio partido en juego)."""
+        """Comentario del simulador: sin modo lento ni control de estado (lo llama el propio partido en juego).
+
+        Si Redis no puede repartirlo, el comentario ya quedó guardado en Cassandra: se anota y el partido sigue."""
         comentario = self._guardar(partido_id, pais, nombre, contenido, "simulacion", uuid.uuid4())
-        self._repartir(comentario)
+        try:
+            self._repartir(comentario)
+        except Exception:
+            logger.warning("comentario_automatico_sin_repartir partido=%s pais=%s", partido_id, pais)
         return comentario
 
     def _guardar(self, partido_id, pais, nombre, contenido, origen, comentario_id) -> dict:

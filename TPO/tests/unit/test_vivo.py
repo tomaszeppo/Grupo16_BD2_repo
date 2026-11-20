@@ -148,3 +148,65 @@ def test_partido_inexistente_da_404(cliente):
 
     usuario = cliente.post("/usuarios", json={"nombre": "Ana", "pais": "ARG"}).json()["usuario"]["id"]
     assert cliente.get("/partidos/P-999/vivo", headers=entrar(cliente, usuario)).status_code == 404
+
+
+def test_al_cortarse_la_conexion_sale_de_la_audiencia_aunque_la_cancelen_varias_veces():
+    """Starlette corta el flujo con un ámbito de cancelación de anyio, que vuelve a cancelar en cada espera:
+    la limpieza tiene que llegar igual a Redis (revisión final, hallazgo 2)."""
+    import anyio
+
+    async def caso():
+        redis = RedisAsincronoFalso()
+        transmision = Transmision(redis, _ajustes())
+        async with anyio.create_task_group() as grupo:
+            grupo.start_soon(_escuchar, transmision, [])
+            await anyio.sleep(0.05)
+            assert redis.zsets["audiencia:P-03:ARG"]
+            grupo.cancel_scope.cancel()
+        assert redis.zsets["audiencia:P-03:ARG"] == {}
+        assert transmision.conexiones == 0
+
+    asyncio.run(caso())
+
+
+def test_quien_entra_mientras_otro_se_va_sigue_suscripto():
+    """Uno se va (su desuscripción tarda) y otro entra al mismo canal: el que entra no puede quedar sin
+    suscripción (revisión final, hallazgo 3)."""
+    async def caso():
+        redis = RedisAsincronoFalso()
+        redis.demora_desuscribir = 0.05
+        transmision = Transmision(redis, _ajustes())
+        primero = asyncio.create_task(_escuchar(transmision, []))
+        await asyncio.sleep(0.02)
+        primero.cancel()
+        await asyncio.sleep(0)  # el primero empezó a desuscribirse
+        salida = []
+        segundo = asyncio.create_task(_escuchar(transmision, salida, token="otro", usuario="U0000002"))
+        await asyncio.sleep(0.15)
+        redis.emitir("chat:P-03:ARG", _comentario(texto="llega"))
+        await asyncio.sleep(0.1)
+        segundo.cancel()
+        await asyncio.gather(primero, segundo, return_exceptions=True)
+        assert [c["contenido"] for c in _eventos(salida, "comentario")] == ["llega"]
+
+    asyncio.run(caso())
+
+
+def test_adaptador_traduce_los_errores_de_la_suscripcion():
+    """El driver real lanza sus propias excepciones; el adaptador las traduce (revisión final, hallazgo 4)."""
+    import redis as driver
+
+    from app.adapters.redis import RedisAdapter
+    from app.errors import DependenciaNoDisponible
+
+    class PubSubCaido:
+        async def subscribe(self, *canales):
+            raise driver.exceptions.ConnectionError("sin conexión")
+
+    async def caso():
+        try:
+            await RedisAdapter(Settings(_env_file=None)).asuscribir(PubSubCaido(), "chat:P-03:ARG")
+        except DependenciaNoDisponible:
+            return "traducido"
+
+    assert asyncio.run(caso()) == "traducido"
