@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     redis_replica_url: str = "redis://localhost:6381/0"
     sesion_ttl_segundos: int = 86400  # se renueva con cada uso
 
+    cassandra_america: str = "cassandra_america"  # nodo de contacto de cada datacenter
+    cassandra_europa: str = "cassandra_europa"
+    cassandra_puerto: int = 9042
+
     influx_url: str = "http://influxdb:8181"
     influx_db: str = "fixture2030_metrics"
     influx_token: str = ""

@@ -27,3 +27,10 @@ def test_dependencias_informa_redis_caido(cliente, redis):
     redis.caida = True
     cuerpo = cliente.get("/health/dependencias").json()
     assert cuerpo["redis"]["estado"] == "caida"
+
+
+def test_dependencias_informa_cada_region_de_cassandra(cliente, cassandra):
+    cassandra.caidas = {"europa"}
+    cuerpo = cliente.get("/health/dependencias").json()
+    assert cuerpo["cassandra_america"]["estado"] == "ok"
+    assert cuerpo["cassandra_europa"]["estado"] == "caida"

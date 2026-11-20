@@ -18,6 +18,26 @@ x-mongo: &mongo
   cpus: ${MONGO_CPUS:-1.0}
   networks: [tpo]
 
+x-cassandra-entorno: &cassandra_entorno
+  MAX_HEAP_SIZE: ${CASSANDRA_HEAP:-384M}
+  HEAP_NEWSIZE: 96M
+  CASSANDRA_CLUSTER_NAME: fixture2030
+  CASSANDRA_ENDPOINT_SNITCH: GossipingPropertyFileSnitch
+  CASSANDRA_RACK: rack1
+  CASSANDRA_SEEDS: cassandra_america
+
+x-cassandra: &cassandra
+  image: cassandra:4.1
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD-SHELL", "cqlsh -e 'SELECT now() FROM system.local' >/dev/null 2>&1"]
+    interval: 15s
+    timeout: 10s
+    retries: 40
+  mem_limit: ${CASSANDRA_MEMORIA:-900m}
+  cpus: ${CASSANDRA_CPUS:-0.75}
+  networks: [tpo]
+
 x-api-entorno: &api_entorno
   MONGO_URI: mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:?definir MONGO_PASSWORD en .env}@mongo1:27017,mongo2:27017,mongo3:27017/?replicaSet=rs0&authSource=admin
   MONGO_DB: prode2030
@@ -117,28 +137,38 @@ services:
     cpus: ${REDIS_CPUS:-0.5}
     networks: [tpo]
 
-  cassandra:
-    image: cassandra:4.1
-    cpus: ${CASSANDRA_CPUS:-0.75}
-    restart: unless-stopped
+  # Comentarios: un datacenter por región (ver docs/arquitectura_regiones.md). Cada nodo guarda una copia
+  # completa; cada usuario escribe y lee en el de su región sin esperar al otro.
+  cassandra_america:
+    <<: *cassandra
     environment:
-      MAX_HEAP_SIZE: 512M
-      HEAP_NEWSIZE: 128M
-    ports: ["127.0.0.1:${CASSANDRA_PUERTO:-9043}:9042"]
-    volumes: ["cassandra_datos:/var/lib/cassandra"]
-    healthcheck:
-      test: ["CMD-SHELL", "cqlsh -e 'SELECT now() FROM system.local' >/dev/null 2>&1"]
-      interval: 15s
-      timeout: 10s
-      retries: 30
-    networks: [tpo]
+      <<: *cassandra_entorno
+      CASSANDRA_DC: america
+    ports: ["127.0.0.1:${CASSANDRA_AMERICA_PUERTO:-9043}:9042"]
+    volumes: ["cassandra_america_datos:/var/lib/cassandra"]
+    networks:
+      tpo:
+        aliases: [cassandra]  # nombre anterior, para lo que todavía se conecta a "cassandra"
 
+  cassandra_europa:
+    <<: *cassandra
+    depends_on:
+      cassandra_america: {condition: service_healthy}
+    environment:
+      <<: *cassandra_entorno
+      CASSANDRA_DC: europa
+    ports: ["127.0.0.1:${CASSANDRA_EUROPA_PUERTO:-9044}:9042"]
+    volumes: ["cassandra_europa_datos:/var/lib/cassandra"]
+
+  # Esquema repetible: crea lo que falta y pasa el keyspace a la replicación por región si venía de antes.
   cassandra_inicio:
     image: cassandra:4.1
+    restart: "no"
     depends_on:
-      cassandra: {condition: service_healthy}
-    volumes: ["./cassandra/esquema.cql:/esquema.cql:ro"]
-    entrypoint: ["cqlsh", "cassandra", "-f", "/esquema.cql"]
+      cassandra_america: {condition: service_healthy}
+      cassandra_europa: {condition: service_healthy}
+    volumes: ["./cassandra:/esquema:ro"]
+    entrypoint: ["bash", "/esquema/iniciar.sh"]
     networks: [tpo]
 
   influxdb:
@@ -202,7 +232,8 @@ volumes:
   mongo2_datos:
   mongo3_datos:
   neo4j_datos:
-  cassandra_datos:
+  cassandra_america_datos:
+  cassandra_europa_datos:
   influx_datos:
 
 networks:

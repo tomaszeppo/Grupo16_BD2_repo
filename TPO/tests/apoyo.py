@@ -4,10 +4,11 @@ from app.main import create_app
 from app.services.calendario import Calendario
 
 
-def armar_app(settings, mongo, neo4j, reloj, redis=None):
-    from tests.falsos import RedisFalso
+def armar_app(settings, mongo, neo4j, reloj, redis=None, cassandra=None):
+    from tests.falsos import CassandraFalso, RedisFalso
 
     redis = redis if redis is not None else RedisFalso()
+    cassandra = cassandra if cassandra is not None else CassandraFalso()
     aplicacion = create_app(settings)
     calendario = Calendario(neo4j, settings.calendario_ttl_segundos, reloj)
     reemplazos = {
@@ -17,6 +18,7 @@ def armar_app(settings, mongo, neo4j, reloj, redis=None):
         deps.get_reloj: lambda: reloj,
         deps.get_calendario: lambda: calendario,
         deps.get_redis: lambda: redis,
+        deps.get_cassandra: lambda: cassandra,
     }
     aplicacion.dependency_overrides.update(reemplazos)
     aplicacion.state.calendario = calendario

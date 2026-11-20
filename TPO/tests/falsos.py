@@ -451,3 +451,41 @@ class RedisFalso(_Base):
     def publicar(self, canal, mensaje):
         self._verificar()
         self.publicados.append((canal, mensaje))
+
+
+class CassandraFalso(_Base):
+    """Comentarios en memoria, con regiones que se pueden dar por caídas y el mismo cambio de región."""
+
+    fuente = "cassandra"
+
+    def __init__(self):
+        super().__init__()
+        self.caidas: set[str] = set()
+        self.filas: dict = {}  # misma clave primaria = misma fila, como en Cassandra
+
+    def _region(self, region):
+        from app.dominio.regiones import otra
+
+        self._verificar()
+        if region not in self.caidas:
+            return region
+        if otra(region) not in self.caidas:
+            return otra(region)
+        raise DependenciaNoDisponible(self.fuente)
+
+    def guardar_comentario(self, region, c) -> str:
+        atendio = self._region(region)
+        self.filas[(c["partido_id"], c["pais"], c["ventana"], c["creado_en"], c["comentario_id"])] = dict(c)
+        return atendio
+
+    def comentarios(self, region, partido_id, pais, ventana, antes_de, limite):
+        atendio = self._region(region)
+        filas = [dict(f, comentario_id=str(f["comentario_id"])) for (p, pa, v, _, _), f in self.filas.items()
+                 if (p, pa, v) == (partido_id, pais, ventana) and f["creado_en"] < antes_de]
+        filas.sort(key=lambda f: f["creado_en"], reverse=True)
+        return filas[:limite], atendio
+
+    def ping_region(self, region):
+        self._verificar()
+        if region in self.caidas:
+            raise DependenciaNoDisponible(self.fuente)

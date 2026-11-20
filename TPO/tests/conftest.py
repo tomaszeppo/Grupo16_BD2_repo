@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from app.config.settings import Settings
 from seed import datos
 from tests.apoyo import armar_app
-from tests.falsos import MongoFalso, Neo4jFalso, RedisFalso
+from tests.falsos import CassandraFalso, MongoFalso, Neo4jFalso, RedisFalso
 
 INICIO = datetime(2030, 6, 13, 15, 0, tzinfo=timezone.utc)  # hora de P-03
 ADMIN = {"X-Admin-Clave": "clave-de-prueba"}
@@ -47,8 +47,13 @@ def redis():
 
 
 @pytest.fixture
-def app(settings, mongo, neo4j, reloj, redis):
-    return armar_app(settings, mongo, neo4j, reloj, redis)
+def cassandra():
+    return CassandraFalso()
+
+
+@pytest.fixture
+def app(settings, mongo, neo4j, reloj, redis, cassandra):
+    return armar_app(settings, mongo, neo4j, reloj, redis, cassandra)
 
 
 @pytest.fixture

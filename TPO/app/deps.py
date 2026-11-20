@@ -9,6 +9,7 @@ from functools import lru_cache
 from fastapi import Cookie, Depends, Header
 
 from app.adapters.mongo import MongoAdapter
+from app.adapters.cassandra import CassandraAdapter, salud_por_region
 from app.adapters.influx import InfluxAdapter
 from app.adapters.neo4j import Neo4jAdapter
 from app.adapters.redis import RedisAdapter
@@ -58,6 +59,11 @@ def _redis() -> RedisAdapter:
 
 
 @lru_cache
+def _cassandra() -> CassandraAdapter:
+    return CassandraAdapter(_settings())
+
+
+@lru_cache
 def _calendario() -> Calendario:
     return Calendario(_neo4j(), _settings().calendario_ttl_segundos, ahora)
 
@@ -85,6 +91,10 @@ async def get_neo4j() -> Neo4jAdapter:
 
 async def get_redis() -> RedisAdapter:
     return _redis()
+
+
+async def get_cassandra() -> CassandraAdapter:
+    return _cassandra()
 
 
 async def get_calendario() -> Calendario:
@@ -135,8 +145,9 @@ async def requiere_admin(x_admin_clave: str | None = Header(None, description="C
 
 # --- servicios ---
 async def get_health_service(mongo=Depends(get_mongo), neo4j=Depends(get_neo4j), redis=Depends(get_redis),
-                       calendario=Depends(get_calendario)) -> HealthService:
-    return HealthService({"mongodb": mongo, "neo4j": neo4j, "redis": redis}, calendario)
+                             cassandra=Depends(get_cassandra), calendario=Depends(get_calendario)) -> HealthService:
+    return HealthService({"mongodb": mongo, "neo4j": neo4j, "redis": redis, **salud_por_region(cassandra)},
+                         calendario)
 
 
 async def get_fixture_service(neo4j=Depends(get_neo4j), calendario=Depends(get_calendario)) -> FixtureService:

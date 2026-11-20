@@ -35,6 +35,10 @@ CALENDARIO_DESACTUALIZADO = Gauge("prode_calendario_desactualizado",
                                   "1 si la copia del calendario no se pudo renovar desde Neo4j (o no se cargó aún)",
                                   multiprocess_mode="livemax")
 
+CASSANDRA_CAMBIO_REGION = Counter("prode_cassandra_cambio_region_total",
+                                  "Operaciones de Cassandra atendidas por la otra región porque la propia no respondió",
+                                  ["desde", "hacia"])
+
 SIN_RUTA = "(sin ruta)"  # pedidos a direcciones que no existen: una sola etiqueta, no una por dirección
 
 
