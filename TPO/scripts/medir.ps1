@@ -10,6 +10,9 @@ Set-Location (Join-Path $PSScriptRoot "..")
 $env:COMMIT = (git rev-parse --short HEAD 2>$null)
 if (-not $env:COMMIT) { $env:COMMIT = "sin commit" }
 
+# Docker escribe su avance en la salida de error: en Windows PowerShell 5.1 eso no es una falla. Las fallas de
+# verdad se detectan por el código de salida.
+$ErrorActionPreference = "Continue"
 function Herramienta { docker compose run --rm herramientas @args; if ($LASTEXITCODE -ne 0) { throw "Falló: $args" } }
 function Esperar-Api {
     foreach ($i in 1..60) {
