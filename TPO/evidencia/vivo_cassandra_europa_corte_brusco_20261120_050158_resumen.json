@@ -1,0 +1,101 @@
+{
+  "escenario": "vivo",
+  "etiqueta": "cassandra_europa_corte_brusco",
+  "inicio": "2026-11-20T05:01:58.954651+00:00",
+  "commit": "4d0ed3d",
+  "parametros": {
+    "usuarios": 1000,
+    "concurrencia": 20,
+    "duracion": 95,
+    "partido": "P-10",
+    "pais": "ARG",
+    "finalizado": false,
+    "usuario_id": null,
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 500,
+    "comentan": 0.1
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "redis_enabled": "true",
+    "pronosticos_hasta_inicio_real": "true",
+    "nodos_de_mongodb": 3,
+    "generador": "proceso lanzado por el operador; su ubicación y límites dependen de cómo se ejecutó; 2 procesos con conexiones asincrónicas",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "influxdb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 5e-06,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "requiere datos existentes; carga.poblar puede haberlos preparado directamente en MongoDB",
+  "alcance": "todos los pedidos medidos pasan por la API; la preparación no se mide",
+  "notas": [
+    "Se mató sin aviso (docker compose kill) el contenedor cassandra_europa cerca del segundo 36 de la corrida y se lo volvió a levantar 30 segundos después."
+  ],
+  "medicion": {
+    "espectadores_pedidos": 500,
+    "conexiones": {
+      "abiertas": 633,
+      "fallidas": 0,
+      "reconexiones": 133
+    },
+    "comentarios": {
+      "enviados": 361,
+      "publicados": 199,
+      "modo_lento": 150,
+      "partido_terminado": 12,
+      "errores": 0
+    },
+    "entrega_ms": {
+      "medidas": 199,
+      "p50": 23.87,
+      "p95": 274.36,
+      "p99": 400.63,
+      "max": 409.87
+    },
+    "audiencia_reportada_max": 500,
+    "simulacion": {
+      "estado_simulacion": "completa",
+      "minuto": 90,
+      "audiencia_incompleta": null,
+      "estadisticas_incompletas": null,
+      "archivo_estado": "completo"
+    }
+  },
+  "fin": "2026-11-20T05:03:43.689283+00:00"
+}

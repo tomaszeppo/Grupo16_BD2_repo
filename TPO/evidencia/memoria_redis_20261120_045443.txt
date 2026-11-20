@@ -1,0 +1,13 @@
+Memoria de Redis después de la serie de medir.ps1 (commit 4d0ed3d).
+used_memory: 50141096 bytes (47.82M) | maxmemory: 192.00M | politica: noeviction
+claves por tipo, con los bytes que ocupan (MEMORY USAGE):
+  medicion: 1000 claves, 0.06 MB
+  paises: 3 claves, 0.00 MB
+  prode:ranking: 1 claves, 11.61 MB
+  prode:ranking:datos: 1 claves, 9.85 MB
+  prode:ranking:listo: 1 claves, 0.00 MB
+  prode:ranking:nombres: 1 claves, 6.65 MB
+  sesion: 102898 claves, 112 bytes cada una (promedio de 2000), 11.5 MB en total
+  unicos: 30 claves, 0.02 MB
+  visto: 9124 claves, 3.70 MB
+usuarios en el ranking: 100000

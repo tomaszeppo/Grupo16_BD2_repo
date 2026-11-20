@@ -4,8 +4,8 @@
     python -m seed.run --inicio 2030-06-13T15:00:00+00:00
     python -m seed.run --dias-hasta-inicio 3
     python -m seed.run --verificar          carga dos veces y falla si los totales cambian
-    python -m seed.run --reiniciar          BORRA los datos de laboratorio (MongoDB, Neo4j y lo que cuenta la
-                                            audiencia en Redis) y carga de nuevo
+    python -m seed.run --reiniciar          BORRA los datos de laboratorio (MongoDB, Neo4j, los comentarios de
+                                            Cassandra y lo que cuenta la audiencia en Redis) y carga de nuevo
 """
 import argparse
 import sys
@@ -33,6 +33,16 @@ def borrar_audiencia_de_redis(redis) -> int:
     for desde in range(0, len(claves), 1000):
         redis.delete(*claves[desde:desde + 1000])
     return len(claves)
+
+
+TABLAS_DE_COMENTARIOS = ("comentarios_por_partido_pais", "paises_por_partido")
+
+
+def borrar_comentarios_de_cassandra(ejecutar) -> None:
+    """Sin esto, volver a jugar un partido mostraría en su historial los comentarios de la vez anterior.
+    `ejecutar` recibe el texto CQL. TRUNCATE necesita que respondan las dos regiones."""
+    for tabla in TABLAS_DE_COMENTARIOS:
+        ejecutar(f"TRUNCATE fixture2030.{tabla}")
 
 
 def _inicio(args, driver, base: str) -> datetime:
@@ -71,6 +81,15 @@ def main() -> int:
             borradas = borrar_audiencia_de_redis(RedisAdapter(s).cli)
             print(f"Datos de laboratorio borrados (base {s.mongo_db} de MongoDB, grafo de Neo4j y {borradas} claves "
                   "de audiencia en Redis).")
+            try:
+                from app.adapters.cassandra import CassandraAdapter
+
+                sesion = CassandraAdapter(s)._sesion("america")
+                borrar_comentarios_de_cassandra(lambda cql: sesion.execute(cql, timeout=60))
+                print("Comentarios de Cassandra borrados.")
+            except Exception as exc:
+                print(f"AVISO: no se pudieron borrar los comentarios de Cassandra ({type(exc).__name__}). "
+                      "Hacen falta las dos regiones levantadas; los comentarios anteriores siguen ahí.", file=sys.stderr)
         inicio = _inicio(args, driver, s.neo4j_db)
         fixture = datos.generar(inicio, args.semilla)
         print(f"Primer partido sin jugar (P-03): {inicio.isoformat()}")

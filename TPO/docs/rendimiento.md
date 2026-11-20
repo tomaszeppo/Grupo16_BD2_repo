@@ -8,10 +8,13 @@ Este documento tiene tres partes que no hay que mezclar: lo que **medimos** en e
 - El generador de carga ([`carga/`](../carga/ejecutar.py)) simula usuarios que piden sin pausa durante 30 segundos. "50 a la vez" quiere decir 50 usuarios virtuales, cada uno mandando su siguiente pedido apenas recibe la respuesta del anterior. Cada usuario virtual usa la sesión de un usuario distinto, creada antes de medir.
 - Antes de medir cargamos 100.000 usuarios y sus pronósticos directo en MongoDB ([`carga/poblar.py`](../carga/poblar.py)), y una sesión por usuario directo en Redis ([`carga/sesiones.py`](../carga/sesiones.py)). Eso es preparación y no se mide.
 - La latencia se informa sobre los pedidos que salieron bien; los errores se cuentan aparte.
+- Se mide la configuración con la que levanta Compose: ranking y puntuación en Redis, y pronósticos admitidos hasta que el partido se pone en juego. Donde comparamos con otra (ranking por MongoDB, sin copia del calendario, más CPU), lo decimos. Cada resumen guarda en `entorno` con qué valores corrió.
 
 **Entorno.** Una notebook con Windows 11 y Docker Desktop (12 núcleos y 7,6 GB asignados a Docker). Límites por contenedor: API con 1 CPU, 512 MB y 2 procesos; cada uno de los tres nodos de MongoDB con 1 CPU y 512 MB; Neo4j con 1 CPU y 1 GB; cada nodo de Cassandra con 0,75 CPU y 900 MB; Redis con 0,5 CPU y 256 MB. El generador corre en la misma máquina.
 
-**Las corridas.** Todas las de este documento se hicieron el 20/11/2026 con [`scripts/medir.ps1`](../scripts/medir.ps1) y [`scripts/prueba_de_falla.ps1`](../scripts/prueba_de_falla.ps1), sobre el commit `9b8f940` (cada resumen lo dice en `"commit"`), sin otros contenedores pesados levantados. La sección 2.3 cuenta además dos mejoras con corridas del 17/11, que están en [`evidencia/anterior/`](../evidencia/anterior/).
+**Las corridas.** Todas las de este documento se hicieron el 20/11/2026 con [`scripts/medir.ps1`](../scripts/medir.ps1) y [`scripts/prueba_de_falla.ps1`](../scripts/prueba_de_falla.ps1), sobre el commit `4d0ed3d` (cada resumen lo dice en `"commit"`), sin otros contenedores pesados levantados. Después de ese commit cambiaron la documentación, el borrado de comentarios al reiniciar el laboratorio y cada cuánto se anota en Cassandra qué países comentan un partido (una escritura por país y por minuto); nada más de lo que se mide.
+
+En [`evidencia/anterior/`](../evidencia/anterior/) quedan dos series previas: la del 17/11, que la sección 2.3 usa para contar dos mejoras, y otra del mismo 20/11 sobre el commit `9b8f940`, anterior a que el ranking pasara a Redis. Cuando comparamos con ellas, lo decimos.
 
 **Dos advertencias sobre estos números:**
 
@@ -26,17 +29,15 @@ La primera versión del generador de carga estaba hecha con un solo proceso y se
 
 ### 2.1 Pico de pronósticos
 
-Usuarios distintos cargando y corrigiendo el pronóstico de un mismo partido (`PUT /partidos/{id}/pronostico`). Cada pedido valida la sesión en Redis y escribe en MongoDB con confirmación de la mayoría de los nodos.
+Usuarios distintos cargando y corrigiendo el pronóstico de un mismo partido (`PUT /partidos/{id}/pronostico`). Cada pedido valida la sesión en Redis, revisa el partido en la copia del calendario y escribe en MongoDB con confirmación de la mayoría de los nodos.
 
 | Usuarios a la vez | Pedidos por segundo | p50 | p95 | p99 | Errores | Archivo |
 |---|---|---|---|---|---|---|
-| 10 | 232,3 | 36,9 ms | 84,3 ms | 105,1 ms | 0 | `pico_pronosticos_c10_20261120_022443` |
-| 50 | 227,7 | 208,1 ms | 310,3 ms | 390,7 ms | 0 | `pico_pronosticos_c50_20261120_022517` |
-| 200 | 218,4 | 903,8 ms | 1.083,2 ms | 1.351,6 ms | 0 | `pico_pronosticos_c200_20261120_022550` |
+| 10 | 201,7 | 38,7 ms | 85,6 ms | 101,3 ms | 0 | `pico_pronosticos_c10_20261120_043501` |
+| 50 | 222,4 | 210,2 ms | 302,5 ms | 388,0 ms | 0 | `pico_pronosticos_c50_20261120_043534` |
+| 200 | 205,5 | 979,8 ms | 1.187,0 ms | 1.612,4 ms | 0 | `pico_pronosticos_c200_20261120_043607` |
 
-Con esta configuración la API atiende unos 220 a 230 pronósticos por segundo y no pasa de ahí: al sumar usuarios no entran más pedidos, solo esperan más. No hubo errores ni con 200 a la vez.
-
-El 17/11 la misma prueba dio entre 150 y 165 por segundo. Entre una corrida y otra cambiaron dos cosas: ahora la máquina estaba libre (aquella vez estaban levantados los contenedores de los Hitos 10 y 13) y el usuario se valida con la sesión en Redis en lugar de buscarlo en MongoDB. No medimos cuánto aporta cada una, así que no atribuimos la diferencia a ninguna.
+Con esta configuración la API atiende entre 200 y 220 pronósticos por segundo y no pasa de ahí: al sumar usuarios no entran más pedidos, solo esperan más. No hubo errores ni con 200 a la vez. La serie anterior del mismo día había dado entre 218 y 232; la diferencia está dentro de lo que varía una corrida de otra.
 
 ### 2.2 Dónde está el cuello de botella
 
@@ -44,13 +45,13 @@ Para saber si el límite era la API o la base medimos MongoDB solo, sin la API, 
 
 | Garantía de escritura | Escrituras por segundo | p50 |
 |---|---|---|
-| Un nodo, sin esperar al diario | 1.184,9 | 30,0 ms |
-| Un nodo, esperando al diario | 880,7 | 65,1 ms |
-| Mayoría de los nodos (la que usa la API) | 855,0 | 69,3 ms |
+| Un nodo, sin esperar al diario | 1.689,3 | 22,9 ms |
+| Un nodo, esperando al diario | 1.098,2 | 31,6 ms |
+| Mayoría de los nodos (la que usa la API) | 944,9 | 48,5 ms |
 
-Archivo: `diagnostico_mongo_20261120_023043`. `scripts/medir.ps1` ya no corre este diagnóstico en la serie; se repite aparte con `docker compose run --rm herramientas python -m carga.diagnostico_mongo --hilos 50 --segundos 10`.
+Archivo: `diagnostico_mongo_20261120_050452`. Este diagnóstico no está en la serie de `medir.ps1`: se corre aparte con `docker compose run --rm herramientas python -m carga.diagnostico_mongo --hilos 50 --segundos 10`, y por eso su resumen dice `"commit": "sin commit"` (se corrió sobre el mismo código que el resto).
 
-Dos conclusiones. La primera: MongoDB acepta unas 850 escrituras por segundo con la garantía que usamos y la API deja pasar unas 230, así que **el cuello de botella es la API**, no la base (la sección 2.4 lo confirma: dándole más CPU a la API, sube). La segunda: pedir confirmación de la mayoría cuesta alrededor de un cuarto de las escrituras frente a confirmar con un solo nodo sin esperar al diario (855,0 contra 1.184,9). Lo pagamos a propósito: un pronóstico confirmado no se pierde aunque se caiga el primario (ver 2.8).
+Dos conclusiones. La primera: MongoDB acepta unas 950 escrituras por segundo con la garantía que usamos y la API deja pasar unas 220, así que **el cuello de botella es la API**, no la base (la sección 2.4 lo confirma: dándole más CPU a la API, sube). La segunda: pedir confirmación de la mayoría cuesta. Esta vez fue algo más del 40 % frente a confirmar con un solo nodo sin esperar al diario (944,9 contra 1.689,3); en la serie anterior había sido cerca de un cuarto (855,0 contra 1.184,9). Lo pagamos a propósito: un pronóstico confirmado no se pierde aunque se caiga el primario (ver 2.8).
 
 ### 2.3 Dos mejoras, con su antes y su después
 
@@ -82,12 +83,12 @@ Esta parte se midió el 17/11, con los contenedores de los Hitos 10 y 13 levanta
 
 | Escenario | Usuarios a la vez | Pedidos por segundo | p95 | Errores | Archivo |
 |---|---|---|---|---|---|
-| Lecturas del fixture | 10 | 197,2 | 95,5 ms | 0 | `lecturas_fixture_c10_20261120_022623` |
-| Lecturas del fixture | 50 | 206,8 | 368,4 ms | 0 | `lecturas_fixture_c50_20261120_022655` |
-| Lecturas del fixture | 200 | 205,3 | 1.194,8 ms | 0 | `lecturas_fixture_c200_20261120_022728` |
-| Pronósticos y lecturas | 50 | 207,3 | 315,8 ms | 0 | `pico_mixto_20261120_022800` |
+| Lecturas del fixture | 10 | 196,0 | 95,6 ms | 0 | `lecturas_fixture_c10_20261120_043640` |
+| Lecturas del fixture | 50 | 193,3 | 397,6 ms | 0 | `lecturas_fixture_c50_20261120_043713` |
+| Lecturas del fixture | 200 | 192,1 | 1.383,1 ms | 0 | `lecturas_fixture_c200_20261120_043745` |
+| Pronósticos y lecturas | 50 | 210,9 | 314,2 ms | 0 | `pico_mixto_20261120_043818` |
 
-El listado del fixture, que antes de la mejora 1 tardaba 2.392 ms de mediana con 50 usuarios, hoy tarda 173,8 ms. En la corrida mixta, pronósticos (MongoDB) y lecturas (Neo4j) conviven sin errores, con medianas parecidas (230,6 ms los pronósticos, entre 123,5 y 257,0 ms las lecturas): comparten el límite de la API y no se frenan entre sí por las bases.
+El listado del fixture, que antes de la mejora 1 tardaba 2.392 ms de mediana con 50 usuarios, hoy tarda 183,6 ms. En la corrida mixta, pronósticos (MongoDB) y lecturas (Neo4j) conviven sin errores, con medianas parecidas (223,2 ms los pronósticos, entre 119,4 y 235,1 ms las lecturas): comparten el límite de la API y no se frenan entre sí por las bases.
 
 ### 2.4 Darle más recursos a la API
 
@@ -95,37 +96,57 @@ Como el límite era la API, le dimos 4 CPU y 4 procesos, sin tocar las bases:
 
 | Escenario | Usuarios a la vez | Pedidos por segundo | p95 | Errores | Archivo |
 |---|---|---|---|---|---|
-| Pronósticos | 50 | 655,2 | 125,1 ms | 0 | `pico_pronosticos_c50_api_4cpu_4procesos_20261120_023207` |
-| Pronósticos | 200 | 813,2 | 362,7 ms | 0 | `pico_pronosticos_c200_api_4cpu_4procesos_20261120_023312` |
-| Lecturas del fixture | 50 | 754,9 | 106,8 ms | 0 | `lecturas_fixture_c50_api_4cpu_4procesos_20261120_023240` |
-| Lecturas del fixture | 200 | 699,3 | 399,1 ms | 0 | `lecturas_fixture_c200_api_4cpu_4procesos_20261120_023346` |
+| Pronósticos | 50 | 671,1 | 118,5 ms | 0 | `pico_pronosticos_c50_api_4cpu_4procesos_20261120_044601` |
+| Pronósticos | 200 | 844,0 | 392,6 ms | 0 | `pico_pronosticos_c200_api_4cpu_4procesos_20261120_044707` |
+| Lecturas del fixture | 50 | 801,9 | 98,0 ms | 0 | `lecturas_fixture_c50_api_4cpu_4procesos_20261120_044634` |
+| Lecturas del fixture | 200 | 806,5 | 330,6 ms | 0 | `lecturas_fixture_c200_api_4cpu_4procesos_20261120_044740` |
 
-Los pronósticos pasaron de unos 230 a entre 655 y 813 por segundo, y las lecturas de unos 205 a entre 700 y 755. La API no guarda estado propio que tenga que compartir (las sesiones están en Redis; la copia del calendario la renueva cada proceso solo), así que crece sumando procesos. Con 4 procesos los pronósticos ya se acercan a lo que MongoDB mostró en la prueba directa: el siguiente límite sería la base.
+Los pronósticos pasaron de unos 220 a entre 671 y 844 por segundo, y las lecturas de unos 195 a unas 800. La API no guarda estado propio que tenga que compartir (las sesiones están en Redis; la copia del calendario la renueva cada proceso solo), así que crece sumando procesos. Con 4 procesos los pronósticos ya se acercan a lo que MongoDB mostró en la prueba directa: el siguiente límite sería la base.
 
 ### 2.5 Cierre de un partido
 
-Al cerrar un partido la API responde enseguida (21 a 24 ms) y la puntuación corre aparte. Medimos cuánto tarda hasta quedar completa:
+Al cerrar un partido la API responde enseguida (entre 13 y 32 ms en las cuatro corridas) y la puntuación corre aparte. La medimos por los dos caminos que tiene el código, en la misma serie y con los mismos volúmenes.
 
-| Pronósticos del partido | Total | Puntuar | Sumar a los puntajes | Guardar el ranking | Archivo |
+**Puntuando en Redis** (lo que levanta Compose). El ranking queda actualizado al terminar el primer paso; después de una espera fija de 15 segundos, los puntos se vuelcan a MongoDB.
+
+| Pronósticos del partido | Ranking actualizado | Volcado a MongoDB | Guardar la foto | Total, con la espera | Archivo |
 |---|---|---|---|---|---|
-| 20.000 | 9,7 s | 2,4 s | 6,8 s | 0,05 s | `cierre_partido_20000_pronosticos_20261120_022833` |
-| 100.000 | 45,0 s | 12,2 s | 32,2 s | 0,01 s | `cierre_partido_100000_pronosticos_20261120_022846` |
+| 20.000 | 2,1 s | 17,1 s | 0,08 s | 34,8 s | `cierre_partido_20000_pronosticos_redis_20261120_044112` |
+| 100.000 | 10,4 s | 102,0 s | 0,05 s | 127,7 s | `cierre_partido_100000_pronosticos_redis_20261120_044150` |
 
-Con cinco veces más pronósticos tardó unas 4,6 veces más: el tiempo acompaña a la cantidad de pronósticos **de ese partido**, no al total acumulado del torneo. El 17/11 la relación había sido de tres veces; con una sola corrida por volumen no sabemos cuál es la representativa.
+**Puntuando dentro de MongoDB** (`REDIS_ENABLED=false`), para comparar:
 
-En las dos corridas repetimos el cierre con el mismo marcador y el ranking quedó igual. Después corrimos el control que recalcula todos los puntajes desde cero ([`scripts/recalcular_puntajes.py`](../scripts/recalcular_puntajes.py)): sobre 120.000 pronósticos puntuados de 100.000 usuarios, sin diferencias (`recalculo_puntajes_20261120_022935.txt`).
+| Pronósticos del partido | Puntuar | Sumar a los puntajes | Guardar la foto | Total | Archivo |
+|---|---|---|---|---|---|
+| 20.000 | 1,9 s | 6,5 s | 0,04 s | 8,7 s | `cierre_partido_20000_pronosticos_mongodb_20261120_043858` |
+| 100.000 | 8,8 s | 33,2 s | 0,01 s | 42,3 s | `cierre_partido_100000_pronosticos_mongodb_20261120_043910` |
+
+Lo que muestran las dos tablas:
+
+- **El ranking se ve antes con Redis.** Con 100.000 pronósticos, la tabla queda completa a los 10,4 segundos; por MongoDB recién a los 42,3, y mientras tanto unos usuarios tienen el partido sumado y otros no.
+- **El proceso entero tarda más con Redis**: 127,7 segundos contra 42,3. El volcado a MongoDB se hace desde la API, por lotes de 500 y con dos escrituras por pronóstico (el pronóstico con su puntaje y el acumulado del usuario), cada lote confirmado por la mayoría; el camino de MongoDB resuelve lo mismo con dos operaciones que corren dentro de la base. Es el costo de tener el ranking rápido: la copia durable llega después.
+- **El tiempo acompaña a los pronósticos de ese partido**, no al total del torneo: con cinco veces más pronósticos, el ranking en Redis tardó 4,9 veces más, el volcado 6 veces y el camino de MongoDB 4,9 veces.
+
+Como el volcado de un partido grande dura más que los 120 segundos tras los cuales una puntuación sin señales se da por abandonada, el proceso avisa que sigue vivo después de cada lote. Sin ese aviso, otro proceso de la API la habría retomado en paralelo.
+
+En las cuatro corridas repetimos el cierre con el mismo marcador y el ranking quedó igual. Al final corrimos el control que recalcula todos los puntajes desde cero ([`scripts/recalcular_puntajes.py`](../scripts/recalcular_puntajes.py)): sobre 240.000 pronósticos puntuados de 100.000 usuarios, sin diferencias (`recalculo_puntajes_20261120_0443.txt`). Ese control cubre también el paso de un camino al otro: los dos primeros partidos se puntuaron por MongoDB y los dos siguientes por Redis, que armó su ranking a partir de los puntajes que ya había.
 
 ### 2.6 Saber el puesto de un usuario en el ranking
 
-Con los puntajes reales de 100.000 usuarios:
+Con los puntajes reales de 100.000 usuarios, la misma prueba leyendo de cada base:
 
-| Consulta | Usuarios a la vez | p50 | p95 | Errores | Archivo |
-|---|---|---|---|---|---|
-| Primeros 100 (`GET /ranking`) | 10 | 7,7 ms | 90,0 ms | 0 | `posicion_ranking_c10_20261120_022937` |
-| Puesto de un usuario (`GET /ranking/usuarios/{id}`) | 10 | 310,7 ms | 696,6 ms | 0 | mismo archivo |
-| Puesto de un usuario | 50 | 1.896,5 ms | 5.787,0 ms | 70 de 591 (504) | `posicion_ranking_c50_20261120_023009` |
+| Consulta | Usuarios a la vez | Base | p50 | p95 | Errores | Archivo |
+|---|---|---|---|---|---|---|
+| Puesto de un usuario (`GET /ranking/usuarios/{id}`) | 10 | MongoDB | 290,6 ms | 585,3 ms | 0 | `posicion_ranking_c10_mongodb_20261120_043955` |
+| Puesto de un usuario | 10 | Redis | 15,7 ms | 81,0 ms | 0 | `posicion_ranking_c10_redis_20261120_044405` |
+| Puesto de un usuario | 50 | MongoDB | 1.798,0 ms | 5.499,7 ms | 65 de 655 (504) | `posicion_ranking_c50_mongodb_20261120_044028` |
+| Puesto de un usuario | 50 | Redis | 182,9 ms | 207,1 ms | 0 de 7.244 | `posicion_ranking_c50_redis_20261120_044437` |
+| Primeros 100 (`GET /ranking`) | 10 | MongoDB | 6,1 ms | 87,4 ms | 0 | `posicion_ranking_c10_mongodb_20261120_043955` |
+| Primeros 100 | 10 | Redis | 17,2 ms | 82,3 ms | 0 | `posicion_ranking_c10_redis_20261120_044405` |
 
-Los primeros 100 salen recorriendo un índice y cortando: 8 ms. El puesto de un usuario obliga a contar cuántos tienen mejor puntaje que él, y con 100.000 usuarios ya tarda 300 ms; con 50 pedidos a la vez empieza a fallar. Este es el dato con el que justificamos que el ranking en vivo vaya a Redis: en un conjunto ordenado el puesto se obtiene directo, sin contar. MongoDB queda como fuente de verdad y como respaldo.
+En MongoDB, el puesto de un usuario obliga a contar cuántos tienen mejor puntaje que él: con 100.000 usuarios tarda cerca de 300 ms y con 50 pedidos a la vez uno de cada diez se pasa del tiempo de espera. En el conjunto ordenado de Redis el puesto sale directo, sin contar: 16 ms de mediana, y con 50 a la vez ningún error. En total la API atendió 277,6 pedidos por segundo contra 43,2 con 10 usuarios, y 299,7 contra 26,7 con 50. **Este es el dato que justifica tener el ranking en Redis.**
+
+Los primeros 100 no mejoran: MongoDB los saca recorriendo un índice y cortando (6 ms de mediana), y Redis necesita tres consultas para armar la misma respuesta (17 ms). Los dos están muy por debajo de lo que importa.
 
 ### 2.7 Validar el pronóstico con y sin la copia del calendario
 
@@ -133,10 +154,12 @@ Para aceptar un pronóstico hay que saber si el partido existe, si tiene equipos
 
 | Forma | Pedidos por segundo | p95 | Archivo |
 |---|---|---|---|
-| Consultando Neo4j en cada pronóstico | 115,7 | 594,5 ms | `pico_pronosticos_sin_copia_del_calendario_20261120_023122` |
-| Con la copia en memoria (30 s) | 227,7 | 310,3 ms | `pico_pronosticos_c50_20261120_022517` |
+| Consultando Neo4j en cada pronóstico | 117,0 | 584,4 ms | `pico_pronosticos_sin_copia_del_calendario_20261120_044516` |
+| Con la copia en memoria (30 s) | 222,4 | 302,5 ms | `pico_pronosticos_c50_20261120_043534` |
 
 La copia casi duplica los pronósticos por segundo y, sobre todo, saca a Neo4j del camino: si se cae, se sigue pronosticando (2.8). El costo es que un cambio en un partido puede tardar hasta 30 segundos en verse en todos los procesos de la API; cómo lo cubrimos está en [decisiones.md](decisiones.md#la-copia-del-calendario).
+
+Durante un tiempo esta comparación dejó de valer sin que lo notáramos: al integrar el modo que admite pronósticos hasta el inicio real del partido, la validación había vuelto a consultar Neo4j en cada pedido, con la configuración por defecto. Lo encontró una revisión del código contra este documento, y una de nuestras propias pruebas ("con Neo4j caído se sigue pronosticando") fallaba si se la corría con esa configuración. Se corrigió antes de esta serie: el modo sigue existiendo y valida con la copia.
 
 ### 2.8 Fallas controladas durante la carga
 
@@ -144,13 +167,15 @@ Las tres pruebas corren pronósticos con 20 usuarios a la vez durante 90 segundo
 
 | Qué se cayó | Cómo | Pedidos | Errores | Archivo |
 |---|---|---|---|---|
-| Primario de MongoDB (`mongo1`) | Apagado con orden | 17.183 | 60 (503) | `caida_primario_20261120_024011` |
-| Primario de MongoDB (`mongo3`) | Corte brusco | 19.831 | 0 | `caida_primario_corte_brusco_20261120_024147` |
-| Neo4j | Corte brusco | 19.499 | 0 | `caida_neo4j_corte_brusco_20261120_024320` |
+| Primario de MongoDB (`mongo1`) | Apagado con orden | 19.147 | 0 | `caida_primario_20261120_045502` |
+| Primario de MongoDB (`mongo1`) | Corte brusco | 17.128 | 60 (503) | `caida_primario_corte_brusco_20261120_045721` |
+| Neo4j | Corte brusco | 18.363 | 0 | `caida_neo4j_corte_brusco_20261120_045940` |
 
-- **Primario apagado con orden.** Al apagarse no hubo ningún error: MongoDB traspasó el mando a otro nodo antes de salir y el cliente repitió solo las escrituras que estaban en vuelo. Los 60 errores llegaron después, entre los segundos 77 y 84, cuando el nodo ya había vuelto (se lo levantó cerca del segundo 64): en esos segundos todos los pedidos fallaron con 503. No investigamos la causa; es compatible con una nueva elección al reincorporarse el nodo, pero eso no lo verificamos. El 17/11 la misma prueba no había tenido errores en la vuelta (`anterior/caida_primario_de_mongodb_20261117_185620`).
-- **Primario cortado de golpe.** Esta vez, ningún error: los pedidos siguieron sin pausa durante el corte. El 17/11, con otro nodo como primario, el corte había dejado unos 10 segundos sin poder escribir y 60 pedidos rechazados sobre 14.522 (`anterior/caida_primario_de_mongodb_corte_brusco_20261117_185830`). Con una corrida de cada lado no podemos decir cuál es el comportamiento típico; lo que sí se mantuvo en las dos es que lo ya confirmado no se perdió, porque se había escrito en la mayoría.
-- **Neo4j cortado de golpe.** Los pronósticos siguieron con la copia del calendario: 0 errores y el mismo ritmo durante el corte. Hubo pedidos sueltos de hasta 8,7 segundos; por lo que vimos en la primera corrida (abajo), son los que intentan renovar la copia mientras Neo4j no responde.
+- **Primario apagado con orden.** Ningún error: MongoDB traspasó el mando a otro nodo antes de salir y el cliente repitió solo las escrituras que estaban en vuelo. Tampoco hubo errores cuando el nodo volvió.
+- **Primario cortado de golpe.** Entre los segundos 30 y 40 no entró ningún pronóstico: los 60 pedidos que se intentaron en ese tramo (20 en el segundo 30, 20 en el 33 y 20 en el 37) fallaron con 503 después de esperar. Son los 10 segundos que tardó el conjunto en elegir otro primario. Desde el segundo 41 los pedidos siguieron normalmente.
+- **Neo4j cortado de golpe.** Los pronósticos siguieron con la copia del calendario: 0 errores y el mismo ritmo durante el corte. Hubo pedidos sueltos de hasta 5,6 segundos; por lo que vimos en la primera corrida (abajo), son los que intentan renovar la copia mientras Neo4j no responde.
+
+Estas pruebas las corrimos tres veces en total (17/11, 20/11 sobre `9b8f940` y esta) y **las del primario no dieron siempre lo mismo**. El corte brusco dejó unos 10 segundos sin escribir y 60 pedidos rechazados en dos de las tres, y ningún error en la otra. El apagado con orden no dio errores en dos de las tres; en la otra aparecieron 60 errores unos segundos después de que el nodo volvió, y no investigamos la causa. Los archivos de las dos series previas están en [`evidencia/anterior/`](../evidencia/anterior/). Lo que se mantuvo en las tres es que lo ya confirmado no se perdió, porque se había escrito en la mayoría, y que la caída de Neo4j no dio errores en los pronósticos.
 
 **La primera vez esta última prueba salió mal**, y sirvió. Con Neo4j caído aparecieron errores en los pronósticos, que justamente no dependen de Neo4j. La causa: cuando un pedido intentaba renovar la copia del calendario, todos los demás se quedaban esperándolo. Lo corregimos (mientras uno renueva, el resto sigue con la copia; y si Neo4j ya se sabe caído, los reintentos van aparte), agregamos dos pruebas automáticas que reproducen el caso y repetimos la medición. Los archivos de aquella primera corrida no se conservaron, por eso no damos sus cifras.
 
@@ -160,36 +185,54 @@ El escenario `vivo` ([`carga/vivo.py`](../carga/vivo.py)) abre una conexión en 
 
 | Espectadores | Conexiones fallidas | Audiencia que contó la API | Comentarios publicados | Con error | Entrega p50 | Entrega p95 | Entrega p99 | Archivo |
 |---|---|---|---|---|---|---|---|---|
-| 500 | 0 | 500 | 95 | 0 | 19,6 ms | 87,6 ms | 136,2 ms | `vivo_500_espectadores_20261120_023425` |
-| 1.000 | 0 | 1.000 | 218 | 0 | 89,2 ms | 654,6 ms | 849,0 ms | `vivo_1000_espectadores_20261120_023606` |
-| 2.000 | 368 | 2.000 | 388 | 0 | 2.039,3 ms | 7.671,0 ms | 9.707,5 ms | `vivo_2000_espectadores_20261120_023751` |
+| 500 | 0 | 500 | 78 | 0 | 20,3 ms | 138,2 ms | 163,9 ms | `vivo_500_espectadores_20261120_044819` |
+| 1.000 | 0 | 1.000 | 182 | 0 | 63,9 ms | 595,1 ms | 701,9 ms | `vivo_1000_espectadores_20261120_045003` |
+| 2.000 | 0 | 2.000 | 315 | 0 | 239,5 ms | 2.165,8 ms | 2.462,8 ms | `vivo_2000_espectadores_20261120_045200` |
 
 Los comentarios frenados por el modo lento (un comentario cada 5 segundos por usuario) se cuentan aparte en cada resumen y no son errores. En las tres corridas la simulación terminó completa y la audiencia contada coincidió con los espectadores conectados.
 
 - **Hasta 1.000 espectadores** la entrega queda por debajo del segundo en el p99.
-- **Con 2.000** la API se satura: la entrega pasa de los 7 segundos en el p95 y 368 intentos de conexión fallan (los espectadores reintentan y terminan entrando: la audiencia llegó a 2.000). Mirando `docker stats` durante corridas de prueba previas a las de la tabla (no quedaron guardadas en un archivo): con 2.000 espectadores la API estaba al 100 % de su CPU, y con 1.000, Redis usaba menos del 1 % de la suya. No registramos Redis ni Cassandra con 2.000. Con lo que vimos, **el cuello de botella es la CPU de la API**, como en los pronósticos.
+- **Con 2.000** la entrega pasa de los 2 segundos en el p95. Esta vez entraron todas las conexiones al primer intento; en la serie anterior del mismo día, con 2.000 habían fallado 368 intentos (que entraron al reintentar) y el p95 había sido de 7,7 segundos. Con una corrida de cada lado no sabemos cuál es el comportamiento típico; en las dos, 2.000 espectadores quedan fuera de lo que una instancia atiende bien.
+- Mirando `docker stats` durante corridas de prueba anteriores (no quedaron guardadas en un archivo): con 2.000 espectadores la API estaba al 100 % de su CPU, y con 1.000, Redis usaba menos del 1 % de la suya. No registramos Redis ni Cassandra con 2.000. Con lo que vimos, **el cuello de botella es la CPU de la API**, como en los pronósticos.
 
-**Atraso de la réplica de Redis.** Es lo que tardaría la tabla del ranking en llegar a "la otra región". Sobre 1.000 escrituras en el primario, la réplica tuvo el dato con una mediana de 0,39 ms, p95 0,95 ms, p99 1,11 ms y un máximo de 45,5 ms; ninguna dejó de llegar (`replica_redis_20261120_023954`). Dos aclaraciones: el script busca el dato cada milisegundo, así que por debajo de 1 ms no distingue; y primario y réplica están en la misma máquina, sin la distancia real entre regiones.
+**Atraso de la réplica de Redis.** Es lo que tardaría la tabla del ranking en llegar a "la otra región". En el laboratorio ningún pedido lee de la réplica: la medición dice cuánto atraso habría si se leyera de ahí. Sobre 1.000 escrituras en el primario, la réplica tuvo el dato con una mediana de 0,34 ms, p95 0,97 ms, p99 1,16 ms y un máximo de 61,2 ms; ninguna dejó de llegar (`replica_redis_20261120_045426`). Dos aclaraciones: el script busca el dato cada milisegundo, así que por debajo de 1 ms no distingue; y primario y réplica están en la misma máquina, sin la distancia real entre regiones.
 
-**Se cae una región de Cassandra durante un partido.** Con 500 espectadores, se mató el nodo de Europa cerca del minuto 30 y se lo levantó 30 segundos después (`vivo_cassandra_europa_corte_brusco_20261120_024453`). La simulación terminó completa y la audiencia llegó a 500. De 340 comentarios enviados, 218 se publicaron, 111 los frenó el modo lento, 10 llegaron con el partido ya terminado y 1 no tuvo respuesta de la API (el cliente se cansó de esperar a los 10 segundos). La entrega fue de 23,1 ms de mediana y 208,9 ms en el p95. Al terminar, el script contó los comentarios del partido en cada región, leyendo solo su propia copia: **las dos regiones tienen exactamente los mismos comentarios**, país por país (`cassandra_europa_corte_brusco_20261119_234657_conteo_por_region.txt`; el nombre usa la hora local de la máquina). El conteo muestra dos ventanas de media hora por país porque ese partido ya tenía comentarios de una corrida anterior que se había cortado; en las dos ventanas las regiones coinciden.
+**Se cae una región de Cassandra durante un partido.** Con 500 espectadores, se mató el nodo de Europa cerca del minuto 30 y se lo levantó 30 segundos después (`vivo_cassandra_europa_corte_brusco_20261120_050158`). La simulación terminó completa y la audiencia llegó a 500. De 361 comentarios enviados, 199 se publicaron, 150 los frenó el modo lento, 12 llegaron con el partido ya terminado y ninguno quedó sin respuesta. La entrega fue de 23,9 ms de mediana y 274,4 ms en el p95. Al terminar, el script contó los comentarios del partido en cada región, leyendo solo su propia copia: **las dos regiones tienen exactamente los mismos comentarios**, 6.028 en cada una, país por país y ventana por ventana (`cassandra_europa_corte_brusco_20261120_020404_conteo_por_region.txt`; el nombre usa la hora local de la máquina). El conteo muestra tres ventanas de media hora por país porque ese partido tenía comentarios de las dos series anteriores: hasta esta entrega, reiniciar los datos del laboratorio no borraba los comentarios de Cassandra. Ahora sí los borra.
 
 **Redis caído durante un partido.** Lo probamos a mano, sin archivo de corrida: con Redis detenido 20 segundos a mitad de una simulación, el partido terminó completo y quedó marcado `audiencia_incompleta`, como está previsto. La prueba automática que cubre el caso es `test_redis_caido_a_mitad_del_partido_no_corta_la_simulacion`.
 
 #### Cuántas instancias de la API harían falta
 
-Con lo medido, una instancia de la API con 1 CPU y 2 procesos sostiene **1.000 espectadores** con la entrega por debajo del segundo, y no 2.000. Para los 3 millones de usuarios simultáneos del enunciado, si todos estuvieran mirando un partido a la vez:
+Con lo medido, una instancia de la API con 1 CPU y 2 procesos sostiene **1.000 espectadores** con la entrega por debajo del segundo, y no 2.000 (en las dos series). Para los 3 millones de usuarios simultáneos del enunciado, si todos estuvieran mirando un partido a la vez:
 
 3.000.000 espectadores ÷ 1.000 por instancia = **3.000 instancias de 1 CPU**.
 
-Es una cota, no una predicción, por tres razones. No medimos instancias con más CPU en este escenario (en pronósticos y lecturas, 4 CPU rindieron entre 2,9 y 3,7 veces lo de 1). En el laboratorio las bases y el generador le quitan procesador a la API. Y el código de la conexión en vivo no está optimizado: cada mensaje se convierte a texto una vez por espectador. Lo que sí muestra la cuenta es dónde está el costo: en atender conexiones abiertas, que crece sumando instancias porque la API no comparte estado entre ellas más allá de Redis.
+Es una cota, no una predicción, por tres razones. No medimos instancias con más CPU en este escenario (en pronósticos y lecturas, 4 CPU rindieron entre 3,0 y 4,2 veces lo de 1). En el laboratorio las bases y el generador le quitan procesador a la API. Y el código de la conexión en vivo no está optimizado: cada mensaje se convierte a texto una vez por espectador. Lo que sí muestra la cuenta es dónde está el costo: en atender conexiones abiertas, que crece sumando instancias porque la API no comparte estado entre ellas más allá de Redis.
+
+### 2.10 Memoria de Redis
+
+Al terminar la serie, con los 100.000 usuarios en el ranking y una sesión abierta por cada uno, le preguntamos a Redis cuánto ocupa cada cosa (`memoria_redis_20261120_045443.txt`):
+
+| Qué | Claves | Memoria |
+|---|---|---|
+| Sesiones | 102.898 | 11,5 MB (112 bytes cada una) |
+| Ranking: el conjunto ordenado | 1 (100.000 usuarios) | 11,6 MB |
+| Ranking: puntos, exactos y tiempo de cada usuario | 1 | 9,9 MB |
+| Ranking: nombres | 1 | 6,7 MB |
+| Marcas de comentarios repetidos (vencen a los 10 minutos) | 9.124 | 3,7 MB |
+| Total que informa Redis | | 47,8 MB de un tope de 192 MB |
+
+Por usuario, una sesión son 112 bytes y su lugar en el ranking unos 281 (los tres últimos renglones de ranking, entre 100.000). Las sesiones se midieron sobre una muestra de 2.000, porque son todas iguales.
 
 ## 3. Objetivos de diseño (no son mediciones)
 
 - Que el pico de pronósticos antes de un partido dependa de una sola base. Hoy cada pronóstico hace dos operaciones en MongoDB y una en Redis (la sesión), y ninguna en Neo4j.
 - Que cerrar un partido cueste según los pronósticos de ese partido y se pueda repetir sin duplicar puntos.
+- Que el ranking se vea actualizado antes de que termine la copia durable.
 - Que un pronóstico confirmado sobreviva a la caída de un nodo.
 - Que la caída de Neo4j no impida pronosticar.
 - Que la caída de una región no corte los comentarios.
+- Que una puntuación que quedó a medias se retome sola.
 - Que la API crezca sumando procesos, sin estado compartido entre ellos fuera de Redis.
 
 ## 4. Proyección al Mundial (no medido)
@@ -198,9 +241,9 @@ El enunciado habla de 3 millones de usuarios simultáneos. **Nada de esta secci�
 
 - **La API.** Es lo primero que se satura, tanto en los pronósticos como en el partido en vivo, y lo más fácil de escalar: más procesos detrás de un balanceador. La cuenta con lo medido está en 2.9.
 - **MongoDB.** Un conjunto de réplicas tiene un solo primario que recibe todas las escrituras; para repartirlas hay que fragmentar. Fragmentaríamos `pronosticos` y `puntajes` por usuario (clave *hashed*): cargar un pronóstico, ver mis pronósticos y leer mi puntaje irían a un solo fragmento. La puntuación de un partido, en cambio, tendría que recorrer todos, porque los pronósticos de un partido quedan repartidos; es un trabajo que corre una vez por partido y se puede hacer fragmento por fragmento.
-- **El ranking.** Con 100.000 usuarios ya se ve que MongoDB no sirve para decir el puesto de alguien en el momento. Con millones, menos. Por eso pasa a Redis.
+- **Redis.** Con los bytes por usuario de la sección 2.10, 3 millones de usuarios con sesión y puntaje ocuparían cerca de 1,2 GB (unos 0,34 GB de sesiones y 0,84 GB de ranking), sin contar el partido en vivo. El tope del laboratorio (192 MB) alcanza para menos de medio millón. Es una multiplicación, no una medición: no probamos Redis con ese volumen. En producción, además, sesiones y ranking irían en instancias separadas, como dice la arquitectura por regiones: hoy comparten una, y si se llena deja de aceptar escrituras para las dos cosas.
 - **Neo4j.** El fixture son 104 partidos y casi no cambia; con la copia en memoria, Neo4j recibe sobre todo las consultas de jugadas. Usamos la edición comunitaria, que no arma clúster: en producción haría falta la edición empresarial para tener réplicas de lectura, o aceptar que el detalle de jugadas tiene un único punto de falla.
-- **Cierre de partido.** Si se mantuviera la relación que medimos, puntuar 3 millones de pronósticos de un partido llevaría varios minutos. No sabemos si se mantiene. En cualquier caso el ranking ya está pensado para tolerarlo: mientras corre la suma, algunos usuarios ven el partido aplicado y otros todavía no.
+- **Cierre de partido.** Si se mantuviera la relación que medimos, con 3 millones de pronósticos en un partido el ranking de Redis tardaría unos 5 minutos en quedar actualizado y el volcado a MongoDB cerca de una hora. No sabemos si se mantiene, y ese volcado no es aceptable así: habría que repartirlo entre varios procesos o hacerlo con operaciones que corran dentro de MongoDB, como en el otro camino. El ranking tolera la espera, porque ya se ve actualizado desde Redis; lo que queda expuesto durante ese tiempo es la copia durable, que depende de que Redis no se pierda.
 
 ## 5. Cómo repetir todo
 
@@ -214,4 +257,4 @@ Desde la carpeta `TPO`, con el entorno levantado y sin otros contenedores pesado
 .\scripts\prueba_de_falla.ps1 europa -Brusco -Partido P-10
 ```
 
-`medir.ps1` borra los datos de laboratorio al empezar. Cada corrida deja su resumen en `evidencia/` con el commit en el que se hizo.
+`medir.ps1` borra los datos de laboratorio al empezar. Cada corrida deja su resumen en `evidencia/` con el commit en el que se hizo. La memoria de Redis de la sección 2.10 se tomó a mano al terminar la serie, con `MEMORY USAGE` sobre cada clave.

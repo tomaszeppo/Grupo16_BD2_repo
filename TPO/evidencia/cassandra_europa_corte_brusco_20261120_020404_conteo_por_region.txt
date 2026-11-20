@@ -1,0 +1,77 @@
+﻿Comentarios del partido P-10 contados en cada región, leyendo solo su copia (commit 4d0ed3d).
+
+== cassandra_america ==
+Consistency level set to LOCAL_ONE.
+
+ pais | count
+------+-------
+  ITA |   114
+  BRA |   146
+  GER |    96
+  POR |   556
+  ESP |   116
+  BRA |   108
+  URU |   118
+  ARG |   151
+  FRA |   526
+  ARG |   117
+  POR |   133
+  MEX |   545
+  FRA |    99
+  BRA |   106
+  URU |   116
+  GER |    97
+  URU |   154
+  ITA |   505
+  MAR |   103
+  MEX |   118
+  MAR |   103
+  POR |   132
+  ESP |   177
+  ARG |   117
+  FRA |    99
+  ESP |   117
+  GER |   497
+  MEX |   116
+  MAR |   531
+  ITA |   115
+
+(30 rows)
+
+== cassandra_europa ==
+Consistency level set to LOCAL_ONE.
+
+ pais | count
+------+-------
+  ITA |   114
+  BRA |   146
+  GER |    96
+  POR |   556
+  ESP |   116
+  BRA |   108
+  URU |   118
+  ARG |   151
+  FRA |   526
+  ARG |   117
+  POR |   133
+  MEX |   545
+  FRA |    99
+  BRA |   106
+  URU |   116
+  GER |    97
+  URU |   154
+  ITA |   505
+  MAR |   103
+  MEX |   118
+  MAR |   103
+  POR |   132
+  ESP |   177
+  ARG |   117
+  FRA |    99
+  ESP |   117
+  GER |   497
+  MEX |   116
+  MAR |   531
+  ITA |   115
+
+(30 rows)

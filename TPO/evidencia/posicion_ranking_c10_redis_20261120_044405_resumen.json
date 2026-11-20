@@ -1,0 +1,111 @@
+{
+  "escenario": "posicion_ranking",
+  "etiqueta": "c10_redis",
+  "inicio": "2026-11-20T04:44:05.161048+00:00",
+  "commit": "4d0ed3d",
+  "parametros": {
+    "usuarios": 100000,
+    "concurrencia": 10,
+    "duracion": 30.0,
+    "partido": "P-03",
+    "pais": "ARG",
+    "finalizado": false,
+    "usuario_id": null,
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 200,
+    "comentan": 0.05
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "redis_enabled": "true",
+    "pronosticos_hasta_inicio_real": "true",
+    "nodos_de_mongodb": 3,
+    "generador": "proceso lanzado por el operador; su ubicación y límites dependen de cómo se ejecutó; 2 procesos y 10 hilos",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "influxdb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 7e-06,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "requiere datos existentes; carga.poblar puede haberlos preparado directamente en MongoDB",
+  "alcance": "todos los pedidos medidos pasan por la API; la preparación no se mide",
+  "notas": [],
+  "duracion_real_segundos": 30.0,
+  "medicion": {
+    "total": 8327,
+    "por_segundo": 277.6,
+    "exitosos": 8327,
+    "errores": 0,
+    "porcentaje_de_error": 0.0,
+    "errores_por_estado": {},
+    "p50_ms": 16.0,
+    "p95_ms": 81.2,
+    "p99_ms": 85.5,
+    "max_ms": 192.6,
+    "max_ms_incluyendo_errores": 192.6,
+    "por_ruta": {
+      "GET /ranking": {
+        "total": 1690,
+        "por_segundo": 56.3,
+        "exitosos": 1690,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 17.2,
+        "p95_ms": 82.3,
+        "p99_ms": 86.1,
+        "max_ms": 112.0,
+        "max_ms_incluyendo_errores": 112.0
+      },
+      "GET /ranking/usuarios/{id}": {
+        "total": 6637,
+        "por_segundo": 221.2,
+        "exitosos": 6637,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 15.7,
+        "p95_ms": 81.0,
+        "p99_ms": 85.2,
+        "max_ms": 192.6,
+        "max_ms_incluyendo_errores": 192.6
+      }
+    }
+  },
+  "fin": "2026-11-20T04:44:36.337790+00:00"
+}

@@ -19,6 +19,7 @@ _SIN_REGION = {"NoHostAvailable", "Unavailable", "ConnectionException", "Connect
 class RegionSinConexion(Exception):
     """No se pudo conectar a la región (caída antes del primer uso, nombre que no resuelve, etc.)."""
 _DEMORA = {"OperationTimedOut", "ReadTimeout", "WriteTimeout"}
+SEGUNDOS_ENTRE_ANOTACIONES_DE_PAIS = 60
 
 _CONSULTAS = {
     "insertar": "INSERT INTO fixture2030.comentarios_por_partido_pais (partido_id, pais, ventana, creado_en, comentario_id, "
@@ -54,7 +55,7 @@ class CassandraAdapter:
         self._s = settings
         self._sesiones: dict = {}
         self._preparadas: dict = {}
-        self._paises_anotados: set[tuple[str, str]] = set()  # (partido, país) que este proceso ya escribió
+        self._paises_anotados: dict[tuple[str, str], float] = {}  # (partido, país) → cuándo lo escribió este proceso
 
     def _sesion(self, region: str):
         if region not in self._sesiones:
@@ -125,12 +126,17 @@ class CassandraAdapter:
                  "creado_en": f.creado_en, "origen": f.origen or "usuario", "pais": pais} for f in filas]
 
     def registrar_pais(self, region: str, partido_id: str, pais: str) -> None:
-        """Anota que ese país comentó el partido. Cada proceso lo escribe una sola vez por país y partido;
-        repetirlo desde otro proceso pisa la misma fila."""
-        if (partido_id, pais) in self._paises_anotados:
+        """Anota que ese país comentó el partido. Cada proceso lo escribe a lo sumo una vez por minuto por país
+        y partido, no una vez por comentario; repetirlo pisa la misma fila. Se repite cada minuto, y no una
+        sola vez, para que la fila vuelva a estar si alguien vació la tabla (al reiniciar el laboratorio)."""
+        import time
+
+        ahora = time.monotonic()
+        anotado = self._paises_anotados.get((partido_id, pais))
+        if anotado is not None and ahora - anotado < SEGUNDOS_ENTRE_ANOTACIONES_DE_PAIS:
             return
         self._ejecutar(region, "registrar_pais", (partido_id, pais))
-        self._paises_anotados.add((partido_id, pais))
+        self._paises_anotados[(partido_id, pais)] = ahora
 
     def paises_con_comentarios(self, partido_id: str) -> set[str]:
         filas, _ = self._ejecutar("america", "listar_paises", (partido_id,))

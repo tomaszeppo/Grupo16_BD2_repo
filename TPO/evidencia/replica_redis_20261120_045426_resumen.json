@@ -1,0 +1,15 @@
+{
+  "commit": "4d0ed3d",
+  "fecha": "2026-11-20T04:54:15",
+  "replica": {
+    "rol": "slave",
+    "enlace": "up"
+  },
+  "muestras": 1000,
+  "tope_ms": 2000,
+  "sin_llegar": 0,
+  "p50_ms": 0.342,
+  "p95_ms": 0.967,
+  "p99_ms": 1.159,
+  "max_ms": 61.249
+}

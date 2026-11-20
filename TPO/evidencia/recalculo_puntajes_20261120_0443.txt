@@ -1,0 +1,4 @@
+Control de la puntuación después de los cuatro cierres de la serie (commit 4d0ed3d). Salida de: python -m scripts.recalcular_puntajes
+Usuarios con puntaje guardado: 100000
+Pronósticos puntuados: 240000
+Sin diferencias: la suma partido a partido coincide con el recálculo completo.

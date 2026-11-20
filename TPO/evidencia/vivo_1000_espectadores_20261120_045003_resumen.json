@@ -1,0 +1,99 @@
+{
+  "escenario": "vivo",
+  "etiqueta": "1000_espectadores",
+  "inicio": "2026-11-20T04:50:03.384934+00:00",
+  "commit": "4d0ed3d",
+  "parametros": {
+    "usuarios": 1000,
+    "concurrencia": 20,
+    "duracion": 95,
+    "partido": "P-08",
+    "pais": "ARG",
+    "finalizado": false,
+    "usuario_id": null,
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 1000,
+    "comentan": 0.05
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "redis_enabled": "true",
+    "pronosticos_hasta_inicio_real": "true",
+    "nodos_de_mongodb": 3,
+    "generador": "proceso lanzado por el operador; su ubicación y límites dependen de cómo se ejecutó; 5 procesos con conexiones asincrónicas",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "influxdb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 9e-06,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "requiere datos existentes; carga.poblar puede haberlos preparado directamente en MongoDB",
+  "alcance": "todos los pedidos medidos pasan por la API; la preparación no se mide",
+  "notas": [],
+  "medicion": {
+    "espectadores_pedidos": 1000,
+    "conexiones": {
+      "abiertas": 1248,
+      "fallidas": 0,
+      "reconexiones": 248
+    },
+    "comentarios": {
+      "enviados": 263,
+      "publicados": 182,
+      "modo_lento": 68,
+      "partido_terminado": 13,
+      "errores": 0
+    },
+    "entrega_ms": {
+      "medidas": 182,
+      "p50": 63.85,
+      "p95": 595.13,
+      "p99": 701.88,
+      "max": 734.7
+    },
+    "audiencia_reportada_max": 1000,
+    "simulacion": {
+      "estado_simulacion": "completa",
+      "minuto": 90,
+      "audiencia_incompleta": null,
+      "estadisticas_incompletas": null,
+      "archivo_estado": "completo"
+    }
+  },
+  "fin": "2026-11-20T04:51:59.315389+00:00"
+}

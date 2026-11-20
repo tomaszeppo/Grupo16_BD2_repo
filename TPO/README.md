@@ -91,7 +91,7 @@ Para pronosticar, entrar en **Fixture**, elegir un partido programado y usar **T
 
 Cada bloque de la pantalla tiene una etiqueta con la base que respondió.
 
-Para empezar de cero entre un ensayo y otro (borra usuarios, pronósticos y resultados del laboratorio):
+Para empezar de cero entre un ensayo y otro (borra usuarios, pronósticos, resultados y comentarios del laboratorio; las series de InfluxDB se conservan):
 
 ```powershell
 docker compose run --rm herramientas python -m seed.run --reiniciar --dias-hasta-inicio 3

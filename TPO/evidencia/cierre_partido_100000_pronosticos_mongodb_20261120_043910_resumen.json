@@ -1,0 +1,93 @@
+{
+  "escenario": "cierre_partido",
+  "etiqueta": "100000_pronosticos_mongodb",
+  "inicio": "2026-11-20T04:39:10.205575+00:00",
+  "commit": "4d0ed3d",
+  "parametros": {
+    "usuarios": 1000,
+    "concurrencia": 20,
+    "duracion": 30,
+    "partido": "P-11",
+    "pais": "ARG",
+    "finalizado": false,
+    "usuario_id": null,
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 200,
+    "comentan": 0.05
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "30",
+    "redis_enabled": "false",
+    "pronosticos_hasta_inicio_real": "true",
+    "nodos_de_mongodb": 3,
+    "generador": "proceso lanzado por el operador; su ubicación y límites dependen de cómo se ejecutó",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "influxdb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": true,
+        "antiguedad_segundos": 13.126647,
+        "desactualizado": false
+      }
+    }
+  },
+  "preparacion": "requiere datos existentes; carga.poblar puede haberlos preparado directamente en MongoDB",
+  "alcance": "todos los pedidos medidos pasan por la API; la preparación no se mide",
+  "notas": [],
+  "medicion": {
+    "partido": "P-11",
+    "marcador": {
+      "goles_local": 2,
+      "goles_visitante": 1
+    },
+    "respuesta_del_cierre_ms": 12.6,
+    "hasta_puntuacion_completa_ms": 42322.2,
+    "puntuacion": {
+      "estado": "completa",
+      "pasos": {
+        "puntuar": 8798.0,
+        "sumar": 33208.7,
+        "foto": 12.2
+      },
+      "pronosticos": 100000,
+      "iniciada_en": "2026-11-20T04:39:10.398000Z",
+      "terminada_en": "2026-11-20T04:39:52.503000Z"
+    },
+    "repeticion_del_cierre": {
+      "estado_http": 202,
+      "ranking_sin_cambios": true
+    }
+  },
+  "fin": "2026-11-20T04:39:54.732163+00:00"
+}

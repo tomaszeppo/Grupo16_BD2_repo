@@ -1,0 +1,98 @@
+{
+  "escenario": "pico_pronosticos",
+  "etiqueta": "sin_copia_del_calendario",
+  "inicio": "2026-11-20T04:45:16.179879+00:00",
+  "commit": "4d0ed3d",
+  "parametros": {
+    "usuarios": 100000,
+    "concurrencia": 50,
+    "duracion": 30.0,
+    "partido": "P-03",
+    "pais": "ARG",
+    "finalizado": false,
+    "usuario_id": null,
+    "goles_local": 2,
+    "goles_visitante": 1,
+    "semilla": 2030,
+    "espectadores": 200,
+    "comentan": 0.05
+  },
+  "entorno": {
+    "api_procesos": "2",
+    "api_memoria": "512m",
+    "api_cpus": "1.0",
+    "mongo_memoria": "512m",
+    "mongo_cpus": "1.0",
+    "neo4j_memoria": "1g",
+    "neo4j_cpus": "1.0",
+    "calendario_ttl_segundos": "0",
+    "redis_enabled": "true",
+    "pronosticos_hasta_inicio_real": "true",
+    "nodos_de_mongodb": 3,
+    "generador": "proceso lanzado por el operador; su ubicación y límites dependen de cómo se ejecutó; 6 procesos y 50 hilos",
+    "dependencias": {
+      "mongodb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "neo4j": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "redis": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_america": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "cassandra_europa": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "influxdb": {
+        "estado": "ok",
+        "detalle": null
+      },
+      "calendario": {
+        "cargado": false,
+        "antiguedad_segundos": null,
+        "desactualizado": true
+      }
+    }
+  },
+  "preparacion": "requiere datos existentes; carga.poblar puede haberlos preparado directamente en MongoDB",
+  "alcance": "todos los pedidos medidos pasan por la API; la preparación no se mide",
+  "notas": [],
+  "duracion_real_segundos": 30.0,
+  "medicion": {
+    "total": 3511,
+    "por_segundo": 117.0,
+    "exitosos": 3511,
+    "errores": 0,
+    "porcentaje_de_error": 0.0,
+    "errores_por_estado": {},
+    "p50_ms": 412.6,
+    "p95_ms": 584.4,
+    "p99_ms": 666.8,
+    "max_ms": 711.1,
+    "max_ms_incluyendo_errores": 711.1,
+    "por_ruta": {
+      "PUT /partidos/{id}/pronostico": {
+        "total": 3511,
+        "por_segundo": 117.0,
+        "exitosos": 3511,
+        "errores": 0,
+        "porcentaje_de_error": 0.0,
+        "errores_por_estado": {},
+        "p50_ms": 412.6,
+        "p95_ms": 584.4,
+        "p99_ms": 666.8,
+        "max_ms": 711.1,
+        "max_ms_incluyendo_errores": 711.1
+      }
+    }
+  },
+  "fin": "2026-11-20T04:45:48.104558+00:00"
+}
