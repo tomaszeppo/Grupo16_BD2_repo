@@ -38,8 +38,8 @@ const claveDia = (iso) => { const d = new Date(iso); return `${d.getFullYear()}-
 const claseEstado = (e) => e === "En juego" ? "en-juego" : e === "Finalizado" ? "finalizado" : "programado";
 const nombreEquipo = (e) => e ? esc(e.nombre) : "Por definir";
 
-// Banderas en emoji a partir del código de cada selección. Windows no dibuja banderas en emoji: ahí queda solo
-// el código de tres letras, que es como se las identifica en el torneo.
+// Banderas: un SVG por selección en vendor/banderas (paquete flag-icons, licencia MIT), que se ve igual en todos
+// los sistemas. Los emoji quedan solo para la lista de países del ingreso, donde no entra una imagen.
 const ISO = {
   ARG: "AR", BRA: "BR", URU: "UY", COL: "CO", ECU: "EC", PAR: "PY", CHI: "CL", PER: "PE", BOL: "BO", VEN: "VE",
   ESP: "ES", POR: "PT", FRA: "FR", GER: "DE", ITA: "IT", NED: "NL", BEL: "BE", CRO: "HR", SUI: "CH", DEN: "DK",
@@ -57,8 +57,9 @@ function banderaEmoji(codigo) {
   const iso = ISO[codigo];
   return iso ? String.fromCodePoint(...[...iso].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)) : "";
 }
+const tieneBandera = (codigo) => Boolean(ISO[codigo] || SUBDIVISION[codigo]);
 const escudo = (e) => e?.codigo
-  ? `<span class="escudo" aria-hidden="true">${banderaEmoji(e.codigo) ? `<span class="escudo-bandera">${banderaEmoji(e.codigo)}</span>` : ""}<span class="escudo-codigo">${esc(e.codigo)}</span></span>`
+  ? `<span class="escudo" aria-hidden="true">${tieneBandera(e.codigo) ? `<img class="escudo-bandera" src="/demo/vendor/banderas/${esc(e.codigo)}.svg" alt="" width="24" height="18" loading="lazy" decoding="async">` : ""}<span class="escudo-codigo">${esc(e.codigo)}</span></span>`
   : `<span class="escudo escudo-vacio" aria-hidden="true"><span class="escudo-codigo">?</span></span>`;
 
 // Catálogo de selecciones (MongoDB): no cambia durante el torneo, así que se pide una sola vez.
