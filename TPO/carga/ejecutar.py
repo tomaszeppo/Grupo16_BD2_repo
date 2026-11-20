@@ -29,10 +29,11 @@ EVIDENCIA = Path(__file__).resolve().parent.parent / "evidencia"
 EVENTOS_DE_MUESTRA = ("EV-P-01-0002", "EV-P-01-0004", "EV-P-02-0003")
 
 
-def _pronostico(rng: random.Random, usuarios: int, partido: str) -> dict:
+def _pronostico(rng: random.Random, tokens: list[str], partido: str) -> dict:
+    """Pronóstico de un usuario al azar, con su sesión (el token i es del usuario i+1, ver carga/sesiones.py)."""
     return {"ruta": "PUT /partidos/{id}/pronostico", "metodo": "PUT", "url": f"/partidos/{partido}/pronostico",
             "json": {"goles_local": rng.randint(0, 4), "goles_visitante": rng.randint(0, 4)},
-            "headers": {"X-Usuario-Id": id_usuario(rng.randint(1, usuarios))}}
+            "headers": {"X-Sesion": rng.choice(tokens)}}
 
 
 def _lectura(rng: random.Random) -> dict:
@@ -55,15 +56,24 @@ def _ranking(rng: random.Random, usuarios: int) -> dict:
     return {"ruta": "GET /ranking", "metodo": "GET", "url": "/ranking?limit=100"}
 
 
+def _sesiones(usuarios: int) -> list[str]:
+    from app.adapters.redis import RedisAdapter
+    from app.config.settings import get_settings
+    from carga.sesiones import preparar
+
+    return preparar(RedisAdapter(get_settings()), usuarios)
+
+
 def _fabrica(args) -> tuple:
     """Devuelve (función que arma el próximo pedido, estados que no se consideran error)."""
     rngs = [random.Random(args.semilla * 1000 + n) for n in range(args.concurrencia)]
+    tokens = _sesiones(args.usuarios) if args.escenario in ("pico_pronosticos", "caida", "pico_mixto") else []
     if args.escenario in ("pico_pronosticos", "caida"):
-        return (lambda n: _pronostico(rngs[n], args.usuarios, args.partido)), {200, 201}
+        return (lambda n: _pronostico(rngs[n], tokens, args.partido)), {200, 201}
     if args.escenario == "lecturas_fixture":
         return (lambda n: _lectura(rngs[n])), {200}
     if args.escenario == "pico_mixto":
-        return (lambda n: _pronostico(rngs[n], args.usuarios, args.partido) if rngs[n].random() < 0.7
+        return (lambda n: _pronostico(rngs[n], tokens, args.partido) if rngs[n].random() < 0.7
                 else _lectura(rngs[n])), {200, 201}
     if args.escenario == "posicion_ranking":
         return (lambda n: _ranking(rngs[n], args.usuarios)), {200}

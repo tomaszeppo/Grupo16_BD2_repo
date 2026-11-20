@@ -7,6 +7,7 @@ from app.dominio.ids import id_pronostico, id_usuario
 from app.dominio.puntuacion import calcular
 from scripts.recalcular_puntajes import diferencias
 from tests.integration.conftest import ADMIN
+from tests.apoyo import entrar
 
 P03 = datetime(2030, 6, 13, 15, 0, tzinfo=timezone.utc)  # horario programado de P-03
 P04 = P03 + timedelta(hours=3)
@@ -203,18 +204,18 @@ def test_tabla_de_un_prode_privado(cliente, mongo):
     ids = [cliente.post("/usuarios", json={"nombre": n, "pais": "ARG"}).json()["usuario"]["id"]
            for n in ("Ana", "Beto", "Ciro", "Dora")]
     ana, beto, ciro, dora = ids
-    prode = cliente.post("/prodes", json={"nombre": "Oficina"}, headers={"X-Usuario-Id": ana}).json()["prode"]
+    prode = cliente.post("/prodes", json={"nombre": "Oficina"}, headers=entrar(cliente, ana)).json()["prode"]
     for u in (beto, ciro):
-        cliente.post("/prodes/unirse", json={"codigo": prode["codigo"]}, headers={"X-Usuario-Id": u})
+        cliente.post("/prodes/unirse", json={"codigo": prode["codigo"]}, headers=entrar(cliente, u))
     mongo.db.puntajes.insert_many([
         {"_id": ana, "puntos": 4, "exactos": 1, "tiempo_seg": 10, "aplicados": ["P-03"]},
         {"_id": beto, "puntos": 6, "exactos": 2, "tiempo_seg": 10, "aplicados": ["P-03"]},
         {"_id": dora, "puntos": 9, "exactos": 3, "tiempo_seg": 10, "aplicados": ["P-03"]},  # no está en el prode
     ])
-    tabla = cliente.get(f"/prodes/{prode['id']}/tabla", headers={"X-Usuario-Id": ciro}).json()
+    tabla = cliente.get(f"/prodes/{prode['id']}/tabla", headers=entrar(cliente, ciro)).json()
     assert [(f["puesto"], f["nombre"], f["puntos"]) for f in tabla["tabla"]] == [(1, "Beto", 6), (2, "Ana", 4), (3, "Ciro", 0)]
-    assert cliente.get(f"/prodes/{prode['id']}/tabla", headers={"X-Usuario-Id": dora}).status_code == 403
-    assert cliente.get("/prodes/PR-00000000/tabla", headers={"X-Usuario-Id": ana}).status_code == 404
+    assert cliente.get(f"/prodes/{prode['id']}/tabla", headers=entrar(cliente, dora)).status_code == 403
+    assert cliente.get("/prodes/PR-00000000/tabla", headers=entrar(cliente, ana)).status_code == 404
 
 
 # --- operación del partido en Neo4j ---
@@ -253,12 +254,12 @@ def test_jugadas_sin_duplicar_y_con_cadena(cliente, neo4j, cargado, reloj):
 def test_asignar_equipos_a_una_eliminatoria_la_vuelve_pronosticable(cliente, reloj):
     u = cliente.post("/usuarios", json={"nombre": "Ana", "pais": "ARG"}).json()["usuario"]["id"]
     cuerpo = {"goles_local": 1, "goles_visitante": 0}
-    assert cliente.put("/partidos/P-73/pronostico", json=cuerpo, headers={"X-Usuario-Id": u}).status_code == 409
+    assert cliente.put("/partidos/P-73/pronostico", json=cuerpo, headers=entrar(cliente, u)).status_code == 409
     asignado = cliente.post("/partidos/P-73/equipos", json={"local": "ARG", "visitante": "BRA"}, headers=ADMIN)
     assert asignado.status_code == 200 and asignado.json()["partido"]["visitante"]["codigo"] == "BRA"
     cliente.post("/partidos/P-73/equipos", json={"local": "URU", "visitante": "BRA"}, headers=ADMIN)  # corrección
     partido = cliente.get("/partidos/P-73").json()["partido"]
     assert (partido["local"]["codigo"], partido["visitante"]["codigo"]) == ("URU", "BRA")
-    assert cliente.put("/partidos/P-73/pronostico", json=cuerpo, headers={"X-Usuario-Id": u}).status_code == 201
+    assert cliente.put("/partidos/P-73/pronostico", json=cuerpo, headers=entrar(cliente, u)).status_code == 201
     assert cliente.post("/partidos/P-73/equipos", json={"local": "ARG", "visitante": "XXX"}, headers=ADMIN).status_code == 404
     assert cliente.post("/partidos/P-03/equipos", json={"local": "ARG", "visitante": "BRA"}, headers=ADMIN).status_code == 409

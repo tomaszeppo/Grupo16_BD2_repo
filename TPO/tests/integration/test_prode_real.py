@@ -2,16 +2,21 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from app.dominio.ids import id_usuario
+from tests.apoyo import entrar
+
+_SESIONES: dict[str, dict] = {}
 
 
 def crear_usuario(cliente, nombre="Ana", pais="ARG") -> str:
     resp = cliente.post("/usuarios", json={"nombre": nombre, "pais": pais})
     assert resp.status_code == 201, resp.text
-    return resp.json()["usuario"]["id"]
+    usuario = resp.json()["usuario"]["id"]
+    _SESIONES[usuario] = entrar(cliente, usuario)
+    return usuario
 
 
 def como(usuario_id):
-    return {"X-Usuario-Id": usuario_id}
+    return _SESIONES[usuario_id]
 
 
 def test_altas_simultaneas_reciben_ids_distintos(cliente, mongo):

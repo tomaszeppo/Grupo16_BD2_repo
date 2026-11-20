@@ -1,6 +1,7 @@
 import re
 
 from tests.conftest import ADMIN
+from tests.apoyo import entrar
 
 
 def valor(texto: str, nombre: str, **etiquetas) -> float:
@@ -54,7 +55,7 @@ def test_estado_del_calendario(cliente):
     cliente.get("/health/dependencias")
     crear = cliente.post("/usuarios", json={"nombre": "Ana", "pais": "ARG"}).json()["usuario"]["id"]
     cliente.put("/partidos/P-03/pronostico", json={"goles_local": 1, "goles_visitante": 0},
-                headers={"X-Usuario-Id": crear})
+                headers=entrar(cliente, crear))
     texto = metricas(cliente)
     assert valor(texto, "prode_calendario_desactualizado") == 0
     assert "prode_calendario_antiguedad_segundos" in texto

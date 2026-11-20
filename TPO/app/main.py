@@ -12,12 +12,13 @@ from app.observability import configurar_logging, crear_middleware
 
 DESCRIPCION = (
     "API del prode del Mundial 2030. Cada endpoint resuelve un caso de uso contra la base que gobierna ese dato: "
-    "MongoDB para el prode y Neo4j para el fixture y los partidos. No acepta consultas libres. "
+    "MongoDB para el prode, Neo4j para el fixture y los partidos y Redis para las sesiones. No acepta consultas libres. "
     "Todos los errores usan el formato {error:{codigo,mensaje,request_id}}."
 )
 
 TAGS = [
     {"name": "Neo4j · Fixture y partidos", "description": "Calendario, jugadas y recorridos del grafo."},
+    {"name": "Redis · Sesiones", "description": "Entrar y salir. Las demás rutas piden X-Sesion o la cookie de sesión."},
     {"name": "MongoDB · Prode", "description": "Usuarios, prodes, pronósticos y ranking."},
     {"name": "MongoDB · Equipos", "description": "Catálogo de equipos y planteles."},
     {"name": "Administración", "description": "Operación del partido para la demostración. Requiere X-Admin-Clave."},
@@ -42,8 +43,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     registrar_manejadores(app)
     instrumentar(app)
 
-    from app.routes import admin, fixture, health, prode, ranking, simulaciones
+    from app.routes import admin, fixture, health, prode, ranking, sesiones, simulaciones
 
+    app.include_router(sesiones.router)
     app.include_router(fixture.router)
     app.include_router(prode.router)
     app.include_router(ranking.router)

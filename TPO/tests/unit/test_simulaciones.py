@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from app.routes import simulaciones
+from tests.apoyo import entrar
 
 
 def test_recientes_consulta_ventanas_y_limita_por_region(monkeypatch):
@@ -81,7 +82,7 @@ def test_comentar_usa_usuario_y_region_de_sesion(cliente, monkeypatch):
         return {"comentario_id":"c1", "usuario_nombre":nombre, "contenido":contenido, "creado_en":"2026-01-01T00:00:00Z"}
     monkeypatch.setattr(simulaciones, "guardar_comentario", guardar)
     usuario = cliente.post("/usuarios", json={"nombre":"Ana", "pais":"ARG"}).json()["usuario"]
-    headers = {"X-Usuario-Id":usuario["id"]}
+    headers = entrar(cliente, usuario["id"])
     assert cliente.post("/partidos/P-03/comentarios", headers=headers, json={"contenido":"hola"}).status_code == 409
     assert cliente.post("/partidos/P-03/estado", headers={"X-Admin-Clave":"clave-de-prueba"}, json={"estado":"En juego"}).status_code == 200
     respuesta = cliente.post("/partidos/P-03/comentarios", headers=headers, json={"contenido":"  Vamos!  "})

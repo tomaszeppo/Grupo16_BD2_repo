@@ -25,7 +25,7 @@ let sondeo = null;        // consulta periódica del avance de la puntuación
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const base = (fuente) => {
   const clase = fuente === "mongodb" ? "mongodb" : fuente === "neo4j" ? "neo4j" : "otra";
-  const nombre = { mongodb: "MongoDB", neo4j: "Neo4j" }[fuente] || fuente;
+  const nombre = { mongodb: "MongoDB", neo4j: "Neo4j", redis: "Redis", cassandra: "Cassandra", influxdb: "InfluxDB" }[fuente] || fuente;
   return `<span class="base ${clase}" title="Base que respondió este bloque">${esc(nombre)}</span>`;
 };
 const fecha = (iso) => new Date(iso).toLocaleString("es-AR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -41,7 +41,7 @@ class ErrorDeApi extends Error {
 async function api(ruta, { metodo = "GET", cuerpo, admin = false } = {}) {
   const encabezados = {};
   if (cuerpo !== undefined) encabezados["Content-Type"] = "application/json";
-  if (sesion.usuario) encabezados["X-Usuario-Id"] = sesion.usuario.id;
+  // La sesión viaja sola en la cookie HttpOnly que dejó POST /sesiones: el código de la página no la ve.
   if (admin) encabezados["X-Admin-Clave"] = claveAdmin;
   let respuesta;
   try {
@@ -52,6 +52,7 @@ async function api(ruta, { metodo = "GET", cuerpo, admin = false } = {}) {
   const datos = await respuesta.json().catch(() => ({}));
   if (!respuesta.ok) {
     if (admin && respuesta.status === 401) { claveAdmin = ""; localStorage.removeItem("admin_clave"); dibujarQuien(); }
+    else if (respuesta.status === 401 && sesion.usuario) { sesion.usuario = null; dibujarQuien(); location.hash = "#/ingreso"; }
     const e = datos.error || {};
     const detalle = (e.detalle || []).map((d) => `${d.campo}: ${d.motivo}`).join("; ");
     throw new ErrorDeApi(respuesta.status, e.codigo || "ERROR", [e.mensaje || `La API respondió ${respuesta.status}.`, detalle].filter(Boolean).join(" "));
@@ -93,7 +94,7 @@ function dibujarQuien() {
   document.getElementById("quien").innerHTML = u
     ? `<span><strong>${esc(u.nombre)}</strong> (${esc(u.id)})</span><button class="boton chico secundario" id="salir" style="border-color:#fff;color:#fff">Cambiar de usuario</button>`
     : claveAdmin ? `<span>Administración</span><button class="boton chico secundario" id="salir" style="border-color:#fff;color:#fff">Salir</button>` : `<a href="#/ingreso">Elegir usuario</a>`;
-  document.getElementById("salir")?.addEventListener("click", () => { sesion.usuario = null; claveAdmin = ""; localStorage.removeItem("admin_clave"); location.hash = "#/ingreso"; dibujarQuien(); });
+  document.getElementById("salir")?.addEventListener("click", () => { if (sesion.usuario) api("/sesiones/actual", { metodo: "DELETE" }).catch(() => {}); sesion.usuario = null; claveAdmin = ""; localStorage.removeItem("admin_clave"); location.hash = "#/ingreso"; dibujarQuien(); });
 }
 
 async function dibujarSalud() {
@@ -104,7 +105,9 @@ async function dibujarSalud() {
     const cal = s.calendario;
     const copia = !cal.cargado ? "sin copia del calendario todavía"
       : `copia del calendario de hace ${Math.round(cal.antiguedad_segundos)} s${cal.desactualizado ? " (no se pudo renovar)" : ""}`;
-    caja.innerHTML = `${una("MongoDB", s.mongodb)}${una("Neo4j", s.neo4j)} ${esc(copia)}`;
+    const otras = [["Redis", s.redis], ["Cassandra América", s.cassandra_america], ["Cassandra Europa", s.cassandra_europa]]
+      .filter(([, d]) => d).map(([n, d]) => una(n, d)).join("");
+    caja.innerHTML = `${una("MongoDB", s.mongodb)}${una("Neo4j", s.neo4j)}${otras} ${esc(copia)}`;
   } catch (e) {
     caja.innerHTML = `<b class="caida">API: no responde</b>`;
   }
@@ -128,20 +131,24 @@ async function vistaIngreso() {
     document.getElementById("pais").innerHTML = d.equipos.map((e) => `<option value="${esc(e.codigo)}">${esc(e.nombre)}</option>`).join("");
   }).catch((e) => { document.getElementById("alta-error").innerHTML = cajaDeError(e); });
 
-  const entrarCon = (u) => { sesion.usuario = u; dibujarQuien(); location.hash = "#/en-vivo"; };
+  // Abre la sesión en Redis; la API deja la cookie. Se guarda aparte solo lo que se muestra (nombre, país).
+  const entrarCon = async (usuarioId) => {
+    const d = await api("/sesiones", { metodo: "POST", cuerpo: { usuario_id: usuarioId } });
+    sesion.usuario = { id: d.usuario.id, nombre: d.usuario.nombre, pais: d.usuario.pais };
+    dibujarQuien(); location.hash = "#/en-vivo";
+  };
   document.getElementById("alta").addEventListener("submit", async (ev) => {
     ev.preventDefault();
     try {
       const d = await api("/usuarios", { metodo: "POST", cuerpo: { nombre: document.getElementById("nombre").value, pais: document.getElementById("pais").value } });
       avisar(`Usuario ${d.usuario.id} creado.`);
-      entrarCon(d.usuario);
+      await entrarCon(d.usuario.id);
     } catch (e) { document.getElementById("alta-error").innerHTML = cajaDeError(e); }
   });
   document.getElementById("entrar").addEventListener("submit", async (ev) => {
     ev.preventDefault();
     try {
-      const usuario = (await api(`/usuarios/${encodeURIComponent(document.getElementById("uid").value.trim().toUpperCase())}`)).usuario;
-      entrarCon(usuario);
+      await entrarCon(document.getElementById("uid").value.trim().toUpperCase());
     } catch (e) { claveAdmin = ""; document.getElementById("entrar-error").innerHTML = cajaDeError(e); }
   });
   document.getElementById("entrar-admin").addEventListener("submit", async (ev) => {

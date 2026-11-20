@@ -21,3 +21,11 @@ def armar_app(settings, mongo, neo4j, reloj, redis=None):
     aplicacion.dependency_overrides.update(reemplazos)
     aplicacion.state.calendario = calendario
     return aplicacion
+
+
+def entrar(cliente, usuario_id: str) -> dict:
+    """Abre una sesión y devuelve el encabezado para usarla. Borra la cookie para que cada pedido sea explícito."""
+    resp = cliente.post("/sesiones", json={"usuario_id": usuario_id})
+    assert resp.status_code == 201, resp.text
+    cliente.cookies.clear()
+    return {"X-Sesion": resp.json()["token"]}

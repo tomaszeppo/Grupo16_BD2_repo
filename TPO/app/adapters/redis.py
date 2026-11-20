@@ -61,6 +61,14 @@ class RedisAdapter:
         with operacion(FUENTE, "guardar", _traducir):
             self.cli.set(clave, valor, ex=int(ttl_seg))
 
+    def guardar_varios(self, pares: dict[str, str], ttl_seg: int) -> None:
+        """Muchas claves en un solo viaje (lo usa el generador de carga para crear sesiones)."""
+        with operacion(FUENTE, "guardar_varios", _traducir):
+            tubo = self.cli.pipeline(transaction=False)
+            for clave, valor in pares.items():
+                tubo.set(clave, valor, ex=int(ttl_seg))
+            tubo.execute()
+
     def reservar(self, clave: str, valor: str, ttl_seg: float) -> bool:
         """Escribe solo si la clave no existe. Devuelve si la escribió."""
         with operacion(FUENTE, "reservar", _traducir):

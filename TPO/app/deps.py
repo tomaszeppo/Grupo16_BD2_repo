@@ -6,7 +6,7 @@ corresponda (`get_sesiones`, `get_ranking`, `get_publicador_eventos`). Ver docs/
 import hmac
 from functools import lru_cache
 
-from fastapi import Depends, Header
+from fastapi import Cookie, Depends, Header
 
 from app.adapters.mongo import MongoAdapter
 from app.adapters.influx import InfluxAdapter
@@ -17,7 +17,7 @@ from app.config.settings import get_settings as _settings
 from app.errors import NoAutorizado
 from app.puertos.eventos import PublicadorEventos, SinPublicador
 from app.puertos.ranking import RankingMongo, RankingPort
-from app.puertos.sesiones import SesionesPorEncabezado, SesionesPort
+from app.puertos.sesiones import SesionesPort, SesionesRedis
 from app.reloj import Reloj, ahora
 from app.services.calendario import Calendario
 from app.services.fixture import FixtureService
@@ -92,9 +92,10 @@ async def get_calendario() -> Calendario:
 
 
 # --- puertos: acá se enchufan Redis e InfluxDB ---
-async def get_sesiones(mongo=Depends(get_mongo)) -> SesionesPort:
-    """Hoy: encabezado X-Usuario-Id. Con Redis: devolver la implementación que valida la sesión."""
-    return SesionesPorEncabezado(mongo)
+async def get_sesiones(redis=Depends(get_redis), mongo=Depends(get_mongo),
+                       settings: Settings = Depends(get_settings)) -> SesionesPort:
+    """Sesiones en Redis (ver app/puertos/sesiones.py)."""
+    return SesionesRedis(redis, mongo, settings.sesion_ttl_segundos)
 
 
 async def get_ranking(mongo=Depends(get_mongo)) -> RankingPort:
@@ -108,9 +109,20 @@ async def get_publicador_eventos() -> PublicadorEventos:
 
 
 # --- quién hace el pedido ---
-def usuario_actual(x_usuario_id: str | None = Header(None, description="Identificador del usuario, por ejemplo U0000001"),
-                   sesiones: SesionesPort = Depends(get_sesiones)) -> str:
-    return sesiones.usuario_de(x_usuario_id)
+async def credencial(x_sesion: str | None = Header(None, description="Token de la sesión (POST /sesiones)"),
+                     sesion: str | None = Cookie(None, include_in_schema=False)) -> str | None:
+    """El encabezado manda; si no está, la cookie que dejó POST /sesiones."""
+    return x_sesion or sesion
+
+
+def usuario_actual(token: str | None = Depends(credencial), sesiones: SesionesPort = Depends(get_sesiones)) -> str:
+    return sesiones.usuario_de(token)
+
+
+def sesion_actual(token: str | None = Depends(credencial),
+                  sesiones: SesionesPort = Depends(get_sesiones)) -> tuple[str, str]:
+    """(token, usuario). La usa la conexión en vivo para contar espectadores por sesión."""
+    return token, sesiones.usuario_de(token)
 
 
 async def requiere_admin(x_admin_clave: str | None = Header(None, description="Clave de administración"),

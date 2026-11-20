@@ -375,6 +375,10 @@ class RedisFalso(_Base):
         self._verificar()
         self._poner(clave, valor, ttl_seg)
 
+    def guardar_varios(self, pares, ttl_seg):
+        for clave, valor in pares.items():
+            self.guardar(clave, valor, ttl_seg)
+
     def reservar(self, clave, valor, ttl_seg) -> bool:
         self._verificar()
         if self._vivo(clave) is not None:
