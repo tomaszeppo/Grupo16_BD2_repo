@@ -42,6 +42,14 @@ CASSANDRA_CAMBIO_REGION = Counter("prode_cassandra_cambio_region_total",
 VIVO_COMENTARIOS = Counter("prode_vivo_comentarios_total", "Comentarios por origen y resultado",
                            ["origen", "resultado"])
 
+VIVO_CONEXIONES = Gauge("prode_vivo_conexiones", "Conexiones en vivo abiertas (suma de todos los procesos)",
+                        multiprocess_mode="livesum")
+VIVO_ENTREGA = Histogram("prode_vivo_entrega_segundos",
+                         "Desde que se publica un comentario hasta que sale por cada conexión, en segundos",
+                         buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5))
+VIVO_DESCARTADOS = Counter("prode_vivo_descartados_total",
+                           "Mensajes descartados porque la conexión de un espectador no daba abasto")
+
 SIN_RUTA = "(sin ruta)"  # pedidos a direcciones que no existen: una sola etiqueta, no una por dirección
 
 

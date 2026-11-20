@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     redis_replica_url: str = "redis://localhost:6381/0"
     sesion_ttl_segundos: int = 86400  # se renueva con cada uso
     chat_segundos_entre_comentarios: float = 5.0  # modo lento, por usuario
+    presencia_refresco_segundos: float = 5.0  # cada cuánto una conexión en vivo renueva su presencia
+    presencia_vencimiento_segundos: float = 15.0  # sin renovar en este tiempo, deja de contar
+    vivo_latido_segundos: float = 15.0  # mensaje vacío para que nada corte una conexión callada
 
     cassandra_america: str = "cassandra_america"  # nodo de contacto de cada datacenter
     cassandra_europa: str = "cassandra_europa"

@@ -15,13 +15,14 @@ from app.adapters.neo4j import Neo4jAdapter
 from app.adapters.redis import RedisAdapter
 from app.config.settings import Settings
 from app.config.settings import get_settings as _settings
-from app.errors import NoAutorizado
+from app.errors import NoAutorizado, NoEncontrado
 from app.puertos.eventos import PublicadorEventos, SinPublicador
 from app.puertos.ranking import RankingMongo, RankingPort
 from app.puertos.sesiones import SesionesPort, SesionesRedis
 from app.reloj import Reloj, ahora
 from app.services.calendario import Calendario
 from app.services.comentarios import ComentariosService
+from app.services.vivo import Transmision
 from app.services.fixture import FixtureService
 from app.services.health import HealthService
 from app.services.partidos_admin import PartidosAdminService
@@ -65,6 +66,11 @@ def _cassandra() -> CassandraAdapter:
 
 
 @lru_cache
+def _transmision() -> Transmision:
+    return Transmision(_redis(), _settings())
+
+
+@lru_cache
 def _calendario() -> Calendario:
     return Calendario(_neo4j(), _settings().calendario_ttl_segundos, ahora)
 
@@ -96,6 +102,10 @@ async def get_redis() -> RedisAdapter:
 
 async def get_cassandra() -> CassandraAdapter:
     return _cassandra()
+
+
+async def get_transmision() -> Transmision:
+    return _transmision()
 
 
 async def get_calendario() -> Calendario:
@@ -142,6 +152,19 @@ async def requiere_admin(x_admin_clave: str | None = Header(None, description="C
     # compare_digest tarda lo mismo acierte o no: el tiempo de respuesta no ayuda a adivinar la clave
     if not esperada or not x_admin_clave or not hmac.compare_digest(x_admin_clave.encode(), esperada.encode()):
         raise NoAutorizado("Falta el encabezado X-Admin-Clave o no es correcto.")
+
+
+def espectador(partido_id: str, sesion: tuple[str, str] = Depends(sesion_actual), mongo=Depends(get_mongo),
+               calendario=Depends(get_calendario)) -> dict:
+    """Quién abre la conexión en vivo. Corre en un hilo (habla con Redis y MongoDB) antes de abrir el flujo,
+    así una sesión inválida o un partido inexistente responden 401 o 404 y no un flujo vacío."""
+    token, usuario_id = sesion
+    if calendario.partido(partido_id) is None:
+        raise NoEncontrado("No existe el partido.")
+    usuario = mongo.obtener_usuario(usuario_id)
+    if usuario is None:
+        raise NoAutorizado("El usuario de la sesión ya no existe.")
+    return {"token": token, "usuario_id": usuario_id, "pais": usuario["pais"]}
 
 
 # --- servicios ---

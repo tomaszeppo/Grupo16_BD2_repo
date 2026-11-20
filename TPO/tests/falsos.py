@@ -489,3 +489,65 @@ class CassandraFalso(_Base):
         self._verificar()
         if region in self.caidas:
             raise DependenciaNoDisponible(self.fuente)
+
+
+class _PubSubFalso:
+    def __init__(self, redis):
+        self._redis = redis
+        self.canales: set[str] = set()
+        import asyncio
+
+        self._cola = asyncio.Queue()
+
+    async def subscribe(self, *canales):
+        self._redis._verificar()
+        self.canales.update(canales)
+
+    async def unsubscribe(self, *canales):
+        self.canales.difference_update(canales)
+
+    async def get_message(self, ignore_subscribe_messages=True, timeout=1.0):
+        import asyncio
+
+        try:
+            return await asyncio.wait_for(self._cola.get(), timeout)
+        except asyncio.TimeoutError:
+            return None
+
+    async def aclose(self):
+        self.canales.clear()
+
+
+class RedisAsincronoFalso(_Base):
+    """Lo que usa la conexión en vivo: suscripciones y presencia. `emitir` simula un PUBLISH de otro proceso."""
+
+    fuente = "redis"
+
+    def __init__(self):
+        super().__init__()
+        self.zsets: dict[str, dict[str, float]] = {}
+        self.conjuntos: dict[str, set] = {}
+        self.suscripciones: list[_PubSubFalso] = []
+
+    async def suscriptor(self):
+        pubsub = _PubSubFalso(self)
+        self.suscripciones.append(pubsub)
+        return pubsub
+
+    def emitir(self, canal: str, mensaje: str) -> None:
+        for pubsub in self.suscripciones:
+            if canal in pubsub.canales:
+                pubsub._cola.put_nowait({"type": "message", "channel": canal, "data": mensaje})
+
+    async def amarcar(self, clave, miembro, puntaje):
+        self._verificar()
+        self.zsets.setdefault(clave, {})[miembro] = puntaje
+
+    async def aquitar(self, clave, miembro):
+        self._verificar()
+        self.zsets.get(clave, {}).pop(miembro, None)
+
+    async def aagregar(self, clave_conjunto, miembro, clave_unicos, usuario):
+        self._verificar()
+        self.conjuntos.setdefault(clave_conjunto, set()).add(miembro)
+        self.conjuntos.setdefault(clave_unicos, set()).add(usuario)
