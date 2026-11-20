@@ -46,6 +46,7 @@ x-api-entorno: &api_entorno
   NEO4J_PASSWORD: ${NEO4J_PASSWORD:?definir NEO4J_PASSWORD en .env}
   REDIS_URL: redis://redis:6379/0
   REDIS_PASSWORD: ${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}
+  REDIS_REPLICA_URL: redis://redis_replica:6379/0
   ADMIN_CLAVE: ${ADMIN_CLAVE:?definir ADMIN_CLAVE en .env}
   CALENDARIO_TTL_SEGUNDOS: ${CALENDARIO_TTL_SEGUNDOS:-30}
   API_PROCESOS: ${API_PROCESOS:-2}
@@ -139,6 +140,26 @@ services:
 
   # Comentarios: un datacenter por región (ver docs/arquitectura_regiones.md). Cada nodo guarda una copia
   # completa; cada usuario escribe y lee en el de su región sin esperar al otro.
+  # Copia de solo lectura de Redis: representa "la otra región". En el laboratorio la API escribe y lee en el
+  # primario; la réplica queda para leer el ranking desde otra región. Ver docs/arquitectura_regiones.md.
+  redis_replica:
+    image: redis:7.4
+    restart: unless-stopped
+    command: ["redis-server", "--replicaof", "redis", "6379", "--masterauth", "${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}", "--requirepass", "${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}", "--replica-read-only", "yes"]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}
+    depends_on:
+      redis: {condition: service_healthy}
+    ports: ["127.0.0.1:${REDIS_REPLICA_PUERTO:-6381}:6379"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli info replication | grep -q master_link_status:up"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: ${REDIS_REPLICA_MEMORIA:-256m}
+    cpus: ${REDIS_REPLICA_CPUS:-0.25}
+    networks: [tpo]
+
   cassandra_america:
     <<: *cassandra
     environment:
