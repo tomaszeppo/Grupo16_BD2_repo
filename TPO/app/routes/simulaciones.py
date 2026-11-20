@@ -9,7 +9,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
 from app.deps import _influx, get_influx, get_mongo, get_neo4j, get_partidos_admin_service, get_puntuacion_service, requiere_admin
-from app.errors import Conflicto, DependenciaNoDisponible, NoEncontrado
+from app.errors import Conflicto, DependenciaNoDisponible, NoEncontrado, ValidacionError
 from app.schemas.comunes import PartidoId
 from app.observability import logger
 from seed.cargar_guion_simulacion import obtener_o_crear
@@ -316,28 +316,59 @@ def historico_partido(partido_id: PartidoId, neo=Depends(get_neo4j)):
     return {"fuente": "neo4j", "partido_id": partido_id, **historico, "jugadas": jugadas}
 
 
+_CAMPOS_MINUTO = ("pases_intentados", "pases_completados", "tiros", "tiros_arco", "goles", "faltas", "corners",
+                  "posesion_segundos")
+
+
+def _en_tramo(minutos, desde, hasta):
+    """Las muestras por minuto del tramo, en la forma que espera _agregar_equipos.
+
+    Las archivadas en Neo4j traen la posesión del minuto en porcentaje: como cada minuto simulado reparte 60
+    segundos entre los dos equipos, los segundos se reconstruyen con 60 × porcentaje / 100.
+    """
+    filas = []
+    for m in minutos:
+        if not desde <= m["minuto"] <= hasta:
+            continue
+        fila = {"equipo_id": m["equipo_id"], "minuto": m["minuto"], **{c: m.get(c) or 0 for c in _CAMPOS_MINUTO}}
+        if m.get("posesion_segundos") is None and m.get("posesion_pct") is not None:
+            fila["posesion_segundos"] = 60 * m["posesion_pct"] / 100
+        filas.append(fila)
+    return filas
+
+
 @router.get("/partidos/{partido_id}/estadisticas")
-def estadisticas_partido(partido_id: PartidoId, mongo=Depends(get_mongo), influx=Depends(get_influx), neo=Depends(get_neo4j)):
-    """Promedio de posesión y suma de tiros/pases de la simulación."""
+def estadisticas_partido(partido_id: PartidoId,
+                         desde_minuto: int | None = Query(None, ge=0, le=90, description="Desde este minuto, inclusive"),
+                         hasta_minuto: int | None = Query(None, ge=0, le=90, description="Hasta este minuto, inclusive"),
+                         mongo=Depends(get_mongo), influx=Depends(get_influx), neo=Depends(get_neo4j)):
+    """Posesión, pases, tiros y faltas por equipo: del partido entero o de un tramo de minutos."""
+    con_tramo = desde_minuto is not None or hasta_minuto is not None
+    desde, hasta = desde_minuto or 0, 90 if hasta_minuto is None else hasta_minuto
+    if desde > hasta:
+        raise ValidacionError("desde_minuto no puede ser mayor que hasta_minuto.")
+    tramo = {"tramo": {"desde_minuto": desde, "hasta_minuto": hasta}} if con_tramo else {}
     doc = mongo.db.simulaciones.find_one({"_id": partido_id}, {"_id": 0, "partido": 1, "estadisticas_estado": 1, "estadisticas_incompletas": 1, "archivo_estado": 1, "estadisticas_version": 1, "corrida_id": 1})
     if not doc or "partido" not in doc:
         raise NoEncontrado("No hay estadísticas para este partido.")
     if doc.get("archivo_estado") == "completo":
         historico = neo.leer_estadisticas_archivadas(partido_id)
         if historico:
-            return {"fuente": "neo4j", "equipos": historico["equipos"], "incompletas": False}
+            equipos = _agregar_equipos(_en_tramo(historico["muestras"], desde, hasta)) if con_tramo else historico["equipos"]
+            return {"fuente": "neo4j", "equipos": equipos, "incompletas": False, **tramo}
     if doc.get("estadisticas_estado") == "fallida":
         raise DependenciaNoDisponible("influxdb")
     if doc.get("estadisticas_version") == 3:
         minutos, _ = influx.agregados_eventos(partido_id, doc["corrida_id"])
-        equipos = _agregar_equipos(minutos)
     elif doc.get("estadisticas_version") == 2:
         minutos, _ = influx.agregados_jugadores(partido_id)
-        equipos = _agregar_equipos(minutos)
+    elif con_tramo:
+        raise Conflicto("Esta simulación es anterior a las muestras por minuto: no admite tramos.")
     else:
-        equipos = influx.resumen_partido(partido_id)
-    return {"fuente": "influxdb", "equipos": equipos, "incompletas": doc.get("estadisticas_incompletas", False)}
-
+        return {"fuente": "influxdb", "equipos": influx.resumen_partido(partido_id),
+                "incompletas": doc.get("estadisticas_incompletas", False)}
+    equipos = _agregar_equipos(_en_tramo(minutos, desde, hasta) if con_tramo else minutos)
+    return {"fuente": "influxdb", "equipos": equipos, "incompletas": doc.get("estadisticas_incompletas", False), **tramo}
 
 @router.get("/partidos/{partido_id}/estadisticas/jugadores")
 def estadisticas_jugadores(partido_id: PartidoId, mongo=Depends(get_mongo), influx=Depends(get_influx), neo=Depends(get_neo4j)):

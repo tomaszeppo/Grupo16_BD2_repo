@@ -41,6 +41,39 @@ def construir_sql(
     )
 
 
+def _filtro_audiencia(partido_id: str, corrida_id: str, desde: int, hasta: int, pais: str | None) -> str:
+    if not _RE_PARTIDO.fullmatch(partido_id) or not re.fullmatch(r"[0-9a-f]{32}", corrida_id or ""):
+        raise ValidacionError("Partido o corrida inválidos.")
+    if pais is not None and not _RE_EQUIPO.fullmatch(pais):
+        raise ValidacionError("País inválido.")
+    filtro = (f"partido_id = '{partido_id}' AND corrida_id = '{corrida_id}' "
+              f"AND minuto >= {int(desde)} AND minuto <= {int(hasta)}")
+    return filtro + (f" AND pais = '{pais}'" if pais else "")
+
+
+def sql_audiencia(partido_id: str, corrida_id: str, desde: int, hasta: int, pais: str | None) -> str:
+    return ("SELECT minuto, pais, espectadores FROM audiencia_partido WHERE "
+            f"{_filtro_audiencia(partido_id, corrida_id, desde, hasta, pais)} ORDER BY minuto, pais LIMIT 20000")
+
+
+def sql_comentarios(partido_id: str, corrida_id: str, desde: int, hasta: int, pais: str | None) -> str:
+    return ("SELECT minuto, pais, origen, comentarios FROM comentarios_partido WHERE "
+            f"{_filtro_audiencia(partido_id, corrida_id, desde, hasta, pais)} ORDER BY minuto, pais, origen LIMIT 40000")
+
+
+def sql_audiencia_promedio(pais: str | None, tipo: str | None) -> str:
+    """Promedio entre partidos, por minuto de partido: primero el total de cada corrida, después el promedio."""
+    if pais is not None and not _RE_EQUIPO.fullmatch(pais):
+        raise ValidacionError("País inválido.")
+    if tipo is not None and tipo not in TIPOS_DE_CORRIDA:
+        raise ValidacionError("Tipo de corrida inválido.")
+    condiciones = [c for c in (f"pais = '{pais}'" if pais else None, f"tipo = '{tipo}'" if tipo else None) if c]
+    donde = (" WHERE " + " AND ".join(condiciones)) if condiciones else ""
+    return ("SELECT minuto, AVG(total) AS promedio, COUNT(*) AS corridas FROM ("
+            f"SELECT corrida_id, minuto, SUM(espectadores) AS total FROM audiencia_partido{donde} "
+            "GROUP BY corrida_id, minuto) GROUP BY minuto ORDER BY minuto")
+
+
 def _traducir(exc: Exception) -> ApiError | None:
     try:
         import httpx
@@ -165,6 +198,38 @@ class InfluxAdapter:
                   f"unicos={int(n)}i {ts}" for pais, n in unicos.items()]
         if lineas:
             self._escribir("guardar_resumen_audiencia", lineas)
+
+    def audiencia_por_minuto(self, partido_id, corrida_id, desde, hasta, pais=None) -> list[dict]:
+        sql = sql_audiencia(partido_id, corrida_id, desde, hasta, pais)
+        with operacion(FUENTE, "audiencia_por_minuto", _traducir):
+            return self._consultar_tolerante(sql)
+
+    def comentarios_por_minuto(self, partido_id, corrida_id, desde, hasta, pais=None) -> list[dict]:
+        sql = sql_comentarios(partido_id, corrida_id, desde, hasta, pais)
+        with operacion(FUENTE, "comentarios_por_minuto", _traducir):
+            return self._consultar_tolerante(sql)
+
+    def resumen_audiencia(self, partido_id, corrida_id) -> dict[str, int]:
+        filtro = _filtro_audiencia(partido_id, corrida_id, 0, 0, None).split(" AND minuto")[0]
+        sql = f"SELECT pais, unicos FROM audiencia_resumen WHERE {filtro} ORDER BY pais"
+        with operacion(FUENTE, "resumen_audiencia", _traducir):
+            return {f["pais"]: int(f["unicos"]) for f in self._consultar_tolerante(sql)}
+
+    def audiencia_promedio_por_minuto(self, pais=None, tipo=None) -> list[dict]:
+        sql = sql_audiencia_promedio(pais, tipo)
+        with operacion(FUENTE, "audiencia_promedio_por_minuto", _traducir):
+            filas = self._consultar_tolerante(sql)
+        return [{"minuto": int(f["minuto"]), "promedio": round(float(f["promedio"]), 1), "corridas": int(f["corridas"])}
+                for f in filas]
+
+    def _consultar_tolerante(self, sql: str) -> list[dict]:
+        """Si la medición todavía no existe (nadie miró aún ningún partido), InfluxDB responde error: es vacío."""
+        resp = self._cli().post("/api/v3/query_sql", json={"db": self._s.influx_db, "q": sql, "format": "json"})
+        if resp.status_code == 200:
+            return resp.json()
+        if resp.status_code in (400, 404) and "not found" in resp.text.lower():
+            return []
+        raise DependenciaNoDisponible(FUENTE)
 
     def guardar_jugadores(self, partido_id, minuto, plantel, jugadas, instante, corrida_id=None):
         """Una muestra por jugador/minuto; un único lote por minuto."""

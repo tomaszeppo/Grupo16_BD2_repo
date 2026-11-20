@@ -23,6 +23,7 @@ TAGS = [
     {"name": "MongoDB · Equipos", "description": "Catálogo de equipos y planteles."},
     {"name": "Redis · En vivo", "description": "Conexión abierta durante el partido: comentarios, estado y audiencia."},
     {"name": "Cassandra · Comentarios", "description": "Tribuna de cada país durante el partido. Se guarda en la región del país."},
+    {"name": "InfluxDB · Audiencia", "description": "Análisis de audiencia y comentarios por minuto, como el de una transmisión."},
     {"name": "Administración", "description": "Operación del partido para la demostración. Requiere X-Admin-Clave."},
     {"name": "Sistema", "description": "Salud y métricas."},
 ]
@@ -45,7 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     registrar_manejadores(app)
     instrumentar(app)
 
-    from app.routes import admin, comentarios, fixture, health, prode, ranking, sesiones, simulaciones, vivo
+    from app.routes import admin, analisis, comentarios, fixture, health, prode, ranking, sesiones, simulaciones, vivo
 
     app.include_router(sesiones.router)
     app.include_router(fixture.router)
@@ -53,6 +54,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(ranking.router)
     app.include_router(admin.router)
     app.include_router(vivo.router)
+    app.include_router(analisis.router)
     app.include_router(comentarios.router)
     app.include_router(simulaciones.router)
     app.include_router(prode.equipos_router)
