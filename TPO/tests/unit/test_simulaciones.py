@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -29,34 +29,63 @@ class PlantelFalso:
         return Cursor()
 
 
-def test_simulacion_escribe_antes_de_iniciar_y_finaliza(monkeypatch):
-    acciones = []
+def test_simulador_genera_datos_por_http(monkeypatch):
     col = Mock()
     mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=PlantelFalso()))
-    partido = {"id":"P-03", "fase": "Fase de grupos", "local": {"codigo": "ARG"}, "visitante": {"codigo": "BRA"}}
-    admin = SimpleNamespace(_partido=lambda id: partido, poner_en_juego=lambda id: acciones.append("iniciar") or partido)
-    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas":[{"tipo":"Gol", "minuto":23, "equipo_id":"ARG", "jugador":"J-ARG-09"},{"tipo":"Gol", "minuto":75, "equipo_id":"BRA", "jugador":"J-BRA-09"}]})
-    puntuacion = SimpleNamespace(cerrar=Mock(), ejecutar=Mock())
-    monkeypatch.setattr(simulaciones, "escribir", lambda id, pais, minuto, *args: acciones.append((pais, minuto)))
-    monkeypatch.setattr(simulaciones, "_influx", lambda: SimpleNamespace(guardar_jugadores=lambda *args: None))
-    monkeypatch.setattr(simulaciones.time, "sleep", lambda n: None)
-    simulaciones._ejecutar("P-03", mongo, admin, puntuacion)
-    assert acciones[:5] == [("ARG", 0), ("BRA", 0), ("ESP", 0), ("URU", 0), "iniciar"]
-    puntuacion.cerrar.assert_called_once_with("P-03", 1, 1, None)
-    puntuacion.ejecutar.assert_called_once_with("P-03")
-    assert col.update_one.call_args_list[-1].args[1]["$set"]["estado_simulacion"] == "completa"
-
-
-def test_falla_de_comentarios_marca_error_sin_iniciar(monkeypatch):
-    col = Mock()
-    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col))
-    admin = SimpleNamespace(_partido=lambda id: {"id":"P-03"}, poner_en_juego=Mock())
-    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas":[]})
-    def fallar(*args): raise RuntimeError("fallo")
-    monkeypatch.setattr(simulaciones, "escribir", fallar)
+    partido = {"id":"P-03", "fase":"Fase de grupos", "local":{"codigo":"ARG"}, "visitante":{"codigo":"BRA"}}
+    admin = SimpleNamespace(_partido=lambda _: partido)
+    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas": [{"tipo":"Gol", "minuto":42, "equipo_id":"ARG", "jugador":"J-ARG-09"}]})
+    monkeypatch.setattr(simulaciones, "get_settings", lambda: SimpleNamespace(simulador_api_url="http://api", admin_clave="clave", influx_raw_db="fixture2030_raw", simulador_comentarios_por_region_segundo=4))
+    monkeypatch.setattr(simulaciones.time, "sleep", lambda _: None)
+    pedidos = []
+    class Cliente:
+        def __init__(self, **kwargs): pass
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+        def put(self, url, **kwargs):
+            pedidos.append((url, kwargs))
+            return SimpleNamespace(status_code=201, raise_for_status=lambda: None)
+        def post(self, url, **kwargs):
+            pedidos.append((url, kwargs))
+            if url == "/administracion/hinchas-demo": body = {"usuarios": {p:[f"U{n:07d}"] for n,p in enumerate(("ARG", "BRA", "ESP", "URU"),1)}}
+            elif url.endswith("/estado"): body = {"partido":partido}
+            elif url.endswith("/muestras"):
+                body = {"marcador":{"local": int(kwargs["json"]["minuto"] >= 42), "visitante":0}}
+            else: body = {}
+            return SimpleNamespace(raise_for_status=lambda: None, json=lambda: body)
+    monkeypatch.setattr(simulaciones.httpx, "Client", Cliente)
     simulaciones._ejecutar("P-03", mongo, admin, Mock())
-    admin.poner_en_juego.assert_not_called()
-    assert col.update_one.call_args.args[1]["$set"]["estado_simulacion"] == "fallida"
+    assert sum(url.endswith("/muestras") for url, _ in pedidos) == 91
+    comentarios = [(url, kw) for url, kw in pedidos if url.endswith("/comentarios")]
+    assert len(comentarios) == 1440 and all("X-Usuario-Id" in kw["headers"] for _, kw in comentarios)
+    primeros_ocho = []
+    for url, kw in pedidos:
+        if url.endswith("/muestras") and kw["json"]["minuto"] == 8:
+            break
+        if url.endswith("/comentarios"):
+            primeros_ocho.append(kw)
+    assert len(primeros_ocho) == 128  # 32 por región durante los primeros 8 segundos
+    assert next(kw["json"] for url, kw in pedidos if url.endswith("/resultado"))["goles_local"] == 1
+    assert col.update_one.call_args.args[1]["$set"]["estado_simulacion"] == "completa"
+
+
+def test_registrar_muestra_usa_datos_de_la_corrida():
+    inicio = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    col = Mock()
+    col.find_one.return_value = {"estado_simulacion":"en_curso", "partido":{"local":{"codigo":"ARG"}, "visitante":{"codigo":"BRA"}},
+        "jugadas":[{"tipo":"Gol", "minuto":42, "equipo_id":"ARG"}], "plantel_estadisticas":{}, "inicio_estadisticas":inicio, "corrida_id":"abc"}
+    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col))
+    influx = SimpleNamespace(guardar_jugadores=Mock())
+    respuesta = simulaciones.registrar_muestra("P-03", simulaciones.MinutoSimulado(minuto=42), mongo, influx)
+    assert respuesta["marcador"] == {"local":1, "visitante":0}
+    assert influx.guardar_jugadores.call_args.args[4] == inicio + timedelta(seconds=42)
+
+
+def test_endpoint_muestras_exige_administrador_y_valida_minuto(cliente):
+    ruta = "/administracion/simulaciones/P-03/muestras"
+    assert cliente.post(ruta, json={"minuto": 1}).status_code == 401
+    headers = {"X-Admin-Clave": "clave-de-prueba"}
+    assert cliente.post(ruta, headers=headers, json={"minuto": 91}).status_code == 422
 
 
 def test_endpoint_fastapi_filtra_pais(cliente, monkeypatch):
@@ -163,20 +192,40 @@ def test_archivar_rechaza_id_duplicado():
     neo.archivar_estadisticas.assert_not_called()
 
 
-def test_simulacion_respeta_gol_definido_en_guion(monkeypatch):
-    col = Mock()
-    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=PlantelFalso()))
-    partido = {"id":"P-03", "fase":"Fase de grupos", "local":{"codigo":"ARG"}, "visitante":{"codigo":"BRA"}}
-    admin = SimpleNamespace(_partido=lambda _:partido, poner_en_juego=lambda _:partido)
-    goles = [{"tipo":"Gol", "minuto":42, "equipo_id":"ARG", "jugador":"J-ARG-09"}]
-    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args:{"jugadas":goles})
-    monkeypatch.setattr(simulaciones, "escribir", lambda *args:None)
-    monkeypatch.setattr(simulaciones, "archivar_estadisticas", lambda *args:None)
-    monkeypatch.setattr(simulaciones.time, "sleep", lambda _:None)
-    influx = SimpleNamespace(guardar_jugadores=Mock())
-    monkeypatch.setattr(simulaciones, "_influx", lambda:influx)
-    puntuacion = SimpleNamespace(cerrar=Mock(), ejecutar=Mock())
-    simulaciones._ejecutar("P-03", mongo, admin, puntuacion)
-    puntuacion.cerrar.assert_called_once_with("P-03", 1, 0, None)
-    muestra_42 = influx.guardar_jugadores.call_args_list[42].args
-    assert muestra_42[1] == 42 and muestra_42[3][0]["jugador"] == "J-ARG-09"
+def test_historial_recorre_paginas_y_ventanas_sin_perder_comentarios(monkeypatch):
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+    inicio = datetime(2026, 1, 1, 12, 29, tzinfo=timezone.utc)
+    fin = datetime(2026, 1, 1, 13, 1, tzinfo=timezone.utc)
+    doc = {"inicio_comentarios":inicio, "fin_comentarios":fin}
+    neo = SimpleNamespace(obtener_partido=lambda _: {"estado":"Finalizado"})
+    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=SimpleNamespace(find_one=lambda _:doc)), obtener_resultado=lambda _:None)
+    llamadas=[]
+    class Sesion:
+        def execute(self, sentencia, params, paging_state=None):
+            llamadas.append((params[2], paging_state))
+            valor = len(llamadas)
+            fila = SimpleNamespace(comentario_id=str(valor), usuario_nombre="Ana", contenido=f"mensaje {valor}", creado_en=fin)
+            return SimpleNamespace(current_rows=[fila], has_more_pages=valor == 2, paging_state=b"p2" if valor == 2 else None)
+    monkeypatch.setattr(simulaciones, "cassandra", lambda:Sesion())
+    cursor = None; recibidos=[]
+    for _ in range(4):
+        pagina = simulaciones.historial_comentarios("P-03", "ARG", cursor, mongo, neo)
+        recibidos.extend(p["contenido"] for p in pagina["items"])
+        cursor = pagina["next_cursor"]
+    assert recibidos == ["mensaje 1", "mensaje 2", "mensaje 3", "mensaje 4"]
+    assert [x[0].minute for x in llamadas] == [0, 30, 30, 0]
+    assert llamadas[2][1] == b"p2"
+    assert cursor is None
+
+
+def test_historial_rechaza_cursor_fuera_del_partido():
+    import pytest
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+    from app.errors import ValidacionError
+    fecha = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
+    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=SimpleNamespace(find_one=lambda _:{"inicio_comentarios":fecha,"fin_comentarios":fecha})), obtener_resultado=lambda _:None)
+    neo = SimpleNamespace(obtener_partido=lambda _:{"estado":"Finalizado"})
+    cursor = simulaciones._cursor_comentarios(fecha - timedelta(hours=1), partido_id="P-03", pais="ARG")
+    with pytest.raises(ValidacionError): simulaciones.historial_comentarios("P-03", "ARG", cursor, mongo, neo)

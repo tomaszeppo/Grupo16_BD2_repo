@@ -1,3 +1,5 @@
+> **Actualización:** La puntuación y el ranking en vivo utilizan Redis cuando `REDIS_ENABLED=true` en Compose. MongoDB conserva pronósticos y resultado y recibe los puntajes después de la espera configurada. El flujo, la recuperación y sus límites se describen en [el README](../README.md#puntuación-y-ranking-con-redis); los apartados siguientes describen la decisión anterior basada en MongoDB.
+
 # Decisiones sobre las bases
 
 Esta parte del proyecto final usa dos bases: **MongoDB** para todo lo del prode y **Neo4j** para el fixture y lo que pasa en cada partido. Redis, Cassandra e InfluxDB se suman sobre esta base ([cómo](como_sumar_una_base.md)). IRIS quedó afuera ([por qué](por_que_no_iris.md)).

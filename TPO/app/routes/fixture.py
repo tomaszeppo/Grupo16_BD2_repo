@@ -2,7 +2,8 @@ from datetime import date
 
 from fastapi import APIRouter, Depends
 
-from app.deps import get_fixture_service
+from app.config.settings import Settings
+from app.deps import get_fixture_service, get_settings
 from app.schemas.comunes import CodigoEquipo, Estado, EventoId, Fase, Limite, PartidoId
 from app.services.fixture import FixtureService
 
@@ -12,15 +13,18 @@ FUENTE = "neo4j"
 
 @router.get("/partidos", summary="Fixture, con filtros por fase, fecha y estado")
 def listar_partidos(fase: Fase | None = None, fecha: date | None = None, estado: Estado | None = None,
-                    svc: FixtureService = Depends(get_fixture_service)) -> dict:
+                    svc: FixtureService = Depends(get_fixture_service), settings: Settings = Depends(get_settings)) -> dict:
     """Sale de la copia del calendario que guarda cada proceso de la API; `antiguedad_segundos` dice de cuándo es."""
     partidos, antiguedad = svc.listar(fase, fecha, estado)
-    return {"fuente": FUENTE, "antiguedad_segundos": antiguedad, "total": len(partidos), "partidos": partidos}
+    return {"fuente": FUENTE, "antiguedad_segundos": antiguedad, "total": len(partidos), "partidos": partidos,
+            "pronosticos_hasta_inicio_real": settings.pronosticos_hasta_inicio_real}
 
 
 @router.get("/partidos/{partido_id}", summary="Un partido con sus equipos y su estadio")
-def obtener_partido(partido_id: PartidoId, svc: FixtureService = Depends(get_fixture_service)) -> dict:
-    return {"fuente": FUENTE, "partido": svc.partido(partido_id)}
+def obtener_partido(partido_id: PartidoId, svc: FixtureService = Depends(get_fixture_service),
+                    settings: Settings = Depends(get_settings)) -> dict:
+    return {"fuente": FUENTE, "partido": svc.partido(partido_id),
+            "pronosticos_hasta_inicio_real": settings.pronosticos_hasta_inicio_real}
 
 
 @router.get("/partidos/{partido_id}/eventos", summary="Jugadas del partido, en orden")

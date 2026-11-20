@@ -25,6 +25,15 @@ x-api-entorno: &api_entorno
   NEO4J_USER: neo4j
   NEO4J_PASSWORD: ${NEO4J_PASSWORD:?definir NEO4J_PASSWORD en .env}
   ADMIN_CLAVE: ${ADMIN_CLAVE:?definir ADMIN_CLAVE en .env}
+  SIMULADOR_API_URL: ${SIMULADOR_API_URL:-http://127.0.0.1:8010}
+  PRONOSTICOS_HASTA_INICIO_REAL: ${PRONOSTICOS_HASTA_INICIO_REAL:-true}
+  SIMULADOR_COMENTARIOS_POR_REGION_SEGUNDO: ${SIMULADOR_COMENTARIOS_POR_REGION_SEGUNDO:-4}
+  INFLUX_RAW_DB: ${INFLUX_RAW_DB:-fixture2030_raw}
+  INFLUX_RESUMEN_DB: ${INFLUX_RESUMEN_DB:-fixture2030_resumenes}
+  REDIS_ENABLED: ${REDIS_ENABLED:-true}
+  REDIS_URL: redis://redis:6379/0
+  REDIS_LOTE: ${REDIS_LOTE:-500}
+  REDIS_PERSISTENCIA_DEMORA_SEGUNDOS: ${REDIS_PERSISTENCIA_DEMORA_SEGUNDOS:-15}
   CALENDARIO_TTL_SEGUNDOS: ${CALENDARIO_TTL_SEGUNDOS:-30}
   API_PROCESOS: ${API_PROCESOS:-2}
   LOG_NIVEL: ${LOG_NIVEL:-INFO}
@@ -36,6 +45,20 @@ x-api-entorno: &api_entorno
   NEO4J_CPUS: ${NEO4J_CPUS:-1.0}
 
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--maxmemory", "${REDIS_MAXMEMORIA:-192mb}", "--maxmemory-policy", "noeviction"]
+    volumes: [redis_datos:/data]
+    cpus: ${REDIS_CPUS:-0.5}
+    mem_limit: ${REDIS_MEMORIA:-256m}
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [tpo]
+
   # Los tres nodos se autentican entre sí con un archivo de clave. Se genera una sola vez y queda en un volumen.
   mongo_clave:
     image: mongo:7.0
@@ -135,11 +158,17 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >-
+        set -e;
+        [ '${INFLUX_RAW_DB:-fixture2030_raw}' != '${INFLUX_RESUMEN_DB:-fixture2030_resumenes}' ] || { echo 'Las bases de datos crudos y resúmenes deben ser distintas' >&2; exit 1; };
+        [ '${INFLUX_RAW_DB:-fixture2030_raw}' != 'fixture2030_metrics' ] || { echo 'La base cruda nueva debe ser distinta de la base histórica' >&2; exit 1; };
         for i in $$(seq 1 60); do
           influxdb3 show databases --host http://influxdb:8181 --format csv > /tmp/bases 2>/dev/null && break;
           sleep 2;
         done;
-        grep -qx fixture2030_metrics /tmp/bases || influxdb3 create database fixture2030_metrics --retention-period 1h --host http://influxdb:8181
+        test -s /tmp/bases;
+        grep -qx fixture2030_metrics /tmp/bases || influxdb3 create database fixture2030_metrics --host http://influxdb:8181;
+        grep -qx ${INFLUX_RAW_DB:-fixture2030_raw} /tmp/bases || influxdb3 create database ${INFLUX_RAW_DB:-fixture2030_raw} --retention-period ${INFLUX_RAW_RETENCION:-7d} --host http://influxdb:8181;
+        grep -qx ${INFLUX_RESUMEN_DB:-fixture2030_resumenes} /tmp/bases || influxdb3 create database ${INFLUX_RESUMEN_DB:-fixture2030_resumenes} --host http://influxdb:8181
     networks: [tpo]
 
   api:
@@ -150,6 +179,7 @@ services:
       neo4j: {condition: service_healthy}
       cassandra_inicio: {condition: service_completed_successfully}
       influx_inicio: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
     environment:
       <<: *api_entorno
       PROMETHEUS_MULTIPROC_DIR: /tmp/metricas
@@ -181,6 +211,7 @@ volumes:
   neo4j_datos:
   cassandra_datos:
   influx_datos:
+  redis_datos:
 
 networks:
   tpo:

@@ -174,6 +174,16 @@ def test_eliminatoria_sin_equipos_definidos_409(cliente):
     assert "equipos" in resp.json()["error"]["mensaje"]
 
 
+def test_laboratorio_admite_pronostico_hasta_el_inicio_real(cliente, reloj, neo4j, settings):
+    settings.pronosticos_hasta_inicio_real = True
+    reloj.instante = reloj.instante.replace(day=14)
+    usuario = crear_usuario(cliente)
+    assert cliente.get("/partidos/P-03").json()["pronosticos_hasta_inicio_real"] is True
+    assert pronosticar(cliente, usuario).status_code == 201
+    neo4j.partidos["P-03"]["estado"] = "En juego"
+    assert pronosticar(cliente, usuario).status_code == 409
+
+
 def test_neo4j_caido_sin_copia_del_calendario_responde_503(cliente, neo4j):
     u = crear_usuario(cliente)
     neo4j.caida = True

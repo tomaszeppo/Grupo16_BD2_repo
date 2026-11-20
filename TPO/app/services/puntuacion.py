@@ -71,6 +71,9 @@ class PuntuacionService:
             return
         hechos = resultado["puntuacion"].get("pasos") or {}
         try:
+            if hasattr(self._ranking, "puntuar_en_redis"):
+                self._ejecutar_redis(partido_id, resultado, hechos)
+                return
             for paso in PASOS:
                 if paso in hechos:
                     continue  # quedó de un intento anterior
@@ -90,6 +93,27 @@ class PuntuacionService:
         except Exception:
             logger.exception("puntuacion_fallo partido=%s", partido_id)
             self._mongo.cerrar_puntuacion(partido_id, "fallida", self._reloj())
+
+    def _ejecutar_redis(self, partido_id, resultado, hechos):
+        inicio = time.perf_counter()
+        cantidad = self._ranking.puntuar_en_redis(partido_id, resultado)
+        self._mongo.marcar_paso(partido_id, "puntuar", round((time.perf_counter() - inicio) * 1000, 1),
+                                {"pronosticos": cantidad})
+        # El ranking queda disponible en Redis antes de hacer el volcado durable.
+        if "sumar" not in hechos:
+            time.sleep(self._ranking.demora)
+            inicio = time.perf_counter()
+            self._ranking.persistir_partido(partido_id)
+            self._mongo.marcar_paso(partido_id, "sumar", round((time.perf_counter() - inicio) * 1000, 1), {})
+        if "foto" not in hechos:
+            inicio = time.perf_counter()
+            self._mongo.guardar_foto(partido_id, self._reloj())
+            self._mongo.marcar_paso(partido_id, "foto", round((time.perf_counter() - inicio) * 1000, 1), {})
+        self._mongo.cerrar_puntuacion(partido_id, "completa", self._reloj())
+        try:
+            self._ranking.limpiar_partido(partido_id)
+        except Exception:
+            logger.exception("limpieza_redis_pendiente partido=%s", partido_id)
 
     def _al_terminar_paso(self, paso: str, duracion_ms: float, extra: dict) -> None:
         metricas.registrar_paso_de_puntuacion(paso, duracion_ms / 1000, extra.get("pronosticos"))

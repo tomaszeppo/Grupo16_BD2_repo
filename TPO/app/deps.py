@@ -52,6 +52,12 @@ def _neo4j() -> Neo4jAdapter:
 
 
 @lru_cache
+def _ranking_redis():
+    from app.adapters.ranking_redis import RankingRedis
+    return RankingRedis(_mongo(), _settings())
+
+
+@lru_cache
 def _calendario() -> Calendario:
     return Calendario(_neo4j(), _settings().calendario_ttl_segundos, ahora)
 
@@ -88,7 +94,8 @@ async def get_sesiones(mongo=Depends(get_mongo)) -> SesionesPort:
 
 
 async def get_ranking(mongo=Depends(get_mongo)) -> RankingPort:
-    """Hoy: colección `puntajes` de MongoDB. Con Redis: devolver la implementación sobre el conjunto ordenado."""
+    if _settings().redis_enabled:
+        return _ranking_redis()
     return RankingMongo(mongo)
 
 
@@ -114,7 +121,10 @@ async def requiere_admin(x_admin_clave: str | None = Header(None, description="C
 # --- servicios ---
 async def get_health_service(mongo=Depends(get_mongo), neo4j=Depends(get_neo4j),
                        calendario=Depends(get_calendario)) -> HealthService:
-    return HealthService({"mongodb": mongo, "neo4j": neo4j}, calendario)
+    bases = {"mongodb": mongo, "neo4j": neo4j}
+    if _settings().redis_enabled:
+        bases["redis"] = _ranking_redis()
+    return HealthService(bases, calendario)
 
 
 async def get_fixture_service(neo4j=Depends(get_neo4j), calendario=Depends(get_calendario)) -> FixtureService:
@@ -135,14 +145,15 @@ async def get_prodes_service(mongo=Depends(get_mongo), reloj=Depends(get_reloj),
 
 
 async def get_pronosticos_service(mongo=Depends(get_mongo), calendario=Depends(get_calendario),
-                            reloj=Depends(get_reloj)) -> PronosticosService:
-    return PronosticosService(mongo, calendario, reloj)
+                            reloj=Depends(get_reloj), settings: Settings = Depends(get_settings),
+                            neo4j=Depends(get_neo4j)) -> PronosticosService:
+    return PronosticosService(mongo, calendario, reloj, neo4j if settings.pronosticos_hasta_inicio_real else None)
 
 
 async def get_partidos_admin_service(neo4j=Depends(get_neo4j), calendario=Depends(get_calendario),
                                reloj=Depends(get_reloj),
-                               publicador=Depends(get_publicador_eventos)) -> PartidosAdminService:
-    return PartidosAdminService(neo4j, calendario, reloj, publicador)
+                               publicador=Depends(get_publicador_eventos), ranking=Depends(get_ranking)) -> PartidosAdminService:
+    return PartidosAdminService(neo4j, calendario, reloj, publicador, ranking)
 
 
 async def get_puntuacion_service(mongo=Depends(get_mongo), neo4j=Depends(get_neo4j), calendario=Depends(get_calendario),

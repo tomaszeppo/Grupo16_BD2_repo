@@ -47,26 +47,11 @@ Las rutas y los servicios no cambian: siguen recibiendo el usuario de `usuario_a
 
 ## Redis: ranking en vivo
 
-El punto de enganche es [`app/puertos/ranking.py`](../app/puertos/ranking.py):
+El TPO incluye `app/adapters/ranking_redis.py`. Compose lo habilita mediante `REDIS_ENABLED=true`; con `false` sigue disponible `RankingMongo`. La inicialización reconstruye el sorted set desde los puntajes de MongoDB por lotes cuando falta la marca de inicialización.
 
-```python
-class RankingPort(Protocol):
-    nombre: str                                              # se informa en "fuente"
-    def top(self, limit: int) -> list[dict]: ...             # {puesto, usuario_id, nombre, puntos, exactos, tiempo_seg}
-    def posicion(self, usuario_id: str) -> dict | None: ...  # {puesto, puntos, exactos, tiempo_seg, total_usuarios}
-    def puntajes_de(self, usuario_ids: list[str]) -> list[dict]: ...
-    def partido_puntuado(self, partido_id: str) -> None: ...
-```
+Al iniciar un partido, un hilo prepara los pronósticos en Redis. Al cerrar, se refresca el snapshot y se aplican las reglas del dominio por lotes. Un script Lua actualiza el total, el sorted set y la marca del partido; conserva la base anterior para reintentar una ejecución parcial. Tras la espera configurada se vuelcan los puntos a MongoDB con operaciones idempotentes, se guarda la foto y se limpian los datos temporales del partido. Los pronósticos y el resultado siguen en MongoDB como respaldo.
 
-Qué hacer:
-
-1. Escribir una clase sobre un conjunto ordenado de Redis. El puntaje de cada usuario puede ser un solo número que ya incluya el desempate, como está planteado en `Hito-13-monitoreo/docs/proyecto_final_planteado.md`.
-2. En `partido_puntuado(partido_id)`, leer de MongoDB los puntajes de quienes pronosticaron ese partido y escribirlos con `ZADD`. La API llama a este método cuando `puntajes` ya tiene sumado el partido. Conviene escribir el total y no un incremento: así repetir el aviso no cambia nada.
-3. En `deps.py`, hacer que `get_ranking` devuelva esa clase.
-
-MongoDB sigue siendo la fuente de verdad. Si Redis se pierde, el ranking se reconstruye recorriendo `puntajes`. La clase actual, `RankingMongo`, sirve además de respaldo si Redis no responde.
-
-Por qué vale la pena está medido: con 100.000 usuarios, saber el puesto de uno leyendo de MongoDB tarda unos 300 ms y con 50 pedidos a la vez empieza a fallar ([rendimiento.md](rendimiento.md#26-saber-el-puesto-de-un-usuario-en-el-ranking)).
+El ranking acepta lecturas parciales mientras se calcula. La puntuación se puede reintentar por la API si quedó fallida o si vence la reserva tras una interrupción. Redis usa AOF `everysec`; no hay recuperación automática al reinicio, failover ni Redis Cluster. Se asume un único partido puntuándose a la vez. El límite de memoria local es deliberadamente pequeño: hay que dimensionar y medir antes de usar millones de usuarios. Los desempates y la configuración se detallan en el README.
 
 ## Redis: la copia del calendario (opcional)
 

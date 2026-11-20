@@ -4,7 +4,7 @@ Este documento tiene tres partes que no hay que mezclar: lo que **medimos** en e
 
 ## 1. Cómo medimos
 
-- Todos los pedidos medidos pasan por la API. En el Hito 12 la carga iba directo a Cassandra y nos quedó marcado como límite; acá no.
+- Las mediciones de carga de la aplicación pasan por la API. El diagnóstico directo de MongoDB descrito más abajo es una medición histórica de la base por separado, no una prueba de capacidad de la aplicación, y ya no se ejecuta en la serie principal. La preparación histórica con `carga.poblar` sí escribía directamente en MongoDB y no se incluía en las mediciones.
 - El generador de carga ([`carga/`](../carga/ejecutar.py)) simula usuarios que piden sin pausa durante 30 segundos. "50 a la vez" quiere decir 50 usuarios virtuales, cada uno mandando su siguiente pedido apenas recibe la respuesta del anterior.
 - Antes de medir cargamos 100.000 usuarios y sus pronósticos directo en MongoDB ([`carga/poblar.py`](../carga/poblar.py)). Eso es preparación y no se mide.
 - La latencia se informa sobre los pedidos que salieron bien; los errores se cuentan aparte.

@@ -55,6 +55,30 @@ def _ranking(rng: random.Random, usuarios: int) -> dict:
     return {"ruta": "GET /ranking", "metodo": "GET", "url": "/ranking?limit=100"}
 
 
+def _vista_partido(partido: str, pais: str, finalizado: bool, usuario_id: str | None = None):
+    """Recorre las consultas de la pantalla; cada usuario virtual tiene su propio turno."""
+    comentario = "historial" if finalizado else "recientes"
+    rutas = [
+        ("GET /en-vivo/partidos/{id}", f"/en-vivo/partidos/{partido}"),
+        ("GET /partidos/{id}/estadisticas", f"/partidos/{partido}/estadisticas"),
+        ("GET /partidos/{id}/jugadas/temporales", f"/partidos/{partido}/jugadas/temporales"),
+        (f"GET /partidos/{{id}}/comentarios/{comentario}", f"/partidos/{partido}/comentarios/{comentario}?pais={pais}"),
+    ]
+    pedidos = [{"ruta": ruta, "metodo": "GET", "url": url} for ruta, url in rutas]
+    if usuario_id:
+        pedidos.append({"ruta": "POST /partidos/{id}/comentarios", "metodo": "POST",
+                        "url": f"/partidos/{partido}/comentarios", "headers": {"X-Usuario-Id": usuario_id},
+                        "json": {"contenido": "Comentario de prueba de carga"}})
+    turnos = {}
+
+    def siguiente(numero):
+        turno = turnos.get(numero, 0)
+        turnos[numero] = turno + 1
+        return pedidos[turno % len(pedidos)]
+
+    return siguiente
+
+
 def _fabrica(args) -> tuple:
     """Devuelve (función que arma el próximo pedido, estados que no se consideran error)."""
     rngs = [random.Random(args.semilla * 1000 + n) for n in range(args.concurrencia)]
@@ -67,6 +91,8 @@ def _fabrica(args) -> tuple:
                 else _lectura(rngs[n])), {200, 201}
     if args.escenario == "posicion_ranking":
         return (lambda n: _ranking(rngs[n], args.usuarios)), {200}
+    if args.escenario == "vista_partido":
+        return _vista_partido(args.partido, args.pais, args.finalizado, args.usuario_id), {200, 201}
     raise SystemExit(f"Escenario desconocido: {args.escenario}")
 
 
@@ -76,7 +102,7 @@ def _entorno(base_url: str) -> dict:
         "API_PROCESOS", "API_MEMORIA", "API_CPUS", "MONGO_MEMORIA", "MONGO_CPUS", "NEO4J_MEMORIA", "NEO4J_CPUS",
         "CALENDARIO_TTL_SEGUNDOS")}
     entorno["nodos_de_mongodb"] = 3
-    entorno["generador"] = "contenedor de herramientas en el mismo equipo y la misma red que la API, sin límite propio"
+    entorno["generador"] = "proceso lanzado por el operador; su ubicación y límites dependen de cómo se ejecutó"
     try:
         entorno["dependencias"] = httpx.get(f"{base_url}/health/dependencias", timeout=10).json()
     except httpx.HTTPError:
@@ -130,17 +156,26 @@ def _cierre_de_partido(args, base_url: str) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Pruebas de carga del prode 2030")
     parser.add_argument("escenario", choices=["pico_pronosticos", "lecturas_fixture", "pico_mixto", "posicion_ranking",
-                                              "cierre_partido", "caida"])
+                                              "cierre_partido", "caida", "vista_partido"])
     parser.add_argument("--usuarios", type=int, default=1000, help="usuarios ya creados con carga.poblar")
     parser.add_argument("--concurrencia", type=int, default=20, help="usuarios virtuales pidiendo a la vez")
     parser.add_argument("--duracion", type=float, default=30, help="segundos")
     parser.add_argument("--partido", default="P-03")
+    parser.add_argument("--pais", default="ARG", help="país de la tribuna, código ISO de tres letras")
+    parser.add_argument("--finalizado", action="store_true", help="consultar comentarios históricos en vez de recientes")
+    parser.add_argument("--usuario-id", help="incluye envío de comentarios con este usuario; crea datos en Cassandra")
     parser.add_argument("--goles-local", type=int, default=2)
     parser.add_argument("--goles-visitante", type=int, default=1)
     parser.add_argument("--semilla", type=int, default=2030)
     parser.add_argument("--etiqueta", default="", help="texto libre que queda en el resumen y en el nombre del archivo")
     parser.add_argument("--nota", action="append", default=[], help="aclaración para el resumen (se puede repetir)")
     args = parser.parse_args()
+    if args.concurrencia < 1 or args.duracion <= 0 or args.usuarios < 1:
+        parser.error("usuarios, concurrencia y duración deben ser mayores que cero")
+    if len(args.pais) != 3 or not args.pais.isascii() or not args.pais.isalpha() or not args.pais.isupper():
+        parser.error("el país debe tener tres letras mayúsculas, por ejemplo ARG")
+    if args.usuario_id and (args.escenario != "vista_partido" or args.finalizado):
+        parser.error("--usuario-id solo admite vista_partido en juego")
 
     base_url = os.environ.get("API_URL", "http://127.0.0.1:8010")
     inicio = datetime.now(timezone.utc)
@@ -150,8 +185,9 @@ def main() -> int:
         "commit": os.environ.get("COMMIT", "sin commit"),
         "parametros": {k: v for k, v in vars(args).items() if k not in ("escenario", "etiqueta", "nota")},
         "entorno": _entorno(base_url),
-        "preparacion": "usuarios, pronósticos y puntajes de volumen cargados directo en MongoDB con carga.poblar; "
-                       "todos los pedidos medidos pasan por la API",
+        "preparacion": ("partido existente; sin preparación de datos por el generador" if args.escenario == "vista_partido"
+                        else "requiere datos existentes; carga.poblar puede haberlos preparado directamente en MongoDB"),
+        "alcance": "todos los pedidos medidos pasan por la API; la preparación no se mide",
         "notas": args.nota,
     }
 

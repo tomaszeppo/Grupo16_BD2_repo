@@ -81,3 +81,29 @@ def test_contadores_incluyen_jugadas_y_goles_del_guion():
     adaptador.guardar_minuto("P-13", 24, "ARG", "BRA", datetime(2026, 1, 1, tzinfo=timezone.utc), (1, 0), ({"Tiro":1,"Pase":9}, {}))
     linea = pedidos[-1].content.decode().splitlines()[0]
     assert "goles=1i" in linea and "tiros=2i" in linea and "pases_completados=9i" in linea
+
+
+def test_resumenes_se_guardan_en_influx_con_id_y_timestamp_estables():
+    pedidos=[]
+    adaptador=InfluxAdapter(Settings(_env_file=None))
+    adaptador._http=httpx.Client(base_url="http://influx", transport=httpx.MockTransport(lambda req: pedidos.append(req) or httpx.Response(204)))
+    instante=datetime(2026,1,1,tzinfo=timezone.utc)
+    equipos=[{"equipo_id":"ARG", "tiros":2, "posesion_pct":55.0}]
+    jugadores=[{"equipo_id":"ARG", "jugador_id":"J-ARG-09", "goles":1}]
+    adaptador.guardar_resumenes("P-03", "a"*32, instante, equipos, jugadores)
+    adaptador.guardar_resumenes("P-03", "a"*32, instante, equipos, jugadores)
+    assert pedidos[0].url.params["db"] == "fixture2030_resumenes"
+    assert pedidos[0].content == pedidos[1].content
+    lineas=pedidos[0].content.decode().splitlines()
+    assert len(lineas) == 2 and lineas[0].startswith("resumen_partido_equipo,")
+    assert lineas[1].startswith("resumen_partido_jugador,") and "goles=1i" in lineas[1]
+
+
+def test_base_de_corrida_y_compatibilidad_con_simulaciones_anteriores():
+    pedidos = []
+    adaptador = InfluxAdapter(Settings(_env_file=None))
+    adaptador._http = httpx.Client(base_url="http://influx", transport=httpx.MockTransport(
+        lambda req: pedidos.append(req) or httpx.Response(200, json=[])))
+    adaptador.para_simulacion({}).consultar("SELECT 1")
+    adaptador.para_simulacion({"influx_raw_db": "fixture2030_raw"}).consultar("SELECT 1")
+    assert [__import__("json").loads(req.content)["db"] for req in pedidos] == ["fixture2030_metrics", "fixture2030_raw"]

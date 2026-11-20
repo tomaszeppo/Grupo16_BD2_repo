@@ -6,11 +6,12 @@ from app.reloj import Reloj
 class PartidosAdminService:
     """Operación del partido durante la demostración: ponerlo en juego, definir equipos y cargar jugadas."""
 
-    def __init__(self, neo4j, calendario, reloj: Reloj, publicador):
+    def __init__(self, neo4j, calendario, reloj: Reloj, publicador, ranking=None):
         self._neo4j = neo4j
         self._calendario = calendario
         self._reloj = reloj
         self._publicador = publicador
+        self._ranking = ranking
 
     def _partido(self, partido_id: str) -> dict:
         partido = self._neo4j.obtener_partido(partido_id)
@@ -26,6 +27,14 @@ class PartidosAdminService:
             raise Conflicto("Todavía no están definidos los equipos de este partido.")
         self._neo4j.iniciar_partido(partido_id, self._reloj())
         self._calendario.invalidar()  # en este proceso los pronósticos se cierran ya; en los demás, al vencer su copia
+        if partido["estado"] == "Programado" and self._ranking is not None and hasattr(self._ranking, "preparar_partido"):
+            import threading
+            def preparar():
+                try:
+                    self._ranking.preparar_partido(partido_id)
+                except Exception:
+                    logger.exception("preparacion_redis_fallida partido=%s", partido_id)
+            threading.Thread(target=preparar, daemon=True, name="preparar-redis").start()
         return self._partido(partido_id)
 
     def asignar_equipos(self, partido_id: str, local: str, visitante: str) -> dict:
