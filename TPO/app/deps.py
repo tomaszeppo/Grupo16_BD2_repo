@@ -11,6 +11,7 @@ from fastapi import Depends, Header
 from app.adapters.mongo import MongoAdapter
 from app.adapters.influx import InfluxAdapter
 from app.adapters.neo4j import Neo4jAdapter
+from app.adapters.redis import RedisAdapter
 from app.config.settings import Settings
 from app.config.settings import get_settings as _settings
 from app.errors import NoAutorizado
@@ -52,6 +53,11 @@ def _neo4j() -> Neo4jAdapter:
 
 
 @lru_cache
+def _redis() -> RedisAdapter:
+    return RedisAdapter(_settings())
+
+
+@lru_cache
 def _calendario() -> Calendario:
     return Calendario(_neo4j(), _settings().calendario_ttl_segundos, ahora)
 
@@ -75,6 +81,10 @@ async def get_influx() -> InfluxAdapter:
 
 async def get_neo4j() -> Neo4jAdapter:
     return _neo4j()
+
+
+async def get_redis() -> RedisAdapter:
+    return _redis()
 
 
 async def get_calendario() -> Calendario:
@@ -112,9 +122,9 @@ async def requiere_admin(x_admin_clave: str | None = Header(None, description="C
 
 
 # --- servicios ---
-async def get_health_service(mongo=Depends(get_mongo), neo4j=Depends(get_neo4j),
+async def get_health_service(mongo=Depends(get_mongo), neo4j=Depends(get_neo4j), redis=Depends(get_redis),
                        calendario=Depends(get_calendario)) -> HealthService:
-    return HealthService({"mongodb": mongo, "neo4j": neo4j}, calendario)
+    return HealthService({"mongodb": mongo, "neo4j": neo4j, "redis": redis}, calendario)
 
 
 async def get_fixture_service(neo4j=Depends(get_neo4j), calendario=Depends(get_calendario)) -> FixtureService:
@@ -168,6 +178,7 @@ def precalentar() -> None:
     def trabajo() -> None:
         pasos = (
             ("mongodb", lambda: _mongo().ping()),
+            ("redis", lambda: _redis().ping()),
             ("calendario", lambda: _calendario().refrescar()),
             ("neo4j", lambda: _neo4j().preparar_consultas()),
         )

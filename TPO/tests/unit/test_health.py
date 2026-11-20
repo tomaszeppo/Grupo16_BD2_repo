@@ -10,6 +10,7 @@ def test_dependencias_informa_cada_base(cliente):
     cuerpo = resp.json()
     assert cuerpo["mongodb"]["estado"] == "ok"
     assert cuerpo["neo4j"]["estado"] == "ok"
+    assert cuerpo["redis"]["estado"] == "ok"
 
 
 def test_dependencias_marca_la_base_caida_y_sigue_respondiendo(cliente, neo4j):
@@ -20,3 +21,9 @@ def test_dependencias_marca_la_base_caida_y_sigue_respondiendo(cliente, neo4j):
     assert cuerpo["neo4j"]["estado"] == "caida"
     assert cuerpo["neo4j"]["detalle"]
     assert cuerpo["mongodb"]["estado"] == "ok"
+
+
+def test_dependencias_informa_redis_caido(cliente, redis):
+    redis.caida = True
+    cuerpo = cliente.get("/health/dependencias").json()
+    assert cuerpo["redis"]["estado"] == "caida"

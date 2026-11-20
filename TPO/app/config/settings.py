@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     neo4j_password: str = ""
     neo4j_db: str = "neo4j"
 
+    redis_url: str = "redis://localhost:6380/0"
+    redis_password: str = ""
+    redis_replica_url: str = "redis://localhost:6381/0"
+
     influx_url: str = "http://influxdb:8181"
     influx_db: str = "fixture2030_metrics"
     influx_token: str = ""

@@ -1,5 +1,5 @@
 # Prode Mundial 2030 — proyecto final. Se levanta solo: no depende de las carpetas de los hitos.
-# Cassandra e InfluxDB forman parte del TPO; Redis y monitoreo son puntos de extensión.
+# Redis, Cassandra e InfluxDB forman parte del TPO.
 name: fixture2030-tpo
 
 x-mongo: &mongo
@@ -24,6 +24,8 @@ x-api-entorno: &api_entorno
   NEO4J_URI: bolt://neo4j:7687
   NEO4J_USER: neo4j
   NEO4J_PASSWORD: ${NEO4J_PASSWORD:?definir NEO4J_PASSWORD en .env}
+  REDIS_URL: redis://redis:6379/0
+  REDIS_PASSWORD: ${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}
   ADMIN_CLAVE: ${ADMIN_CLAVE:?definir ADMIN_CLAVE en .env}
   CALENDARIO_TTL_SEGUNDOS: ${CALENDARIO_TTL_SEGUNDOS:-30}
   API_PROCESOS: ${API_PROCESOS:-2}
@@ -96,6 +98,25 @@ services:
     cpus: ${NEO4J_CPUS:-1.0}
     networks: [tpo]
 
+  # Sesiones, presencia en los partidos en vivo, reparto de comentarios entre procesos y contadores.
+  # AOF cada segundo: un reinicio no cierra las sesiones abiertas.
+  redis:
+    image: redis:7.4
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--requirepass", "${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}"]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?definir REDIS_PASSWORD en .env}
+    ports: ["127.0.0.1:${REDIS_PUERTO:-6380}:6379"]
+    volumes: [redis_datos:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: ${REDIS_MEMORIA:-256m}
+    cpus: ${REDIS_CPUS:-0.5}
+    networks: [tpo]
+
   cassandra:
     image: cassandra:4.1
     cpus: ${CASSANDRA_CPUS:-0.75}
@@ -148,6 +169,7 @@ services:
     depends_on:
       mongo_inicio: {condition: service_completed_successfully}
       neo4j: {condition: service_healthy}
+      redis: {condition: service_healthy}
       cassandra_inicio: {condition: service_completed_successfully}
       influx_inicio: {condition: service_completed_successfully}
     environment:
@@ -174,6 +196,7 @@ services:
     networks: [tpo]
 
 volumes:
+  redis_datos:
   mongo_clave:
   mongo1_datos:
   mongo2_datos:

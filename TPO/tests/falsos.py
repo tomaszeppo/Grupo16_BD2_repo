@@ -343,3 +343,107 @@ class Neo4jFalso(_Base):
     def finalizar_partido(self, partido_id, goles_local, goles_visitante) -> None:
         self._verificar()
         self.partidos[partido_id].update(estado="Finalizado", goles_local=goles_local, goles_visitante=goles_visitante)
+
+
+class RedisFalso(_Base):
+    """Redis en memoria con vencimientos según un reloj inyectable (por defecto, el de la máquina)."""
+
+    fuente = "redis"
+
+    def __init__(self, reloj=None):
+        super().__init__()
+        import time
+
+        self.reloj = reloj or time.time
+        self.valores: dict[str, tuple[object, float | None]] = {}
+        self.publicados: list[tuple[str, str]] = []
+
+    def _vivo(self, clave):
+        par = self.valores.get(clave)
+        if par is None:
+            return None
+        valor, vence = par
+        if vence is not None and self.reloj() >= vence:
+            del self.valores[clave]
+            return None
+        return valor
+
+    def _poner(self, clave, valor, ttl=None):
+        self.valores[clave] = (valor, None if ttl is None else self.reloj() + ttl)
+
+    def guardar(self, clave, valor, ttl_seg):
+        self._verificar()
+        self._poner(clave, valor, ttl_seg)
+
+    def reservar(self, clave, valor, ttl_seg) -> bool:
+        self._verificar()
+        if self._vivo(clave) is not None:
+            return False
+        self._poner(clave, valor, ttl_seg)
+        return True
+
+    def leer(self, clave):
+        self._verificar()
+        return self._vivo(clave)
+
+    def leer_renovando(self, clave, ttl_seg):
+        self._verificar()
+        self.renovaciones = getattr(self, "renovaciones", []) + [ttl_seg]
+        valor = self._vivo(clave)
+        if valor is not None:
+            self._poner(clave, valor, ttl_seg)
+        return valor
+
+    def borrar(self, *claves):
+        self._verificar()
+        for clave in claves:
+            self.valores.pop(clave, None)
+
+    def incrementar(self, clave) -> int:
+        self._verificar()
+        valor = int(self._vivo(clave) or 0) + 1
+        self._poner(clave, str(valor))
+        return valor
+
+    def tomar_y_borrar(self, clave) -> int:
+        self._verificar()
+        valor = self._vivo(clave)
+        self.valores.pop(clave, None)
+        return int(valor) if valor is not None else 0
+
+    def agregar_a_conjunto(self, clave, miembro):
+        self._verificar()
+        conjunto = self._vivo(clave) or set()
+        conjunto.add(miembro)
+        self._poner(clave, conjunto)
+
+    def miembros(self, clave) -> set:
+        self._verificar()
+        return set(self._vivo(clave) or set())
+
+    def marcar(self, clave, miembro, puntaje):
+        self._verificar()
+        zset = self._vivo(clave) or {}
+        zset[miembro] = puntaje
+        self._poner(clave, zset)
+
+    def quitar(self, clave, miembro):
+        self._verificar()
+        (self._vivo(clave) or {}).pop(miembro, None)
+
+    def contar_desde(self, clave, minimo) -> int:
+        self._verificar()
+        zset = self._vivo(clave) or {}
+        for miembro in [m for m, p in zset.items() if p < minimo]:
+            del zset[miembro]
+        return len(zset)
+
+    def agregar_unico(self, clave, miembro):
+        self.agregar_a_conjunto(clave, miembro)
+
+    def contar_unicos(self, clave) -> int:
+        return len(self.miembros(clave))
+
+    def publicar(self, canal, mensaje):
+        self._verificar()
+        self.publicados.append((canal, mensaje))
