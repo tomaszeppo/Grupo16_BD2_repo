@@ -227,7 +227,7 @@ def test_poner_en_juego_dos_veces_no_mueve_el_inicio_real(cliente, neo4j, reloj)
     assert primera["estado"] == segunda["estado"] == "En juego"
     assert primera["inicio_real"] == segunda["inicio_real"]
     assert primera["inicio_real"].startswith("2030-06-13T14:57:00")
-    assert cliente.post("/partidos/P-104/estado", json={"estado": "En juego"}, headers=ADMIN).status_code == 409
+    assert cliente.post("/partidos/P-128/estado", json={"estado": "En juego"}, headers=ADMIN).status_code == 409
 
 
 def test_jugadas_sin_duplicar_y_con_cadena(cliente, neo4j, cargado, reloj):
@@ -254,12 +254,12 @@ def test_jugadas_sin_duplicar_y_con_cadena(cliente, neo4j, cargado, reloj):
 def test_asignar_equipos_a_una_eliminatoria_la_vuelve_pronosticable(cliente, reloj):
     u = cliente.post("/usuarios", json={"nombre": "Ana", "pais": "ARG"}).json()["usuario"]["id"]
     cuerpo = {"goles_local": 1, "goles_visitante": 0}
-    assert cliente.put("/partidos/P-73/pronostico", json=cuerpo, headers=entrar(cliente, u)).status_code == 409
-    asignado = cliente.post("/partidos/P-73/equipos", json={"local": "ARG", "visitante": "BRA"}, headers=ADMIN)
+    assert cliente.put("/partidos/P-97/pronostico", json=cuerpo, headers=entrar(cliente, u)).status_code == 409
+    asignado = cliente.post("/partidos/P-97/equipos", json={"local": "ARG", "visitante": "BRA"}, headers=ADMIN)
     assert asignado.status_code == 200 and asignado.json()["partido"]["visitante"]["codigo"] == "BRA"
-    cliente.post("/partidos/P-73/equipos", json={"local": "URU", "visitante": "BRA"}, headers=ADMIN)  # corrección
-    partido = cliente.get("/partidos/P-73").json()["partido"]
+    cliente.post("/partidos/P-97/equipos", json={"local": "URU", "visitante": "BRA"}, headers=ADMIN)  # corrección
+    partido = cliente.get("/partidos/P-97").json()["partido"]
     assert (partido["local"]["codigo"], partido["visitante"]["codigo"]) == ("URU", "BRA")
-    assert cliente.put("/partidos/P-73/pronostico", json=cuerpo, headers=entrar(cliente, u)).status_code == 201
-    assert cliente.post("/partidos/P-73/equipos", json={"local": "ARG", "visitante": "XXX"}, headers=ADMIN).status_code == 404
+    assert cliente.put("/partidos/P-97/pronostico", json=cuerpo, headers=entrar(cliente, u)).status_code == 201
+    assert cliente.post("/partidos/P-97/equipos", json={"local": "ARG", "visitante": "XXX"}, headers=ADMIN).status_code == 404
     assert cliente.post("/partidos/P-03/equipos", json={"local": "ARG", "visitante": "BRA"}, headers=ADMIN).status_code == 409

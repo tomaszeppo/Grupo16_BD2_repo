@@ -9,21 +9,30 @@ from datetime import datetime, timedelta
 
 from app.dominio.ids import id_partido
 
-EQUIPOS = [
-    ("ARG", "Argentina"), ("BRA", "Brasil"), ("URU", "Uruguay"), ("COL", "Colombia"),
-    ("ECU", "Ecuador"), ("PAR", "Paraguay"), ("CHI", "Chile"), ("PER", "Perú"),
-    ("ESP", "España"), ("POR", "Portugal"), ("FRA", "Francia"), ("GER", "Alemania"),
-    ("ENG", "Inglaterra"), ("ITA", "Italia"), ("NED", "Países Bajos"), ("BEL", "Bélgica"),
-    ("CRO", "Croacia"), ("SUI", "Suiza"), ("DEN", "Dinamarca"), ("POL", "Polonia"),
-    ("SRB", "Serbia"), ("AUT", "Austria"), ("SWE", "Suecia"), ("NOR", "Noruega"),
-    ("MAR", "Marruecos"), ("SEN", "Senegal"), ("NGA", "Nigeria"), ("EGY", "Egipto"),
-    ("GHA", "Ghana"), ("CMR", "Camerún"), ("CIV", "Costa de Marfil"), ("TUN", "Túnez"),
-    ("ALG", "Argelia"), ("RSA", "Sudáfrica"), ("MEX", "México"), ("USA", "Estados Unidos"),
-    ("CAN", "Canadá"), ("CRC", "Costa Rica"), ("PAN", "Panamá"), ("JAM", "Jamaica"),
-    ("JPN", "Japón"), ("KOR", "Corea del Sur"), ("AUS", "Australia"), ("IRN", "Irán"),
-    ("KSA", "Arabia Saudita"), ("QAT", "Catar"), ("UZB", "Uzbekistán"), ("NZL", "Nueva Zelanda"),
+# 64 selecciones en cuatro bombos de 16. El grupo g toma el equipo g de cada bombo, así que los seis
+# anfitriones (primeros del bombo 1) encabezan los grupos A a F y nunca se cruzan en la fase de grupos.
+_BOMBOS = [
+    [("ARG", "Argentina"), ("ESP", "España"), ("POR", "Portugal"), ("URU", "Uruguay"), ("MAR", "Marruecos"),
+     ("PAR", "Paraguay"), ("BRA", "Brasil"), ("FRA", "Francia"), ("ENG", "Inglaterra"), ("GER", "Alemania"),
+     ("NED", "Países Bajos"), ("BEL", "Bélgica"), ("ITA", "Italia"), ("CRO", "Croacia"), ("COL", "Colombia"),
+     ("USA", "Estados Unidos")],
+    [("MEX", "México"), ("SUI", "Suiza"), ("DEN", "Dinamarca"), ("JPN", "Japón"), ("SEN", "Senegal"),
+     ("ECU", "Ecuador"), ("AUT", "Austria"), ("KOR", "Corea del Sur"), ("POL", "Polonia"), ("SRB", "Serbia"),
+     ("SWE", "Suecia"), ("CAN", "Canadá"), ("NOR", "Noruega"), ("IRN", "Irán"), ("CHI", "Chile"),
+     ("AUS", "Australia")],
+    [("PER", "Perú"), ("NGA", "Nigeria"), ("EGY", "Egipto"), ("CIV", "Costa de Marfil"), ("TUN", "Túnez"),
+     ("ALG", "Argelia"), ("CMR", "Camerún"), ("GHA", "Ghana"), ("TUR", "Turquía"), ("UKR", "Ucrania"),
+     ("CZE", "Chequia"), ("SCO", "Escocia"), ("KSA", "Arabia Saudita"), ("QAT", "Catar"), ("CRC", "Costa Rica"),
+     ("PAN", "Panamá")],
+    [("JAM", "Jamaica"), ("RSA", "Sudáfrica"), ("UZB", "Uzbekistán"), ("NZL", "Nueva Zelanda"), ("WAL", "Gales"),
+     ("IRL", "Irlanda"), ("GRE", "Grecia"), ("HUN", "Hungría"), ("ROU", "Rumania"), ("SVK", "Eslovaquia"),
+     ("BOL", "Bolivia"), ("VEN", "Venezuela"), ("HON", "Honduras"), ("MLI", "Malí"), ("IRQ", "Irak"),
+     ("CHN", "China")],
 ]
-GRUPOS = "ABCDEFGHIJKL"
+GRUPOS = "ABCDEFGHIJKLMNOP"
+# En el orden de los grupos: los cuatro primeros son el grupo A, los cuatro siguientes el B, y así.
+EQUIPOS = [_BOMBOS[bombo][g] for g in range(len(GRUPOS)) for bombo in range(4)]
+ANFITRIONES = ("ARG", "ESP", "POR", "URU", "MAR", "PAR")
 
 ESTADIOS = [
     ("Estadio del Río", "Buenos Aires"), ("Estadio de la Rambla", "Montevideo"),
@@ -101,15 +110,20 @@ def _jugadores(rng: random.Random) -> list[dict]:
     return salida
 
 
+PARTIDOS_DE_GRUPOS = 6 * len(GRUPOS)  # 96
+ELIMINATORIAS = [("Dieciseisavos", 16), ("Octavos", 8), ("Cuartos", 4), ("Semifinal", 2), ("Tercer puesto", 1),
+                 ("Final", 1)]
+
+
 def _partidos(equipos: list[dict], estadios: list[dict], inicio: datetime) -> tuple[list[dict], list[tuple]]:
     cruces = []
     for jornada in _JORNADAS:
-        for g in range(12):
+        for g in range(len(GRUPOS)):
             del_grupo = [e["codigo"] for e in equipos[g * 4:g * 4 + 4]]
             for a, b in jornada:
                 cruces.append(("Fase de grupos", del_grupo[a], del_grupo[b]))
-    cruces += [("Dieciseisavos", None, None)] * 16 + [("Octavos", None, None)] * 8 + [("Cuartos", None, None)] * 4
-    cruces += [("Semifinal", None, None)] * 2 + [("Tercer puesto", None, None), ("Final", None, None)]
+    for fase, cantidad in ELIMINATORIAS:
+        cruces += [(fase, None, None)] * cantidad
 
     partidos = []
     for i, (fase, local, visitante) in enumerate(cruces):
@@ -126,21 +140,39 @@ def _partidos(equipos: list[dict], estadios: list[dict], inicio: datetime) -> tu
             for origen in (primer_origen + 2 * k, primer_origen + 2 * k + 1):
                 cuadro.append((id_partido(origen), id_partido(primer_destino + k), "ganador"))
 
-    enlazar(73, 89, 8)  # dieciseisavos → octavos
-    enlazar(89, 97, 4)  # octavos → cuartos
-    enlazar(97, 101, 2)  # cuartos → semifinales
-    enlazar(101, 104, 1)  # semifinales → final
-    cuadro += [("P-101", "P-103", "perdedor"), ("P-102", "P-103", "perdedor")]
+    enlazar(97, 113, 8)  # dieciseisavos → octavos
+    enlazar(113, 121, 4)  # octavos → cuartos
+    enlazar(121, 125, 2)  # cuartos → semifinales
+    enlazar(125, 128, 1)  # semifinales → final
+    cuadro += [("P-125", "P-127", "perdedor"), ("P-126", "P-127", "perdedor")]
     return partidos, cuadro
 
 
+TURNOS_POR_DIA = 4  # horarios de inicio por día, cada tres horas
+
+
 def _fecha(indice: int, inicio: datetime) -> datetime:
-    """Cuatro partidos por día, cada tres horas. Las eliminatorias dejan un día libre entre rondas."""
-    if indice < 2:  # la muestra, jugada el día anterior
-        return inicio - timedelta(days=1) + timedelta(hours=3 * indice)
-    j = indice - 2
-    descanso = sum(1 for corte in (70, 86, 94, 98, 100) if j >= corte)  # índice (sin la muestra) donde arranca cada ronda
-    return inicio + timedelta(days=j // 4 + descanso, hours=3 * (j % 4))
+    """Horario de cada partido.
+
+    Fase de grupos: los dos partidos de un grupo en cada jornada empiezan a la misma hora, en simultáneo, y hay
+    cuatro horarios por día (ocho partidos). Eliminatorias: un partido por horario y un día libre entre rondas.
+    P-01 y P-02 son la muestra: se jugaron, en simultáneo, el día anterior a `inicio`.
+    """
+    if indice < 2:
+        return inicio - timedelta(days=1)
+    if indice < PARTIDOS_DE_GRUPOS:
+        turno = (indice - 2) // 2
+        return inicio + timedelta(days=turno // TURNOS_POR_DIA, hours=3 * (turno % TURNOS_POR_DIA))
+    turnos_de_grupos = (PARTIDOS_DE_GRUPOS - 2) // 2
+    dia = -(-turnos_de_grupos // TURNOS_POR_DIA)  # primer día después de la fase de grupos
+    restante = indice - PARTIDOS_DE_GRUPOS
+    for _, cantidad in ELIMINATORIAS:
+        dia += 1  # día libre antes de cada ronda
+        if restante < cantidad:
+            return inicio + timedelta(days=dia + restante // TURNOS_POR_DIA, hours=3 * (restante % TURNOS_POR_DIA))
+        dia += -(-cantidad // TURNOS_POR_DIA)  # días que ocupa la ronda
+        restante -= cantidad
+    raise ValueError("Índice de partido fuera del torneo.")
 
 
 def _jugadas(rng: random.Random, partido: dict, plantel: dict) -> tuple[list[dict], int, int]:

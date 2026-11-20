@@ -11,15 +11,15 @@ def _totales_mongo(db):
 
 
 def test_totales_tras_la_primera_carga(cargado, mongo, neo4j):
-    assert _totales_mongo(mongo.db) == {"equipos": 48, "jugadores": 1248, "resultados": 2}
+    assert _totales_mongo(mongo.db) == {"equipos": 64, "jugadores": 1664, "resultados": 2}
     totales = cargar_neo4j.totales(neo4j._drv(), "neo4j")
-    assert totales["Equipo"] == 48
-    assert totales["Jugador"] == 1248
+    assert totales["Equipo"] == 64
+    assert totales["Jugador"] == 1664
     assert totales["Estadio"] == 16
-    assert totales["Partido"] == 104
-    assert totales["PERTENECE_A"] == 1248
-    assert totales["PARTICIPA_EN"] == 144
-    assert totales["SE_JUEGA_EN"] == 104
+    assert totales["Partido"] == 128
+    assert totales["PERTENECE_A"] == 1664
+    assert totales["PARTICIPA_EN"] == 192
+    assert totales["SE_JUEGA_EN"] == 128
     assert totales["CLASIFICA_A"] == 32
     eventos = sum(len(e) for e in cargado.eventos.values())
     assert totales["Evento"] == eventos == totales["OCURRE_EN"]

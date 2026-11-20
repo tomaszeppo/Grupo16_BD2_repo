@@ -39,7 +39,7 @@ Al iniciar un partido, un hilo prepara los pronósticos en Redis. Al cerrar, se 
 
 El ranking acepta lecturas parciales mientras se calcula. Si la puntuación queda fallida, o el proceso que la llevaba muere, la API la retoma sola (cada 30 segundos busca las que quedaron a medias, hasta cinco intentos por partido); también se puede repetir el cierre a mano. Redis usa AOF `everysec`; no hay failover ni Redis Cluster. Se asume un único partido puntuándose a la vez. El límite de memoria local es deliberadamente pequeño: hay que dimensionar y medir antes de usar millones de usuarios. Los desempates y la configuración se detallan en el README.
 
-Usa el mismo Redis que las sesiones y el partido en vivo (con su contraseña): `deps._ranking_redis()` le pasa el cliente de `deps._redis()`. La réplica `redis_replica` (`REDIS_REPLICA_URL`) representa "la otra región": hoy ningún pedido lee de ella; cuánto tarda un cambio en llegarle se mide con `python -m scripts.medir_replica_redis` ([arquitectura por regiones](arquitectura_regiones.md)).
+Usa el mismo Redis que las sesiones y el partido en vivo (con su contraseña): `deps._ranking_redis()` le pasa el cliente de `deps._redis()`. La réplica `redis_replica` (`REDIS_REPLICA_URL`) representa "la otra región": de ella se leen el puesto de cada hincha y las tablas de los prodes privados; cuánto tarda un cambio en llegarle se mide con `python -m scripts.medir_replica_redis` ([arquitectura por regiones](arquitectura_regiones.md)).
 
 Por qué vale la pena está medido: con 100.000 usuarios, saber el puesto de uno leyendo de MongoDB tarda unos 300 ms y con 50 pedidos a la vez empieza a fallar ([rendimiento.md](rendimiento.md#26-saber-el-puesto-de-un-usuario-en-el-ranking)).
 

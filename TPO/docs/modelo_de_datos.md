@@ -110,7 +110,7 @@ Todas las consultas están como constantes en [`app/adapters/neo4j.py`](../app/a
 
 ## Datos de laboratorio
 
-Los genera [`seed/datos.py`](../seed/datos.py) con semilla fija: 48 equipos en 12 grupos, 26 jugadores por equipo, 16 estadios y 104 partidos (72 de grupos con sus equipos y 32 de eliminatorias sin equipos, enlazados en el cuadro). Los dos primeros partidos nacen jugados, con sus jugadas y su marcador, para tener cadenas que recorrer desde el arranque.
+Los genera [`seed/datos.py`](../seed/datos.py) con semilla fija: 64 equipos en 16 grupos (A a P), 26 jugadores por equipo, 16 estadios y 128 partidos: 96 de grupos con sus equipos (P-01 a P-96) y 32 de eliminatorias sin equipos, enlazados en el cuadro (dieciseisavos P-97 a P-112, octavos P-113 a P-120, cuartos P-121 a P-124, semifinales P-125 y P-126, tercer puesto P-127 y final P-128). Los seis anfitriones encabezan los grupos A a F. En la fase de grupos, los dos partidos de cada grupo en una jornada empiezan a la misma hora, con cuatro horarios por día; en las eliminatorias, un partido por horario y un día libre entre rondas. Los dos primeros partidos nacen jugados, con sus jugadas y su marcador, para tener cadenas que recorrer desde el arranque.
 
 
 ## Histórico de simulaciones
@@ -125,7 +125,7 @@ Las jugadas son hechos sintéticos definidos por el guion; no se inventa un juga
 
 ## Redis
 
-Claves que usa la API. Todas viven en el primario; la réplica (`redis_replica`) recibe una copia de lectura.
+Claves que usa la API. Todas se escriben en el primario; la réplica (`redis_replica`) recibe una copia, y de ahí se leen el puesto de cada hincha y las tablas de los prodes privados.
 
 | Clave | Tipo | Qué guarda | Vence |
 |---|---|---|---|

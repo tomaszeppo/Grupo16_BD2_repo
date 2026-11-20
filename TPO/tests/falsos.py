@@ -104,6 +104,19 @@ class MongoFalso(_Base):
         self.pronosticos[clave] = doc
         return _pub(doc), anterior is None
 
+    def obtener_pronostico(self, usuario_id, partido_id):
+        self._verificar()
+        return _pub(copy.deepcopy(self.pronosticos.get(f"{usuario_id}:{partido_id}")))
+
+    def pronosticos_del_partido(self, partido_id, usuario_ids):
+        self._verificar()
+        salida = {}
+        for usuario_id in usuario_ids:
+            p = self.pronosticos.get(f"{usuario_id}:{partido_id}")
+            if p is not None:
+                salida[usuario_id] = {k: p[k] for k in ("goles_local", "goles_visitante", "anulado", "puntos") if k in p}
+        return salida
+
     def pronosticos_de(self, usuario_id, limit, offset):
         self._verificar()
         filas = sorted((_pub(p) for p in self.pronosticos.values() if p["usuario_id"] == usuario_id),

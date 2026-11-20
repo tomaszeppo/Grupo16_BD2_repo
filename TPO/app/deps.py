@@ -74,7 +74,7 @@ def _transmision() -> Transmision:
 def _ranking_redis():
     """El ranking usa el mismo Redis que las sesiones (con su contraseña), por su propio cliente sincrónico."""
     from app.adapters.ranking_redis import RankingRedis
-    return RankingRedis(_mongo(), _settings(), cliente=_redis().cli)
+    return RankingRedis(_mongo(), _settings(), cliente=_redis().cli, lectura=_redis().cli_replica)
 
 
 @lru_cache
@@ -224,8 +224,9 @@ async def get_puntuacion_service(mongo=Depends(get_mongo), neo4j=Depends(get_neo
     return PuntuacionService(mongo, neo4j, calendario, reloj, ranking, settings.puntuacion_toma_vencida_segundos)
 
 
-async def get_ranking_service(ranking=Depends(get_ranking), mongo=Depends(get_mongo)) -> RankingService:
-    return RankingService(ranking, mongo)
+async def get_ranking_service(ranking=Depends(get_ranking), mongo=Depends(get_mongo),
+                              settings: Settings = Depends(get_settings)) -> RankingService:
+    return RankingService(ranking, mongo, settings.ranking_copia_segundos)
 
 
 async def get_comentarios_service(cassandra=Depends(get_cassandra), redis=Depends(get_redis), neo4j=Depends(get_neo4j),

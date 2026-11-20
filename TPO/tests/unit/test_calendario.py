@@ -106,11 +106,11 @@ def test_salud_incluye_el_estado_del_calendario(cliente):
 
 
 def test_el_listado_del_fixture_sale_de_la_copia(calendario, neo4j):
-    assert len(calendario.listar(None, None, None)) == 104
-    assert len(calendario.listar("Fase de grupos", None, None)) == 72
+    assert len(calendario.listar(None, None, None)) == 128
+    assert len(calendario.listar("Fase de grupos", None, None)) == 96
     assert [p["id"] for p in calendario.listar(None, None, "Finalizado")] == ["P-01", "P-02"]
     from datetime import date
-    assert len(calendario.listar(None, date(2030, 6, 13), None)) == 3
+    assert len(calendario.listar(None, date(2030, 6, 13), None)) == 6
     assert neo4j.llamadas == 1
 
 
@@ -120,7 +120,7 @@ def test_el_listado_no_deja_modificar_la_copia(calendario):
 
 
 def test_el_fixture_se_sigue_viendo_con_neo4j_caido_si_hay_copia(cliente, neo4j):
-    assert cliente.get("/partidos").json()["total"] == 104
+    assert cliente.get("/partidos").json()["total"] == 128
     neo4j.caida = True
     resp = cliente.get("/partidos", params={"fase": "Final"})
     assert resp.status_code == 200 and resp.json()["total"] == 1

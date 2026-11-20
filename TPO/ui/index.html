@@ -2,35 +2,43 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1d33">
   <title>Prode Mundial 2030</title>
   <link rel="stylesheet" href="/demo/vendor/bootstrap/bootstrap.min.css">
-  <link rel="stylesheet" href="/demo/estilos.css?v=2">
+  <link rel="stylesheet" href="/demo/estilos.css?v=3">
 </head>
 <body class="d-flex flex-column min-vh-100">
   <a class="saltar visually-hidden-focusable" href="#contenido">Ir al contenido</a>
-  <header class="cabecera navbar">
+  <header class="cabecera">
     <div class="container-xl cabecera-interior">
-      <a class="marca navbar-brand me-0" href="#/en-vivo">Prode <span>Mundial 2030</span></a>
-      <nav id="menu" class="nav nav-pills" aria-label="Secciones">
-        <a class="nav-link" href="#/fixture">Fixture</a>
-        <a class="nav-link" href="#/ranking">Ranking</a>
-        <a class="nav-link" href="#/prodes">Mis prodes</a>
-        <a class="nav-link" id="menu-admin" href="#/admin" hidden>Administración</a>
+      <a class="marca" href="#/en-vivo" aria-label="Prode Mundial 2030, inicio">
+        <svg class="marca-pelota" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><circle cx="16" cy="16" r="14"/><path d="M16 9l6 4.4-2.3 7h-7.4L10 13.4z"/><path d="M16 2v7M30 12.5l-8 .9M24.5 28l-4.8-7.6M7.5 28l4.8-7.6M2 12.5l8 .9" fill="none"/></svg>
+        <span class="marca-texto"><span class="marca-prode">Prode</span> <span class="marca-mundial">Mundial 2030</span></span>
+      </a>
+      <nav id="menu" class="menu" aria-label="Secciones">
+        <a href="#/en-vivo"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7"/></svg><span>En vivo</span></a>
+        <a href="#/fixture"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span>Fixture</span></a>
+        <a href="#/grupos"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="4" width="7" height="7" rx="1.5"/><rect x="13.5" y="4" width="7" height="7" rx="1.5"/><rect x="3.5" y="13" width="7" height="7" rx="1.5"/><rect x="13.5" y="13" width="7" height="7" rx="1.5"/></svg><span>Grupos</span></a>
+        <a href="#/ranking"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H4.5v1.5A3.5 3.5 0 0 0 8 11M16 6h3.5v1.5A3.5 3.5 0 0 1 16 11M12 13v4M8.5 20h7M10 17h4v3h-4z"/></svg><span>Ranking</span></a>
+        <a href="#/prodes"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="9" cy="8.5" r="3"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M14.5 15.2A4.5 4.5 0 0 1 21 19"/></svg><span>Mis prodes</span></a>
+        <a id="menu-admin" href="#/admin" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg><span>Admin</span></a>
       </nav>
       <div id="quien" class="quien"></div>
     </div>
   </header>
 
-  <main class="container-xl flex-grow-1 py-4 py-lg-5" id="contenido" tabindex="-1"></main>
+  <main class="container-xl flex-grow-1 py-3 py-md-4 py-lg-5" id="contenido" tabindex="-1"></main>
 
-  <footer class="pie border-top py-3"><div class="container-xl d-flex flex-wrap gap-2 justify-content-between">
-    <span id="salud" class="salud">Consultando el estado de las bases…</span>
-    <span>Datos de laboratorio. Cada bloque indica qué base respondió.</span>
-  </div></footer>
+  <footer class="pie">
+    <div class="container-xl pie-interior">
+      <div id="salud" class="salud" aria-live="polite">Consultando el estado de las bases…</div>
+      <p class="pie-firma">Proyecto académico · Grupo 16 · Bases de Datos II. Datos de laboratorio: cada bloque indica qué base respondió.</p>
+    </div>
+  </footer>
 
-  <div id="aviso" class="alert aviso" role="status" aria-live="polite" hidden></div>
+  <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
   <script src="/demo/vendor/gsap/gsap.min.js" defer></script>
-  <script src="/demo/app.js?v=2" defer></script>
+  <script src="/demo/app.js?v=3" defer></script>
 </body>
 </html>

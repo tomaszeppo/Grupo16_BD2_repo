@@ -53,12 +53,24 @@ def _lotes(iterable, tamano):
 class RankingRedis:
     nombre = "redis"
 
-    def __init__(self, mongo, settings, cliente=None):
+    def __init__(self, mongo, settings, cliente=None, lectura=None):
         self.mongo = mongo
         self.lote = max(1, settings.redis_lote)
         self.demora = max(0, settings.redis_persistencia_demora_segundos)
         self.r = cliente or redis.Redis.from_url(settings.redis_url, decode_responses=True, socket_timeout=5,
                                                  socket_connect_timeout=5, health_check_interval=30)
+        # Réplica para las lecturas de un solo hincha (su puesto, las tablas de sus prodes): así no compiten con
+        # el ranking público ni con la puntuación, que van al primario. Si la réplica no responde, el primario.
+        self.lectura = lectura
+
+    def _leer(self, operacion):
+        """Corre `operacion(cliente)` en la réplica y, si no está o falla, en el primario."""
+        if self.lectura is not None:
+            try:
+                return operacion(self.lectura)
+            except redis.RedisError:
+                pass
+        return operacion(self.r)
 
     def _asegurar_ranking(self):
         if self.r.exists(LISTO):
@@ -201,18 +213,34 @@ class RankingRedis:
 
     def posicion(self, usuario_id):
         self._asegurar_ranking()
-        posicion = self.r.zrevrank(ZSET, miembro_redis(usuario_id))
-        if posicion is None:
+
+        def consultar(cliente):
+            tubo = cliente.pipeline(transaction=False)
+            tubo.zrevrank(ZSET, miembro_redis(usuario_id))
+            tubo.hget(DATOS, usuario_id)
+            tubo.zcard(ZSET)
+            return tubo.execute()
+
+        posicion, texto, total = self._leer(consultar)
+        if posicion is None or texto is None:  # sin puntaje, o en el orden pero sin sus datos: no es un error
             return None
-        texto = self.r.hget(DATOS, usuario_id)
-        if texto is None:  # está en el orden pero sin sus datos: se informa como sin puntaje, no como error
-            return None
-        datos = json.loads(texto)
-        return {"puesto": posicion + 1, **datos, "total_usuarios": self.r.zcard(ZSET)}
+        return {"puesto": posicion + 1, **json.loads(texto), "total_usuarios": total}
 
     def puntajes_de(self, usuario_ids):
+        """La tabla de un prode privado: hasta 100 integrantes, en la réplica (ver `__init__`)."""
         self._asegurar_ranking()
-        valores = self.r.hmget(DATOS, usuario_ids) if usuario_ids else []
-        nombres = self._nombres(usuario_ids)
+        if not usuario_ids:
+            return []
+
+        def consultar(cliente):
+            tubo = cliente.pipeline(transaction=False)
+            tubo.hmget(DATOS, usuario_ids)
+            tubo.hmget(NOMBRES, usuario_ids)
+            return tubo.execute()
+
+        valores, encontrados = self._leer(consultar)
+        nombres = dict(zip(usuario_ids, encontrados))
+        if any(n is None for n in nombres.values()):  # nombres que faltan: se completan desde MongoDB, en el primario
+            nombres = self._nombres(usuario_ids)
         return [{"usuario_id": u, "nombre": nombres.get(u), **(json.loads(v) if v else {"puntos": 0, "exactos": 0, "tiempo_seg": 0})}
                 for u, v in zip(usuario_ids, valores)]

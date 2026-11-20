@@ -31,7 +31,7 @@ def cerrar(cliente, partido="P-03", gl=2, gv=1, **extra):
 def test_sin_la_clave_de_administracion_responde_401(cliente, encabezados):
     for ruta, cuerpo in (("/partidos/P-03/estado", {"estado": "En juego"}),
                          ("/partidos/P-03/resultado", {"goles_local": 1, "goles_visitante": 0}),
-                         ("/partidos/P-73/equipos", {"local": "ARG", "visitante": "BRA"}),
+                         ("/partidos/P-97/equipos", {"local": "ARG", "visitante": "BRA"}),
                          ("/partidos/P-03/eventos", {"id": "EV-1", "tipo": "Gol", "minuto": 3, "orden": 1})):
         resp = cliente.post(ruta, json=cuerpo, headers=encabezados)
         assert resp.status_code == 401, ruta
@@ -66,23 +66,23 @@ def test_poner_en_juego_cierra_los_pronosticos_en_este_proceso(cliente):
 def test_no_se_pone_en_juego_lo_inexistente_lo_terminado_ni_lo_que_no_tiene_equipos(cliente):
     assert poner_en_juego(cliente, "P-999").status_code == 404
     assert poner_en_juego(cliente, "P-01").status_code == 409
-    assert poner_en_juego(cliente, "P-104").status_code == 409
+    assert poner_en_juego(cliente, "P-128").status_code == 409
     assert cliente.post("/partidos/P-03/estado", json={"estado": "Finalizado"}, headers=ADMIN).status_code == 422
 
 
 # --- equipos de eliminatorias ---
 def test_asignar_equipos_habilita_el_pronostico(cliente):
     u = crear_usuario(cliente)
-    resp = cliente.post("/partidos/P-73/equipos", json={"local": "ARG", "visitante": "BRA"}, headers=ADMIN)
+    resp = cliente.post("/partidos/P-97/equipos", json={"local": "ARG", "visitante": "BRA"}, headers=ADMIN)
     assert resp.status_code == 200
     assert resp.json()["partido"]["local"]["codigo"] == "ARG"
-    pronosticar(cliente, u, "P-73", 1, 0)
+    pronosticar(cliente, u, "P-97", 1, 0)
 
 
 @pytest.mark.parametrize("partido,cuerpo,codigo", [
-    ("P-73", {"local": "ARG", "visitante": "ARG"}, 422),
-    ("P-73", {"local": "ARG", "visitante": "XXX"}, 404),
-    ("P-73", {"local": "arg", "visitante": "BRA"}, 422),
+    ("P-97", {"local": "ARG", "visitante": "ARG"}, 422),
+    ("P-97", {"local": "ARG", "visitante": "XXX"}, 404),
+    ("P-97", {"local": "arg", "visitante": "BRA"}, 422),
     ("P-03", {"local": "ARG", "visitante": "BRA"}, 409),  # fase de grupos
     ("P-999", {"local": "ARG", "visitante": "BRA"}, 404),
 ])
@@ -226,12 +226,12 @@ def test_cuerpo_de_cierre_invalido_422(cliente, cuerpo):
 
 
 def test_eliminatoria_empatada_exige_decir_quien_clasifica(cliente):
-    cliente.post("/partidos/P-73/equipos", json={"local": "ARG", "visitante": "BRA"}, headers=ADMIN)
-    poner_en_juego(cliente, "P-73")
-    assert cerrar(cliente, "P-73", 1, 1).status_code == 422
-    assert cerrar(cliente, "P-73", 1, 1, clasificado="URU").status_code == 422
-    assert cerrar(cliente, "P-73", 2, 1, clasificado="BRA").status_code == 422  # ganó ARG
-    assert cerrar(cliente, "P-73", 1, 1, clasificado="BRA").status_code == 202
+    cliente.post("/partidos/P-97/equipos", json={"local": "ARG", "visitante": "BRA"}, headers=ADMIN)
+    poner_en_juego(cliente, "P-97")
+    assert cerrar(cliente, "P-97", 1, 1).status_code == 422
+    assert cerrar(cliente, "P-97", 1, 1, clasificado="URU").status_code == 422
+    assert cerrar(cliente, "P-97", 2, 1, clasificado="BRA").status_code == 422  # ganó ARG
+    assert cerrar(cliente, "P-97", 1, 1, clasificado="BRA").status_code == 202
 
 
 def test_pronostico_tardio_se_anula(cliente, mongo, reloj):

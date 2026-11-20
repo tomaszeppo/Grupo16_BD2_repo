@@ -24,7 +24,7 @@ class RelojFijo:
 def settings():
     # Valores explícitos: las pruebas no dependen de las variables de entorno del contenedor donde corran.
     return Settings(_env_file=None, admin_clave="clave-de-prueba", pronosticos_hasta_inicio_real=False,
-                    redis_enabled=False)
+                    redis_enabled=False, ranking_copia_segundos=0)
 
 
 @pytest.fixture

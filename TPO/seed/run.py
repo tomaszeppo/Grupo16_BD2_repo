@@ -20,7 +20,7 @@ from seed import cargar_mongo, cargar_neo4j, datos
 
 COLECCIONES = ["usuarios", "prodes", "pronosticos", "resultados", "puntajes", "rankings_historicos",
                "equipos", "jugadores", "contadores",
-               "simulaciones"]  # estado de cada simulación: sin borrarlo, un partido reiniciado no se puede volver a simular
+               "simulaciones", "guiones_simulacion", "configuracion"]  # estado de cada simulación: sin borrarlo, un partido reiniciado no se puede volver a simular
 
 
 # Lo que la audiencia y los comentarios dejan en Redis por partido. Las sesiones no se tocan.

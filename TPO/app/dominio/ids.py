@@ -1,7 +1,7 @@
 """Identificadores del proyecto. Son los mismos en todas las bases: nadie traduce ids entre una y otra."""
 import re
 
-ID_PARTIDO = r"^P-\d{2,3}$"  # P-01 … P-104
+ID_PARTIDO = r"^P-\d{2,3}$"  # P-01 … P-128
 ID_USUARIO = r"^U\d{7}$"  # U0000001
 CODIGO_EQUIPO = r"^[A-Z]{3}$"  # código FIFA
 ID_PRODE = r"^PR-[0-9a-f]{8}$"

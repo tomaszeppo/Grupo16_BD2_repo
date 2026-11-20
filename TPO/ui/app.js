@@ -27,13 +27,49 @@ let navegacionActual = 0;
 // ---------- utilidades ----------
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const base = (fuente) => {
-  const clase = fuente === "mongodb" ? "mongodb" : fuente === "neo4j" ? "neo4j" : "otra";
+  const clase = ["mongodb", "neo4j", "redis", "cassandra", "influxdb"].includes(fuente) ? fuente : "otra";
   const nombre = { mongodb: "MongoDB", neo4j: "Neo4j", redis: "Redis", cassandra: "Cassandra", influxdb: "InfluxDB" }[fuente] || fuente;
   return `<span class="badge rounded-pill base ${clase}" title="Base que respondió este bloque">${esc(nombre)}</span>`;
 };
-const fecha = (iso) => new Date(iso).toLocaleString("es-AR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const fecha = (iso) => new Date(iso).toLocaleString("es-AR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const hora = (iso) => new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const diaLargo = (iso) => { const t = new Date(iso).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" }); return t.charAt(0).toUpperCase() + t.slice(1); };
+const claveDia = (iso) => { const d = new Date(iso); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; };
 const claseEstado = (e) => e === "En juego" ? "en-juego" : e === "Finalizado" ? "finalizado" : "programado";
 const nombreEquipo = (e) => e ? esc(e.nombre) : "Por definir";
+
+// Banderas en emoji a partir del código de cada selección. Windows no dibuja banderas en emoji: ahí queda solo
+// el código de tres letras, que es como se las identifica en el torneo.
+const ISO = {
+  ARG: "AR", BRA: "BR", URU: "UY", COL: "CO", ECU: "EC", PAR: "PY", CHI: "CL", PER: "PE", BOL: "BO", VEN: "VE",
+  ESP: "ES", POR: "PT", FRA: "FR", GER: "DE", ITA: "IT", NED: "NL", BEL: "BE", CRO: "HR", SUI: "CH", DEN: "DK",
+  POL: "PL", SRB: "RS", AUT: "AT", SWE: "SE", NOR: "NO", IRL: "IE", UKR: "UA", CZE: "CZ", TUR: "TR", GRE: "GR",
+  HUN: "HU", ROU: "RO", SVK: "SK", MAR: "MA", SEN: "SN", NGA: "NG", EGY: "EG", GHA: "GH", CMR: "CM", CIV: "CI",
+  TUN: "TN", ALG: "DZ", RSA: "ZA", MLI: "ML", MEX: "MX", USA: "US", CAN: "CA", CRC: "CR", PAN: "PA", JAM: "JM",
+  HON: "HN", JPN: "JP", KOR: "KR", AUS: "AU", IRN: "IR", KSA: "SA", QAT: "QA", UZB: "UZ", NZL: "NZ", IRQ: "IQ",
+  CHN: "CN",
+};
+const SUBDIVISION = { ENG: "gbeng", SCO: "gbsct", WAL: "gbwls" };
+const banderasEmoji = typeof navigator === "undefined" || !/Windows/i.test(navigator.userAgent || "");
+function banderaEmoji(codigo) {
+  if (!banderasEmoji) return "";
+  if (SUBDIVISION[codigo]) return String.fromCodePoint(0x1F3F4, ...[...SUBDIVISION[codigo]].map(c => 0xE0000 + c.charCodeAt(0)), 0xE007F);
+  const iso = ISO[codigo];
+  return iso ? String.fromCodePoint(...[...iso].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)) : "";
+}
+const escudo = (e) => e?.codigo
+  ? `<span class="escudo" aria-hidden="true">${banderaEmoji(e.codigo) ? `<span class="escudo-bandera">${banderaEmoji(e.codigo)}</span>` : ""}<span class="escudo-codigo">${esc(e.codigo)}</span></span>`
+  : `<span class="escudo escudo-vacio" aria-hidden="true"><span class="escudo-codigo">?</span></span>`;
+
+// Catálogo de selecciones (MongoDB): no cambia durante el torneo, así que se pide una sola vez.
+let catalogo = null;
+function catalogoEquipos() {
+  if (!catalogo) catalogo = api("/equipos").then(d => new Map(d.equipos.map(e => [e.codigo, e]))).catch(e => { catalogo = null; throw e; });
+  return catalogo;
+}
+const grupoDe = (partido, equipos) => partido.fase === "Fase de grupos" ? equipos?.get(partido.local?.codigo)?.grupo : null;
+
+const ANFITRIONES = [["ARG", "Argentina"], ["PAR", "Paraguay"], ["URU", "Uruguay"], ["ESP", "España"], ["POR", "Portugal"], ["MAR", "Marruecos"]];
 const marcador = (p) => p.goles_local == null ? "–" : `${p.goles_local} - ${p.goles_visitante}`;
 const duracion = (seg) => seg >= 86400 ? `${(seg / 86400).toFixed(1)} d` : seg >= 3600 ? `${(seg / 3600).toFixed(1)} h` : `${Math.round(seg / 60)} min`;
 
@@ -80,7 +116,7 @@ async function iniciarAdministrador() {
 function avisar(texto, mal = false) {
   const caja = document.getElementById("aviso");
   caja.textContent = texto;
-  caja.className = mal ? "alert aviso mal" : "alert aviso";
+  caja.className = mal ? "aviso mal" : "aviso";
   caja.hidden = false;
   clearTimeout(avisar.reloj);
   avisar.reloj = setTimeout(() => { caja.hidden = true; }, mal ? 7000 : 3500);
@@ -108,8 +144,8 @@ function dibujarQuien() {
   document.getElementById("menu").hidden = !u && !claveAdmin;
   document.getElementById("menu-admin").hidden = !claveAdmin;
   document.getElementById("quien").innerHTML = u
-    ? `<span><strong>${esc(u.nombre)}</strong> (${esc(u.id)})</span><button class="btn btn-outline-light btn-sm" id="salir">Cambiar de usuario</button>`
-    : claveAdmin ? `<span>Administración</span><button class="btn btn-outline-light btn-sm" id="salir">Salir</button>` : `<a href="#/ingreso">Elegir usuario</a>`;
+    ? `<span class="quien-usuario">${escudo({ codigo: u.pais })}<span><strong>${esc(u.nombre)}</strong><small>${esc(u.id)}</small></span></span><button class="btn btn-sm quien-salir" id="salir">Cambiar<span class="visually-hidden"> de usuario</span></button>`
+    : claveAdmin ? `<span>Administración</span><button class="btn btn-sm quien-salir" id="salir">Salir</button>` : `<a class="quien-entrar" href="#/ingreso">Entrar</a>`;
   document.getElementById("salir")?.addEventListener("click", () => { if (sesion.usuario) api("/sesiones/actual", { metodo: "DELETE" }).catch(() => {}); sesion.usuario = null; claveAdmin = ""; administradorPreparado = false; localStorage.removeItem("admin_clave"); location.hash = "#/ingreso"; dibujarQuien(); });
 }
 
@@ -121,9 +157,9 @@ async function dibujarSalud() {
     const cal = s.calendario;
     const copia = !cal.cargado ? "sin copia del calendario todavía"
       : `copia del calendario de hace ${Math.round(cal.antiguedad_segundos)} s${cal.desactualizado ? " (no se pudo renovar)" : ""}`;
-    const otras = [["Redis", s.redis], ["Cassandra América", s.cassandra_america], ["Cassandra Europa", s.cassandra_europa]]
+    const otras = [["Redis", s.redis], ["Cassandra América", s.cassandra_america], ["Cassandra Europa", s.cassandra_europa], ["InfluxDB", s.influxdb]]
       .filter(([, d]) => d).map(([n, d]) => una(n, d)).join("");
-    caja.innerHTML = `${una("MongoDB", s.mongodb)}${una("Neo4j", s.neo4j)}${otras} ${esc(copia)}`;
+    caja.innerHTML = `${una("MongoDB", s.mongodb)}${una("Neo4j", s.neo4j)}${otras}<span class="salud-copia">${esc(copia)}</span>`;
   } catch (e) {
     caja.innerHTML = `<b class="caida">API: no responde</b>`;
   }
@@ -132,7 +168,7 @@ async function dibujarSalud() {
 // ---------- ingreso ----------
 async function vistaIngreso() {
   contenido.innerHTML = `
-    <div class="titulo"><div><h1>Entrá al Prode</h1><p>Ingresá con tu identificador o creá una cuenta para seguir los partidos.</p></div></div>
+    ${portadaTorneo("Entrá al Prode", "Pronosticá los 128 partidos, armá tu grupo con amigos y seguí cada partido con la tribuna de tu país.")}
     <div class="row g-3 g-lg-4">
       <div class="col-12 col-md-6 col-xl-4"><section class="card bloque h-100"><header><h2>Usuario nuevo</h2>${base("mongodb")}</header>
         <form id="alta"><div><label class="form-label" for="nombre">Nombre</label><input class="form-control" id="nombre" required maxlength="60" autocomplete="off"></div>
@@ -145,8 +181,10 @@ async function vistaIngreso() {
     </div>`;
   const pais = document.getElementById("pais");
   const altaError = document.getElementById("alta-error");
-  api("/equipos").then((d) => {
-    pais.innerHTML = d.equipos.map((e) => `<option value="${esc(e.codigo)}">${esc(e.nombre)}</option>`).join("");
+  catalogoEquipos().then((equipos) => {
+    const lista = [...equipos.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+    pais.innerHTML = lista.map((e) => `<option value="${esc(e.codigo)}">${banderaEmoji(e.codigo) ? banderaEmoji(e.codigo) + " " : ""}${esc(e.nombre)}</option>`).join("");
+    pais.value = equipos.has("ARG") ? "ARG" : lista[0]?.codigo;
   }).catch((e) => { altaError.innerHTML = cajaDeError(e); });
 
   // Abre la sesión en Redis; la API deja la cookie. Se guarda aparte solo lo que se muestra (nombre, país).
@@ -178,60 +216,113 @@ async function vistaIngreso() {
   });
 }
 
+// ---------- portada del torneo ----------
+// Seis anfitriones en tres continentes: la franja se repite en el ingreso y en la portada.
+function portadaTorneo(titulo, bajada, extra = "") {
+  return `<section class="portada" aria-labelledby="portada-titulo">
+    <div class="portada-cancha" aria-hidden="true"></div>
+    <div class="portada-cuerpo">
+      <p class="portada-volanta">Mundial 2030 · 64 selecciones · 128 partidos</p>
+      <h1 id="portada-titulo">${esc(titulo)}</h1>
+      <p class="portada-bajada">${esc(bajada)}</p>
+      <ul class="anfitriones" aria-label="Países anfitriones">
+        ${ANFITRIONES.map(([codigo, nombre]) => `<li>${escudo({ codigo })}<span>${esc(nombre)}</span></li>`).join("")}
+      </ul>
+      <p class="portada-continentes">Sudamérica · Europa · África</p>
+      ${extra}
+    </div>
+  </section>`;
+}
+
 // ---------- fixture ----------
 const FASES = ["Fase de grupos", "Dieciseisavos", "Octavos", "Cuartos", "Semifinal", "Tercer puesto", "Final"];
+const GRUPOS = "ABCDEFGHIJKLMNOP".split("");
 let faseElegida = "Fase de grupos";
+let grupoElegido = "";
 
 // Una tarjeta para el fixture, la portada y el historial: los equipos siempre ocupan una fila cada uno.
 function tarjetaPartido(p, {
-  estado = p.estado, marcador = [p.goles_local, p.goles_visitante], minuto, detalle, accion,
+  estado = p.estado, marcador = [p.goles_local, p.goles_visitante], minuto, detalle, accion, grupo, conFecha = true,
 } = {}) {
   const equipo = (e, goles) => `<div class="partido-equipo">
-    <span>${nombreEquipo(e)}</span><strong class="partido-goles">${esc(goles ?? "–")}</strong>
+    ${escudo(e)}<span class="partido-nombre">${nombreEquipo(e)}</span><strong class="partido-goles">${esc(goles ?? "–")}</strong>
   </div>`;
-  return `<div class="col"><a class="card partido h-100" href="#/partido/${esc(p.id)}">
+  const cuando = conFecha ? fecha(p.fecha_hora) : hora(p.fecha_hora);
+  return `<div class="col"><a class="card partido h-100 ${claseEstado(estado)}" href="#/partido/${esc(p.id)}">
     <div class="card-body">
-      <div class="partido-cabecera"><span>${esc(p.id)} · ${esc(fecha(p.fecha_hora))}</span>
-        <span class="badge rounded-pill estado ${claseEstado(estado)}">${esc(estado)}${minuto == null ? "" : ` · ${esc(minuto)}′`}</span>
+      <div class="partido-cabecera"><span>${grupo ? `<b class="partido-grupo">Grupo ${esc(grupo)}</b> · ` : ""}${esc(p.id)} · ${esc(cuando)}</span>
+        <span class="estado ${claseEstado(estado)}">${estado === "En juego" ? '<span class="punto-vivo" aria-hidden="true"></span>' : ""}${esc(estado)}${minuto == null ? "" : ` · ${esc(minuto)}′`}</span>
       </div>
       <div class="partido-equipos">${equipo(p.local, marcador[0])}${equipo(p.visitante, marcador[1])}</div>
     </div>
-    ${detalle || accion ? `<div class="card-footer partido-pie">
+    ${detalle || accion ? `<div class="partido-pie">
       ${detalle ? `<span>${esc(detalle)}</span>` : ""}${accion ? `<strong>${esc(accion)}</strong>` : ""}
     </div>` : ""}
   </a></div>`;
 }
 
+// Agrupa por día y por horario de inicio. Dos o más partidos con el mismo horario se juegan en simultáneo.
+function partidosPorHorario(partidos, equipos, hastaInicioReal) {
+  const dias = new Map();
+  for (const p of partidos) {
+    const dia = claveDia(p.fecha_hora);
+    if (!dias.has(dia)) dias.set(dia, { fecha: p.fecha_hora, horarios: new Map() });
+    const horarios = dias.get(dia).horarios;
+    if (!horarios.has(p.fecha_hora)) horarios.set(p.fecha_hora, []);
+    horarios.get(p.fecha_hora).push(p);
+  }
+  return [...dias.values()].map(({ fecha: f, horarios }) => `<section class="jornada" aria-label="${esc(diaLargo(f))}">
+    <h2 class="jornada-dia">${esc(diaLargo(f))}</h2>
+    ${[...horarios.entries()].map(([inicio, lista]) => `<div class="horario">
+      <div class="horario-cabecera"><span class="horario-hora">${esc(hora(inicio))}</span>${lista.length > 1 ? `<span class="simultaneo">En simultáneo · ${lista.length} partidos</span>` : ""}</div>
+      <div class="row row-cols-1 row-cols-md-2 g-3">${lista.map(p => tarjetaPartido(p, {
+        conFecha: false, grupo: grupoDe(p, equipos),
+        detalle: [p.estadio?.nombre, p.estadio?.ciudad].filter(Boolean).join(", "),
+        accion: pronosticoAbierto(p, hastaInicioReal) ? "Hacer pronóstico" : null,
+      })).join("")}</div>
+    </div>`).join("")}
+  </section>`).join("");
+}
+
 async function vistaFixture() {
   contenido.innerHTML = `
-    <div class="titulo"><div><h1>Fixture</h1><p>Elegí un partido para pronosticarlo o seguir sus jugadas.</p></div>${base("neo4j")}</div>
+    <div class="titulo"><div><h1>Fixture</h1><p>Los 128 partidos, día por día. En la fase de grupos, los dos partidos de cada grupo se juegan a la misma hora.</p></div>${base("neo4j")}</div>
     <div class="fixture-fases">
-      <h2 id="fases-titulo">Fase del torneo</h2>
-      <select id="fases-movil" class="form-select d-sm-none" aria-labelledby="fases-titulo">${FASES.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("")}</select>
-      <div class="filtros d-none d-sm-flex flex-wrap gap-2" role="group" aria-labelledby="fases-titulo">${FASES.map(f => `<button type="button" class="btn btn-outline-primary btn-sm" aria-pressed="${f === faseElegida}" data-fase="${esc(f)}">${esc(f)}</button>`).join("")}</div>
+      <label class="form-label" for="fases-movil" id="fases-titulo">Fase del torneo</label>
+      <select id="fases-movil" class="form-select d-md-none">${FASES.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join("")}</select>
+      <div class="filtros d-none d-md-flex" role="group" aria-labelledby="fases-titulo">${FASES.map(f => `<button type="button" class="btn btn-sm" aria-pressed="${f === faseElegida}" data-fase="${esc(f)}">${esc(f)}</button>`).join("")}</div>
+      <div id="filtro-grupo" class="filtro-grupo">
+        <label class="form-label" for="grupo-elegido">Grupo</label>
+        <select id="grupo-elegido" class="form-select"><option value="">Todos los grupos</option>${GRUPOS.map(g => `<option value="${g}">Grupo ${g}</option>`).join("")}</select>
+      </div>
     </div>
     <div id="fixture-estado" class="fixture-estado" role="status"></div>
-    <div id="lista" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3 partidos"></div>`;
+    <div id="lista" class="partidos"></div>`;
   const lista = document.getElementById("lista"), estado = document.getElementById("fixture-estado");
   const fases = [...contenido.querySelectorAll("[data-fase]")];
   const selectorFase = document.getElementById("fases-movil");
+  const selectorGrupo = document.getElementById("grupo-elegido"), filtroGrupo = document.getElementById("filtro-grupo");
+  selectorGrupo.value = grupoElegido;
   let consulta = 0;
   async function cargarFase(fase) {
     const actual = ++consulta;
     faseElegida = fase;
     selectorFase.value = fase;
     fases.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.fase === fase)));
+    filtroGrupo.hidden = fase !== "Fase de grupos";
     estado.textContent = "Cargando partidos…";
     lista.setAttribute("aria-busy", "true");
     lista.replaceChildren();
     try {
-      const d = await api(`/partidos?fase=${encodeURIComponent(fase)}`);
+      const [d, equipos] = await Promise.all([api(`/partidos?fase=${encodeURIComponent(fase)}`), catalogoEquipos().catch(() => null)]);
       if (actual !== consulta || !lista.isConnected) return;
-      estado.textContent = d.partidos.length ? `${d.partidos.length} ${d.partidos.length === 1 ? "partido" : "partidos"}` : "No hay partidos en esta fase.";
-      lista.innerHTML = d.partidos.map(p => tarjetaPartido(p, {
-        detalle: [p.estadio?.nombre, p.estadio?.ciudad].filter(Boolean).join(", "),
-        accion: pronosticoAbierto(p, d.pronosticos_hasta_inicio_real) ? "Hacer pronóstico" : null,
-      })).join("");
+      const elegidos = fase === "Fase de grupos" && grupoElegido && equipos
+        ? d.partidos.filter(p => grupoDe(p, equipos) === grupoElegido) : d.partidos;
+      const simultaneos = new Set(elegidos.map(p => p.fecha_hora)).size;
+      estado.textContent = elegidos.length
+        ? `${elegidos.length} ${elegidos.length === 1 ? "partido" : "partidos"} en ${simultaneos} ${simultaneos === 1 ? "horario" : "horarios"}`
+        : "No hay partidos en esta fase.";
+      lista.innerHTML = partidosPorHorario(elegidos, equipos, d.pronosticos_hasta_inicio_real);
     } catch (e) {
       if (actual !== consulta || !lista.isConnected) return;
       estado.innerHTML = cajaDeError(e);
@@ -241,7 +332,56 @@ async function vistaFixture() {
   }
   fases.forEach(b => b.addEventListener("click", () => cargarFase(b.dataset.fase)));
   selectorFase.addEventListener("change", () => cargarFase(selectorFase.value));
+  selectorGrupo.addEventListener("change", () => { grupoElegido = selectorGrupo.value; cargarFase(faseElegida); });
   await cargarFase(faseElegida);
+}
+
+// ---------- grupos ----------
+// Las tablas de posiciones no se guardan en ninguna base: se calculan acá con los partidos finalizados.
+function tablaDeGrupo(equiposDelGrupo, partidos) {
+  const filas = new Map(equiposDelGrupo.map(e => [e.codigo, { equipo: e, pj: 0, g: 0, e: 0, p: 0, gf: 0, gc: 0 }]));
+  for (const p of partidos) {
+    if (p.estado !== "Finalizado" || p.goles_local == null) continue;
+    const local = filas.get(p.local?.codigo), visitante = filas.get(p.visitante?.codigo);
+    if (!local || !visitante) continue;
+    for (const [fila, propios, ajenos] of [[local, p.goles_local, p.goles_visitante], [visitante, p.goles_visitante, p.goles_local]]) {
+      fila.pj++; fila.gf += propios; fila.gc += ajenos;
+      if (propios > ajenos) fila.g++; else if (propios === ajenos) fila.e++; else fila.p++;
+    }
+  }
+  return [...filas.values()].map(f => ({ ...f, dg: f.gf - f.gc, pts: 3 * f.g + f.e }))
+    .sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf || a.equipo.nombre.localeCompare(b.equipo.nombre, "es"));
+}
+
+async function vistaGrupos() {
+  contenido.innerHTML = `
+    <div class="titulo"><div><h1>Fase de grupos</h1><p>16 grupos de 4. Pasan los dos primeros de cada grupo a los dieciseisavos de final.</p></div><div class="titulo-bases">${base("mongodb")}${base("neo4j")}</div></div>
+    <p class="nota grupos-aclaracion">Las tablas se calculan en tu navegador con los partidos finalizados del fixture (Neo4j) y el catálogo de selecciones (MongoDB). Orden: puntos, diferencia de gol y goles a favor.</p>
+    <div id="grupos" class="grupos" aria-busy="true"><p class="vacio">Cargando grupos…</p></div>`;
+  const caja = document.getElementById("grupos");
+  try {
+    const [equipos, d] = await Promise.all([catalogoEquipos(), api("/partidos?fase=" + encodeURIComponent("Fase de grupos"))]);
+    if (!caja.isConnected) return;
+    const porGrupo = new Map(GRUPOS.map(g => [g, []]));
+    for (const e of equipos.values()) (porGrupo.get(e.grupo) || porGrupo.set(e.grupo, []).get(e.grupo)).push(e);
+    const partidosDe = (g) => d.partidos.filter(p => grupoDe(p, equipos) === g);
+    const jugados = d.partidos.filter(p => p.estado === "Finalizado").length;
+    caja.innerHTML = `<p class="grupos-avance">${jugados} de ${d.partidos.length} partidos de grupos jugados</p>
+      <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">${[...porGrupo.entries()].filter(([, lista]) => lista.length).map(([g, lista]) => {
+        const partidos = partidosDe(g);
+        const proximo = partidos.filter(p => p.estado !== "Finalizado").sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora))[0];
+        const filas = tablaDeGrupo(lista, partidos);
+        return `<div class="col"><section class="card grupo" aria-labelledby="grupo-${g}">
+          <header class="grupo-cabecera"><h2 id="grupo-${g}"><span class="grupo-letra">${g}</span>Grupo ${g}</h2>${proximo ? `<a href="#/partido/${esc(proximo.id)}" class="grupo-proximo">${proximo.estado === "En juego" ? "En juego" : "Próximo"}: ${esc(fecha(proximo.fecha_hora))}</a>` : '<span class="grupo-proximo">Completo</span>'}</header>
+          <div class="tabla-caja" tabindex="0" role="region" aria-label="Posiciones del grupo ${g}"><table class="tabla-grupo">
+            <thead><tr><th scope="col" class="pos"><span class="visually-hidden">Posición</span>#</th><th scope="col">Selección</th><th scope="col" class="n" title="Partidos jugados">PJ</th><th scope="col" class="n" title="Ganados">G</th><th scope="col" class="n" title="Empatados">E</th><th scope="col" class="n" title="Perdidos">P</th><th scope="col" class="n opcional" title="Goles a favor">GF</th><th scope="col" class="n opcional" title="Goles en contra">GC</th><th scope="col" class="n" title="Diferencia de gol">DG</th><th scope="col" class="n" title="Puntos">Pts</th></tr></thead>
+            <tbody>${filas.map((f, i) => `<tr class="${i < 2 ? "clasifica" : ""}"><td class="pos">${i + 1}</td><td><span class="grupo-equipo">${escudo(f.equipo)}<span>${esc(f.equipo.nombre)}</span></span></td><td class="n">${f.pj}</td><td class="n">${f.g}</td><td class="n">${f.e}</td><td class="n">${f.p}</td><td class="n opcional">${f.gf}</td><td class="n opcional">${f.gc}</td><td class="n">${f.dg > 0 ? "+" : ""}${f.dg}</td><td class="n pts">${f.pts}</td></tr>`).join("")}</tbody>
+          </table></div>
+          <p class="grupo-nota"><span class="marca-clasifica" aria-hidden="true"></span>Los dos primeros pasan a dieciseisavos.</p>
+        </section></div>`;
+      }).join("")}</div>`;
+  } catch (e) { if (caja.isConnected) caja.innerHTML = cajaDeError(e); }
+  finally { caja.removeAttribute("aria-busy"); }
 }
 
 // ---------- partido en vivo: conexión, tribuna y audiencia ----------
@@ -264,7 +404,7 @@ function abrirVivo(id, alcance, manejadores, alEstadoConexion) {
   return fuente;
 }
 
-const movimientoReducido = window.matchMedia("(prefers-reduced-motion: reduce)");
+const movimientoReducido = window.matchMedia?.("(prefers-reduced-motion: reduce)") ?? { matches: true };
 
 function animarVivo(elemento, inicio, fin, duracion, ease = "power2.out") {
   if (movimientoReducido.matches || document.hidden) return;
@@ -560,81 +700,95 @@ function iniciarRelato(id, partido) {
   });
 }
 
-function marcadorPortada({ partido, minuto, marcador }) {
-  return `<article class="list-group-item vivo-partido px-0 py-3 py-md-4">
-    <div class="row g-3 g-md-4 align-items-center">
-      <div class="col-12 col-md-auto vivo-partido-info">
-        <span class="badge vivo-indicador">En juego</span><span class="vivo-minuto ms-2">${esc(minuto ?? 0)}′</span>
-        <p class="vivo-meta mt-2">${esc(partido.fase)}</p>
-      </div>
-      <div class="col-12 col-md">
-        <div class="vivo-marcador">
-          <strong>${nombreEquipo(partido.local)}</strong>
-          <span class="vivo-goles"><span>${esc(marcador?.local ?? 0)}</span><span class="vivo-guion">–</span><span>${esc(marcador?.visitante ?? 0)}</span></span>
-          <strong>${nombreEquipo(partido.visitante)}</strong>
-        </div>
-      </div>
-      <div class="col-12 col-md-auto d-grid">
-        <a class="btn vivo-accion" href="#/partido/${esc(partido.id)}">Seguir partido<span class="visually-hidden">: ${nombreEquipo(partido.local)} vs ${nombreEquipo(partido.visitante)}</span></a>
-      </div>
+function marcadorPortada({ partido, minuto, marcador }, equipos) {
+  const grupo = grupoDe(partido, equipos);
+  return `<article class="vivo-partido">
+    <div class="vivo-partido-info">
+      <span class="vivo-indicador"><span class="punto-vivo" aria-hidden="true"></span>En juego</span><span class="vivo-minuto">${esc(minuto ?? 0)}′</span>
+      <span class="vivo-meta">${grupo ? `Grupo ${esc(grupo)}` : esc(partido.fase)}${partido.estadio?.ciudad ? ` · ${esc(partido.estadio.ciudad)}` : ""}</span>
     </div>
+    <div class="vivo-marcador">
+      <span class="vivo-equipo">${escudo(partido.local)}<strong>${nombreEquipo(partido.local)}</strong></span>
+      <span class="vivo-goles" aria-label="${esc(marcador?.local ?? 0)} a ${esc(marcador?.visitante ?? 0)}"><span>${esc(marcador?.local ?? 0)}</span><span class="vivo-guion" aria-hidden="true">–</span><span>${esc(marcador?.visitante ?? 0)}</span></span>
+      <span class="vivo-equipo vivo-equipo-visitante"><strong>${nombreEquipo(partido.visitante)}</strong>${escudo(partido.visitante)}</span>
+    </div>
+    <a class="btn vivo-accion" href="#/partido/${esc(partido.id)}">Seguir partido<span class="visually-hidden">: ${nombreEquipo(partido.local)} vs ${nombreEquipo(partido.visitante)}</span></a>
   </article>`;
 }
 
 async function vistaEnVivo() {
   contenido.innerHTML = `
-    <section class="card inicio-vivo" aria-labelledby="portada-vivo-titulo">
-      <div class="card-body p-3 p-sm-4 p-lg-5">
-        <header class="d-flex flex-wrap justify-content-between align-items-start gap-3 pb-3">
-          <div><h1 id="portada-vivo-titulo">Partidos en vivo</h1><p class="vivo-meta mt-2">Seguí el partido, las jugadas y la conversación.</p></div>
-          <span id="cantidad-vivo" class="badge rounded-pill vivo-cantidad" hidden></span>
-        </header>
-        <div id="lista-vivo" class="list-group list-group-flush">
-          <p class="vivo-meta py-3" role="status">Buscando partidos…</p>
-        </div>
+    <section class="inicio-vivo" aria-labelledby="portada-vivo-titulo">
+      <header class="inicio-vivo-cabecera">
+        <div><p class="portada-volanta">Mundial 2030</p><h1 id="portada-vivo-titulo">Partidos en vivo</h1><p class="vivo-meta">Seguí el marcador, las jugadas y la tribuna de tu país.</p></div>
+        <span id="cantidad-vivo" class="vivo-cantidad" hidden></span>
+      </header>
+      <div id="lista-vivo" class="lista-vivo">
+        <p class="vivo-meta" role="status">Buscando partidos…</p>
       </div>
     </section>
-    <section class="recientes"><div class="recientes-titulo"><div><h2>Últimos partidos</h2><p>Resultados y recorrido de jugadas.</p></div><a href="#/fixture">Ver fixture →</a></div><div id="recientes-lista" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3"><p class="vacio">Cargando partidos…</p></div><button id="recientes-mas" class="btn btn-outline-primary" type="button" hidden>Ver más partidos</button></section>`;
+    <section class="proximos" aria-labelledby="proximos-titulo"><div class="recientes-titulo"><div><h2 id="proximos-titulo">Próximo horario</h2><p id="proximos-nota">Los partidos que arrancan juntos.</p></div><a href="#/fixture">Ver fixture →</a></div><div id="proximos-lista" class="row row-cols-1 row-cols-md-2 g-3"><p class="vacio">Cargando partidos…</p></div></section>
+    <section class="recientes" aria-labelledby="recientes-titulo"><div class="recientes-titulo"><div><h2 id="recientes-titulo">Últimos resultados</h2><p>Resultados y recorrido de jugadas.</p></div><a href="#/grupos">Ver grupos →</a></div><div id="recientes-lista" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3"><p class="vacio">Cargando partidos…</p></div><button id="recientes-mas" class="btn btn-outline-primary" type="button" hidden>Ver más partidos</button></section>
+    ${portadaTorneo("Seis anfitriones, tres continentes", "Un solo torneo para seguir desde cualquier lugar: la tribuna de cada país comenta en su región y el ranking es uno solo para todos.")}`;
   const lista = document.getElementById("lista-vivo");
   const contador = document.getElementById("cantidad-vivo");
+  const equipos = await catalogoEquipos().catch(() => null);
+  if (!lista.isConnected) return;
   let ultimoContenido;
   async function actualizar() {
     try {
       const d = await api("/en-vivo/partidos");
       if (!lista.isConnected) return;
-      contador.hidden = d.partidos.length < 2;
       const cantidad = d.partidos.length;
-      contador.textContent = `${cantidad} ${cantidad === 1 ? "partido en juego" : "partidos en juego"}`;
-      const tarjetas = d.partidos.map(marcadorPortada).join("") || `<div class="list-group-item vivo-partido px-0 pt-3 pb-0">
+      contador.hidden = cantidad < 2;
+      contador.textContent = `${cantidad} partidos en simultáneo`;
+      const tarjetas = d.partidos.map(p => marcadorPortada(p, equipos)).join("") || `<div class="vivo-vacio">
         <h2>No hay partidos en juego</h2>
-        <p class="vivo-meta mt-2">Consultá el fixture para ver cuándo empieza el próximo.</p>
-        <div class="d-flex flex-wrap gap-2 mt-3"><a class="btn vivo-accion" href="#/fixture">Ver fixture</a>${claveAdmin ? '<a class="btn btn-outline-light" href="#/admin">Ir a administración</a>' : ""}</div>
+        <p class="vivo-meta">Mirá abajo cuándo arranca el próximo horario.</p>
+        <div class="vivo-vacio-acciones"><a class="btn vivo-accion" href="#/fixture">Ver fixture</a>${claveAdmin ? '<a class="btn btn-outline-light" href="#/admin">Ir a administración</a>' : ""}</div>
       </div>`;
       if (tarjetas !== ultimoContenido) {
         const enlaceActivo = lista.contains(document.activeElement) ? document.activeElement.getAttribute("href") : null;
         lista.innerHTML = tarjetas;
+        lista.classList.toggle("varios", cantidad > 1);
         if (enlaceActivo) [...lista.querySelectorAll("a")].find(a => a.getAttribute("href") === enlaceActivo)?.focus({ preventScroll: true });
         ultimoContenido = tarjetas;
       }
     } catch (e) {
-      if (lista.isConnected) { contador.hidden = true; lista.innerHTML = `<div class="list-group-item vivo-partido px-0 pt-3 pb-0">${cajaDeError(e)}</div>`; ultimoContenido = null; }
+      if (lista.isConnected) { contador.hidden = true; lista.innerHTML = `<div class="vivo-vacio">${cajaDeError(e)}</div>`; ultimoContenido = null; }
     }
   }
   actualizar(); comentariosTimers.push(setInterval(actualizar, 3000));
+
+  // El próximo horario con partidos programados: en la fase de grupos, dos partidos a la vez.
+  const proximos = document.getElementById("proximos-lista"), notaProximos = document.getElementById("proximos-nota");
+  api("/partidos?estado=Programado").then(d => {
+    if (!proximos.isConnected) return;
+    const conEquipos = d.partidos.filter(p => p.local && p.visitante).sort((a, b) => new Date(a.fecha_hora) - new Date(b.fecha_hora));
+    if (!conEquipos.length) { proximos.innerHTML = '<p class="vacio">No quedan partidos programados con equipos definidos.</p>'; return; }
+    const inicio = conEquipos[0].fecha_hora;
+    const juntos = conEquipos.filter(p => p.fecha_hora === inicio);
+    notaProximos.textContent = `${diaLargo(inicio)}, ${hora(inicio)}${juntos.length > 1 ? ` · ${juntos.length} partidos en simultáneo` : ""}`;
+    proximos.innerHTML = juntos.map(p => tarjetaPartido(p, {
+      conFecha: false, grupo: grupoDe(p, equipos), detalle: [p.estadio?.nombre, p.estadio?.ciudad].filter(Boolean).join(", "),
+      accion: pronosticoAbierto(p, d.pronosticos_hasta_inicio_real) ? "Hacer pronóstico" : "Ver partido",
+    })).join("");
+  }).catch(e => { if (proximos.isConnected) proximos.innerHTML = cajaDeError(e); });
+
   const recientes = document.getElementById("recientes-lista");
   const mas = document.getElementById("recientes-mas");
   try {
     const datos = await api("/partidos?estado=Finalizado");
     if (!recientes.isConnected) return;
     const partidos = datos.partidos.slice().sort((a, b) => new Date(b.fecha_hora) - new Date(a.fecha_hora));
-    let cantidad = 8;
+    let cantidad = 6;
     const dibujar = () => {
       recientes.innerHTML = partidos.slice(0, cantidad).map(p => tarjetaPartido(p, {
-        detalle: p.fase, accion: "Ver partido",
+        grupo: grupoDe(p, equipos), detalle: grupoDe(p, equipos) ? null : p.fase, accion: "Ver partido",
       })).join("") || '<p class="vacio w-100">Todavía no hay partidos finalizados.</p>';
       mas.hidden = cantidad >= partidos.length;
     };
-    mas.onclick = () => { cantidad += 8; dibujar(); }; dibujar();
+    mas.onclick = () => { cantidad += 6; dibujar(); }; dibujar();
   } catch (e) { if (recientes.isConnected) recientes.innerHTML = cajaDeError(e); }
 }
 
@@ -707,19 +861,21 @@ async function vistaPartido(id) {
   }
   catch (e) { if (version !== navegacionActual) return; contenido.innerHTML = `<div class="titulo"><h1>Partido ${esc(id)}</h1>${base("neo4j")}</div>${cajaDeError(e)}<p><a href="#/fixture">Volver al fixture</a></p>`; return; }
 
+  const equiposCatalogo = await catalogoEquipos().catch(() => null);
   if (version !== navegacionActual) return;
+  const grupoPartido = grupoDe(partido, equiposCatalogo);
   contenido.innerHTML = `
-    <nav aria-label="Ubicación"><ol class="breadcrumb mb-3"><li class="breadcrumb-item"><a href="#/en-vivo">Inicio</a></li><li class="breadcrumb-item active" aria-current="page">Partido ${esc(partido.id)}</li></ol></nav>
+    <nav aria-label="Ubicación"><ol class="breadcrumb mb-3"><li class="breadcrumb-item"><a href="#/en-vivo">Inicio</a></li><li class="breadcrumb-item"><a href="#/fixture">Fixture</a></li><li class="breadcrumb-item active" aria-current="page">Partido ${esc(partido.id)}</li></ol></nav>
     <section class="tablero marcador-partido" aria-labelledby="partido-titulo">
       <div class="gol-luz" hidden aria-hidden="true"></div>
       <div class="gol-aviso" hidden aria-hidden="true"><strong>¡Gol!</strong><span></span></div>
       <div class="gol-anuncio visually-hidden" role="status"></div>
       <h1 id="partido-titulo" class="visually-hidden">${nombreEquipo(partido.local)} vs ${nombreEquipo(partido.visitante)}</h1>
-      <div class="meta"><span>${esc(partido.id)} · ${esc(partido.fase)} · ${esc(fecha(partido.fecha_hora))}</span><span>${esc(partido.estadio.nombre)}, ${esc(partido.estadio.ciudad)} ${base("neo4j")}</span></div>
+      <div class="meta"><span>${esc(partido.id)} · ${grupoPartido ? `Grupo ${esc(grupoPartido)}` : esc(partido.fase)} · ${esc(fecha(partido.fecha_hora))}</span><span>${esc(partido.estadio.nombre)}, ${esc(partido.estadio.ciudad)} ${base("neo4j")}</span></div>
       <div class="equipos">
-        <div class="equipo">${nombreEquipo(partido.local)}<small>local</small></div>
+        <div class="equipo">${escudo(partido.local)}<span>${nombreEquipo(partido.local)}</span><small>local</small></div>
         <div class="goles" id="marcador-vivo" aria-live="polite" aria-atomic="true">${esc(marcador(partido))}</div>
-        <div class="equipo">${nombreEquipo(partido.visitante)}<small>visitante</small></div>
+        <div class="equipo">${escudo(partido.visitante)}<span>${nombreEquipo(partido.visitante)}</span><small>visitante</small></div>
       </div>
       <div class="meta"><span class="estado marcador-estado" id="estado-vivo">${esc(partido.estado)}</span><span>${partido.inicio_real ? "Empezó " + esc(fecha(partido.inicio_real)) : ""}</span></div>
       <div class="ranking-accion" id="ranking-accion" ${partido.estado === "Finalizado" ? "" : "hidden"}><button class="btn btn-outline-light" id="abrir-ranking">Ver rankings</button></div>
@@ -770,28 +926,25 @@ async function vistaPartido(id) {
     const usuario = sesion.usuario;
     const avisoGrupos = modal.querySelector("#ranking-aviso-grupos");
     selector.replaceChildren(new Option("General", "general"));
-    selector.disabled = true;
+    selector.value = "general";
     avisoGrupos.replaceChildren();
-    rankingContenido.innerHTML = '<p class="nota">Cargando tus grupos…</p>';
     modal.showModal();
+    // Primero el ranking público; los grupos privados se listan después y se piden solo si se eligen.
+    await cargarRankingModal();
+    if (!vigente()) return;
     try {
       if (usuario) {
         const { prodes } = await api(`/usuarios/${encodeURIComponent(usuario.id)}/prodes`);
         if (!vigente()) return;
         for (const grupo of prodes) selector.add(new Option(grupo.nombre, grupo.id));
-        if (prodes.length) selector.value = prodes.find(p => p.id === ultimoGrupoRanking)?.id ?? prodes[0].id;
-        else avisoGrupos.innerHTML = 'Todavía no pertenecés a un grupo. Podés crear uno o unirte desde <a href="#/prodes">Mis prodes</a>.';
+        avisoGrupos.innerHTML = prodes.length
+          ? `Elegí ${prodes.some(p => p.id === ultimoGrupoRanking) ? "otra vez tu grupo" : "uno de tus grupos"} para ver sus pronósticos de este partido.`
+          : 'Todavía no pertenecés a un grupo. Podés crear uno o unirte desde <a href="#/prodes">Mis prodes</a>.';
       } else {
         avisoGrupos.innerHTML = '<a href="#/ingreso">Ingresá</a> para ver los pronósticos de tus grupos.';
       }
     } catch (e) {
-      if (!vigente()) return;
-      avisoGrupos.innerHTML = cajaDeError(e);
-    } finally {
-      if (vigente()) {
-        selector.disabled = false;
-        cargarRankingModal();
-      }
+      if (vigente()) avisoGrupos.innerHTML = cajaDeError(e);
     }
   });
   document.getElementById("cerrar-ranking").addEventListener("click", () => modal.close());
@@ -923,7 +1076,7 @@ async function dibujarPronostico(partido) {
   const vigente = () => caja.isConnected && consultasPronostico.get(caja) === consulta;
   const u = sesion.usuario;
   if (!u) { caja.innerHTML = bloque("Tu pronóstico", "mongodb", `<p><a href="#/ingreso">Elegí un usuario</a> para ver o guardar tu pronóstico.</p>`); return; }
-  if (!caja.hasChildNodes()) caja.innerHTML = bloque("Tu pronóstico", "mongodb", '<p class="nota" role="status">Consultando tu pronóstico…</p>');
+  if (!caja.hasChildNodes?.()) caja.innerHTML = bloque("Tu pronóstico", "mongodb", '<p class="nota" role="status">Consultando tu pronóstico…</p>');
   const identidad = `<p class="nota mb-2">Usuario: <strong>${esc(u.nombre || u.id)}</strong> · ${esc(u.id)}</p>`;
   let mio;
   try {
@@ -1045,11 +1198,13 @@ const tablaRanking = (filas, yo, verPronosticos = false) => filas.length
 
 async function vistaRanking() {
   const yo = sesion.usuario?.id;
-  contenido.innerHTML = `<div class="titulo"><div><h1>Ranking general</h1><p>Orden: puntos, resultados exactos y anticipación acumulada. 3 puntos por resultado exacto, 1 por acertar ganador o empate.</p></div></div>
-    <div class="row g-3 g-lg-4 align-items-start"><div class="col-12 col-lg-8" id="top"></div><div class="col-12 col-lg-4 pila"><div id="mio"></div></div></div>`;
+  contenido.innerHTML = `<div class="titulo"><div><h1>Ranking general</h1><p>Uno solo para todo el mundo. Orden: puntos, resultados exactos y anticipación acumulada. 3 puntos por resultado exacto, 1 por acertar ganador o empate.</p></div></div>
+    <div class="row g-3 g-lg-4 align-items-start"><div class="col-12 col-lg-8" id="top"><p class="vacio" role="status">Cargando el ranking…</p></div><div class="col-12 col-lg-4 pila"><div id="mio"></div></div></div>`;
   const top = document.getElementById("top");
   const mio = document.getElementById("mio");
-  top.innerHTML = await cargarBloque("Primeros 20", "mongodb", api("/ranking?limit=20"), (d) => tablaRanking(d.ranking, yo));
+  // El ranking público se pide y se dibuja antes que cualquier dato propio del usuario.
+  const podio = (filas) => filas.length >= 3 ? `<ol class="podio" aria-label="Podio">${filas.slice(0, 3).map(f => `<li class="podio-${f.puesto} ${f.usuario_id === yo ? "yo" : ""}"><span class="podio-puesto">${f.puesto}°</span><strong>${esc(f.nombre || f.usuario_id)}</strong><span>${f.puntos} ${f.puntos === 1 ? "punto" : "puntos"}</span></li>`).join("")}</ol>` : "";
+  top.innerHTML = await cargarBloque("Primeros 20", "redis", api("/ranking?limit=20"), (d) => podio(d.ranking) + tablaRanking(d.ranking, yo));
   if (!top.isConnected) return;
   if (!yo) { mio.innerHTML = bloque("Tu puesto", "mongodb", `<p><a href="#/ingreso">Elegí un usuario</a> para ver tu puesto.</p>`); return; }
   try {
@@ -1057,7 +1212,7 @@ async function vistaRanking() {
     mio.innerHTML = bloque("Tu puesto", d.fuente, `<div class="mi-puesto"><span><b>${d.puesto}°</b> de ${d.total_usuarios}</span><span>${d.puntos} ${d.puntos === 1 ? "punto" : "puntos"} · ${d.exactos} ${d.exactos === 1 ? "exacto" : "exactos"}</span></div>
       <p class="nota" style="margin-top:10px">Tu puntaje acumula los partidos que pronosticaste y ya fueron puntuados.</p>`);
   } catch (e) {
-    mio.innerHTML = bloque("Tu puesto", "mongodb", e.estado === 404 ? `<p>Todavía no tenés puntaje: se calcula cuando termina un partido que hayas pronosticado.</p>` : cajaDeError(e));
+    mio.innerHTML = bloque("Tu puesto", "redis", e.estado === 404 ? `<p>Todavía no tenés puntaje: se calcula cuando termina un partido que hayas pronosticado.</p>` : cajaDeError(e));
   }
 }
 
@@ -1303,7 +1458,7 @@ async function operar(id) {
 }
 
 // ---------- navegación ----------
-const RUTAS = { ingreso: vistaIngreso, fixture: vistaFixture, "en-vivo": vistaEnVivo, ranking: vistaRanking, prodes: vistaProdes, admin: vistaAdmin };
+const RUTAS = { ingreso: vistaIngreso, fixture: vistaFixture, grupos: vistaGrupos, "en-vivo": vistaEnVivo, ranking: vistaRanking, prodes: vistaProdes, admin: vistaAdmin };
 
 async function navegar() {
   const version = ++navegacionActual;
@@ -1335,7 +1490,7 @@ async function navegar() {
   dibujarSalud();
 }
 
-document.querySelector(".saltar").addEventListener("click", ev => {
+document.querySelector?.(".saltar")?.addEventListener("click", ev => {
   ev.preventDefault();
   contenido.focus();
   contenido.scrollIntoView();

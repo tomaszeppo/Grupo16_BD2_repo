@@ -91,15 +91,16 @@ def test_ventana_de_pronostico_contra_el_fixture_real(cliente, reloj):
     u = crear_usuario(cliente)
     cuerpo = {"goles_local": 1, "goles_visitante": 0}
     assert cliente.put("/partidos/P-01/pronostico", json=cuerpo, headers=como(u)).status_code == 409  # finalizado
-    assert cliente.put("/partidos/P-104/pronostico", json=cuerpo, headers=como(u)).status_code == 409  # sin equipos
+    assert cliente.put("/partidos/P-128/pronostico", json=cuerpo, headers=como(u)).status_code == 409  # sin equipos
     assert cliente.put("/partidos/P-999/pronostico", json=cuerpo, headers=como(u)).status_code == 404
     reloj.instante = datetime(2030, 6, 13, 15, 0, tzinfo=timezone.utc)
     assert cliente.put("/partidos/P-03/pronostico", json=cuerpo, headers=como(u)).status_code == 409  # ya es la hora
-    assert cliente.put("/partidos/P-04/pronostico", json=cuerpo, headers=como(u)).status_code == 201  # empieza a las 18
+    assert cliente.put("/partidos/P-04/pronostico", json=cuerpo, headers=como(u)).status_code == 409  # en simultáneo con P-03
+    assert cliente.put("/partidos/P-05/pronostico", json=cuerpo, headers=como(u)).status_code == 201  # empieza a las 18
 
 
 def test_catalogo_de_equipos(cliente):
-    assert len(cliente.get("/equipos").json()["equipos"]) == 48
+    assert len(cliente.get("/equipos").json()["equipos"]) == 64
     plantel = cliente.get("/equipos/ARG/jugadores").json()
     assert plantel["total"] == 26 and plantel["jugadores"][0]["dorsal"] == 1
     arqueros = cliente.get("/equipos/ARG/jugadores", params={"posicion": "Arquero"}).json()

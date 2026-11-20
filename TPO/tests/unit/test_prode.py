@@ -176,7 +176,7 @@ def test_no_se_pronostica_a_la_hora_de_inicio_ni_despues(cliente, reloj):
 
 def test_eliminatoria_sin_equipos_definidos_409(cliente):
     u = crear_usuario(cliente)
-    resp = pronosticar(cliente, u, "P-104")
+    resp = pronosticar(cliente, u, "P-128")
     assert resp.status_code == 409
     assert "equipos" in resp.json()["error"]["mensaje"]
 
@@ -230,3 +230,17 @@ def test_mongodb_caido_responde_503(cliente, mongo):
 def test_los_pronosticos_de_otro_usuario_no_se_pueden_ver(cliente):
     a, b = crear_usuario(cliente), crear_usuario(cliente, "Beto")
     assert cliente.get(f"/usuarios/{a}/pronosticos", headers=como(b)).status_code == 403
+
+
+def test_pronosticos_del_grupo_solo_desde_que_empieza_el_partido(cliente):
+    ana, beto = crear_usuario(cliente), crear_usuario(cliente, "Beto")
+    prode = cliente.post("/prodes", json={"nombre": "Los del barrio"}, headers=como(ana)).json()["prode"]
+    cliente.post("/prodes/unirse", json={"codigo": prode["codigo"]}, headers=como(beto))
+    assert pronosticar(cliente, beto, gl=1, gv=1).status_code == 201
+    antes = cliente.get(f"/prodes/{prode['id']}/tabla/P-03", headers=como(ana))
+    assert antes.status_code == 409
+    assert cliente.get(f"/prodes/{prode['id']}/tabla/P-999", headers=como(ana)).status_code == 404
+    assert cliente.post("/partidos/P-03/estado", json={"estado": "En juego"}, headers=ADMIN).status_code == 200
+    despues = cliente.get(f"/prodes/{prode['id']}/tabla/P-03", headers=como(ana)).json()
+    pronosticos = {f["usuario_id"]: f["pronostico"] for f in despues["tabla"]}
+    assert pronosticos[beto]["goles_local"] == 1 and pronosticos[ana] is None

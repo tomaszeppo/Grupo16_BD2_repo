@@ -1,4 +1,11 @@
+import threading
+import time
+
 from app.errors import NoEncontrado, Prohibido
+
+# Copia de los primeros puestos, compartida por todos los pedidos de este proceso: {limit: (vence, filas)}.
+_COPIA_PUBLICA: dict[int, tuple[float, list[dict]]] = {}
+_CANDADO_COPIA = threading.Lock()
 
 
 def _orden(fila: dict) -> tuple:
@@ -8,16 +15,33 @@ def _orden(fila: dict) -> tuple:
 class RankingService:
     """Tablas de posiciones. El ranking general sale del puerto de ranking (Redis o MongoDB, según la configuración)."""
 
-    def __init__(self, ranking, mongo):
+    def __init__(self, ranking, mongo, copia_segundos: float = 0.0, reloj=time.monotonic):
         self._ranking = ranking
         self._mongo = mongo
+        self._copia_segundos = copia_segundos
+        self._reloj = reloj
 
     @property
     def fuente(self) -> str:
         return self._ranking.nombre
 
     def top(self, limit: int) -> list[dict]:
-        return self._ranking.top(limit)
+        """Los primeros puestos. Es la vista que más se pide: cada proceso guarda la respuesta unos segundos, así
+        miles de hinchas mirando la tabla a la vez cuestan una consulta por proceso cada ese tiempo, y no una
+        por hincha. Si varios pedidos llegan con la copia vencida, uno solo consulta y el resto espera su
+        resultado."""
+        if self._copia_segundos <= 0:
+            return self._ranking.top(limit)
+        guardada = _COPIA_PUBLICA.get(limit)
+        if guardada and guardada[0] > self._reloj():
+            return guardada[1]
+        with _CANDADO_COPIA:
+            guardada = _COPIA_PUBLICA.get(limit)
+            if guardada and guardada[0] > self._reloj():
+                return guardada[1]
+            filas = self._ranking.top(limit)
+            _COPIA_PUBLICA[limit] = (self._reloj() + self._copia_segundos, filas)
+            return filas
 
     def posicion(self, usuario_id: str) -> dict:
         posicion = self._ranking.posicion(usuario_id)

@@ -6,15 +6,15 @@ def test_listado_completo_ordenado_y_con_fuente(cliente):
     assert resp.status_code == 200
     cuerpo = resp.json()
     assert cuerpo["fuente"] == "neo4j"
-    assert cuerpo["total"] == 104
+    assert cuerpo["total"] == 128
     assert cuerpo["partidos"][0]["id"] == "P-01"
     assert cuerpo["partidos"][2]["local"]["codigo"]
 
 
 def test_filtros_de_fase_estado_y_fecha(cliente):
-    assert cliente.get("/partidos", params={"fase": "Fase de grupos"}).json()["total"] == 72
+    assert cliente.get("/partidos", params={"fase": "Fase de grupos"}).json()["total"] == 96
     assert cliente.get("/partidos", params={"estado": "Finalizado"}).json()["total"] == 2
-    assert cliente.get("/partidos", params={"fecha": "2030-06-13"}).json()["total"] == 3
+    assert cliente.get("/partidos", params={"fecha": "2030-06-13"}).json()["total"] == 6
 
 
 def test_detalle_de_partido(cliente):
@@ -28,7 +28,7 @@ def test_detalle_de_partido(cliente):
 
 
 def test_eliminatoria_sin_equipos_devuelve_nulos(cliente):
-    partido = cliente.get("/partidos/P-104").json()["partido"]
+    partido = cliente.get("/partidos/P-128").json()["partido"]
     assert partido["fase"] == "Final" and partido["local"] is None and partido["visitante"] is None
 
 

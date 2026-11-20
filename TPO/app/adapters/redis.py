@@ -43,6 +43,17 @@ class RedisAdapter:
         return self._cli
 
     @property
+    def cli_replica(self):
+        """Cliente de la réplica de solo lectura (`REDIS_REPLICA_URL`), o None si no está configurada."""
+        if not self._s.redis_replica_url:
+            return None
+        if getattr(self, "_cli_replica", None) is None:
+            import redis
+
+            self._cli_replica = redis.Redis.from_url(self._s.redis_replica_url, **self._opciones())
+        return self._cli_replica
+
+    @property
     def acli(self):
         if self._acli is None:
             import redis.asyncio as aredis

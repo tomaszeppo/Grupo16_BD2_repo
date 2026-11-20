@@ -60,7 +60,7 @@ def usuario_prueba_admin(mongo=Depends(get_mongo)) -> dict:
 
 class PedidoHinchas(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    paises: list[Annotated[str, Field(pattern=r"^[A-Z]{3}$")]] = Field(default=["ARG", "BRA", "ESP", "URU"], max_length=48)
+    paises: list[Annotated[str, Field(pattern=r"^[A-Z]{3}$")]] = Field(default=["ARG", "BRA", "ESP", "URU"], max_length=64)
     cantidad: int = Field(default=8, ge=1, le=50)
 
 

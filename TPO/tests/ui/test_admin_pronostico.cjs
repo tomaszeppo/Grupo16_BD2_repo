@@ -5,7 +5,8 @@ const datos = new Map([['usuario',JSON.stringify({id:'U0000121',nombre:'Admin',p
 const storage = {getItem:k=>datos.get(k)||null,setItem:(k,v)=>datos.set(k,v),removeItem:k=>datos.delete(k)};
 const elementos = new Map();
 function elemento(id) {
-  if (!elementos.has(id)) elementos.set(id,{id,innerHTML:'',isConnected:true,querySelectorAll:()=>[],addEventListener(){},focus(){}});
+  if (!elementos.has(id)) elementos.set(id,{id,innerHTML:'',isConnected:true,querySelectorAll:()=>[],
+    querySelector:()=>({addEventListener(){},replaceChildren(){},textContent:''}),addEventListener(){},focus(){}});
   return elementos.get(id);
 }
 const partido={id:'P-14',estado:'Programado',fecha_hora:'2000-11-23T11:00:00Z',local:{nombre:'Nigeria',codigo:'NGA'},visitante:{nombre:'Egipto',codigo:'EGY'}};

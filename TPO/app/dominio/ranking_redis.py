@@ -1,12 +1,12 @@
 """Codificación del orden del TPO para un sorted set de Redis.
 
-El torneo tiene como máximo 104 partidos y 3 puntos por partido. La anticipación
-acumulada no supera 104 * 432000 segundos. El resultado cabe exactamente en un
+El torneo tiene como máximo 128 partidos y 3 puntos por partido. La anticipación
+acumulada no supera 128 * 432000 segundos. El resultado cabe exactamente en un
 double de Redis; el identificador invertido conserva el desempate ascendente.
 """
 import re
 
-MAX_PARTIDOS = 104
+MAX_PARTIDOS = 128
 MAX_TIEMPO = MAX_PARTIDOS * 432000
 MULT_EXACTOS = 100_000_000
 MULT_PUNTOS = 100_000_000_000

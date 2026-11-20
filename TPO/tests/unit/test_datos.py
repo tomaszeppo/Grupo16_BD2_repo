@@ -14,16 +14,21 @@ def fx():
     return datos.generar(INICIO)
 
 
-def test_48_equipos_en_12_grupos_de_4(fx):
-    assert len(fx.equipos) == 48
-    assert len({e["codigo"] for e in fx.equipos}) == 48
+def test_64_equipos_en_16_grupos_de_4(fx):
+    assert len(fx.equipos) == 64
+    assert len({e["codigo"] for e in fx.equipos}) == 64
     assert all(ids.es_codigo_equipo(e["codigo"]) for e in fx.equipos)
-    assert Counter(e["grupo"] for e in fx.equipos) == {g: 4 for g in "ABCDEFGHIJKL"}
+    assert Counter(e["grupo"] for e in fx.equipos) == {g: 4 for g in "ABCDEFGHIJKLMNOP"}
+
+
+def test_los_seis_anfitriones_encabezan_grupos_distintos(fx):
+    grupo_de = {e["codigo"]: e["grupo"] for e in fx.equipos}
+    assert [grupo_de[c] for c in datos.ANFITRIONES] == list("ABCDEF")
 
 
 def test_26_jugadores_por_equipo_con_id_unico(fx):
-    assert len(fx.jugadores) == 1248
-    assert len({j["id"] for j in fx.jugadores}) == 1248
+    assert len(fx.jugadores) == 1664
+    assert len({j["id"] for j in fx.jugadores}) == 1664
     assert set(Counter(j["equipo"] for j in fx.jugadores).values()) == {26}
     arg = sorted(j["dorsal"] for j in fx.jugadores if j["equipo"] == "ARG")
     assert arg == list(range(1, 27))
@@ -35,8 +40,8 @@ def test_16_estadios(fx):
     assert len({e["id"] for e in fx.estadios}) == 16
 
 
-def test_104_partidos_con_ids_correlativos(fx):
-    assert [p["id"] for p in fx.partidos] == [f"P-{i:02d}" for i in range(1, 105)]
+def test_128_partidos_con_ids_correlativos(fx):
+    assert [p["id"] for p in fx.partidos] == [f"P-{i:02d}" for i in range(1, 129)]
     assert all(ids.es_id_partido(p["id"]) for p in fx.partidos)
     estadios = {e["id"] for e in fx.estadios}
     assert all(p["estadio"] in estadios for p in fx.partidos)
@@ -44,7 +49,7 @@ def test_104_partidos_con_ids_correlativos(fx):
 
 def test_fases_y_cantidades(fx):
     assert Counter(p["fase"] for p in fx.partidos) == {
-        "Fase de grupos": 72, "Dieciseisavos": 16, "Octavos": 8, "Cuartos": 4,
+        "Fase de grupos": 96, "Dieciseisavos": 16, "Octavos": 8, "Cuartos": 4,
         "Semifinal": 2, "Tercer puesto": 1, "Final": 1,
     }
 
@@ -58,7 +63,7 @@ def test_grupos_con_equipos_y_tres_partidos_por_equipo(fx):
         assert grupo_de[p["local"]] == grupo_de[p["visitante"]]
         jugados[p["local"]] += 1
         jugados[p["visitante"]] += 1
-    assert len(jugados) == 48 and set(jugados.values()) == {3}
+    assert len(jugados) == 64 and set(jugados.values()) == {3}
 
 
 def test_eliminatorias_sin_equipos(fx):
@@ -80,8 +85,8 @@ def test_cuadro_de_eliminatorias(fx):
 def test_calendario_parte_de_la_fecha_de_inicio(fx):
     por_id = {p["id"]: p for p in fx.partidos}
     assert por_id["P-03"]["fecha_hora"] == INICIO
-    assert por_id["P-04"]["fecha_hora"] == INICIO + timedelta(hours=3)
-    assert por_id["P-07"]["fecha_hora"] == INICIO + timedelta(days=1)
+    assert por_id["P-05"]["fecha_hora"] == INICIO + timedelta(hours=3)
+    assert por_id["P-11"]["fecha_hora"] == INICIO + timedelta(days=1)
     assert all(p["fecha_hora"].tzinfo is not None for p in fx.partidos)
     fechas = [p["fecha_hora"] for p in fx.partidos]
     assert fechas == sorted(fechas)
@@ -143,5 +148,30 @@ def test_misma_semilla_mismo_resultado():
 def test_ids():
     assert ids.id_pronostico("U0000001", "P-01") == "U0000001:P-01"
     assert ids.es_id_usuario("U0000001") and not ids.es_id_usuario("U1")
-    assert ids.es_id_partido("P-104") and not ids.es_id_partido("P-1") and not ids.es_id_partido("abc")
+    assert ids.es_id_partido("P-128") and not ids.es_id_partido("P-1") and not ids.es_id_partido("abc")
     assert not ids.es_codigo_equipo("arg")
+
+
+def test_en_la_fase_de_grupos_los_dos_partidos_de_cada_grupo_van_en_simultaneo(fx):
+    grupo_de = {e["codigo"]: e["grupo"] for e in fx.equipos}
+    por_horario = {}
+    for p in fx.partidos:
+        if p["fase"] == "Fase de grupos":
+            por_horario.setdefault(p["fecha_hora"], []).append(grupo_de[p["local"]])
+    assert set(map(len, por_horario.values())) == {2}
+    assert all(len(set(grupos)) == 1 for grupos in por_horario.values())  # los dos son del mismo grupo
+    por_id = {p["id"]: p for p in fx.partidos}
+    assert por_id["P-03"]["fecha_hora"] == por_id["P-04"]["fecha_hora"]
+
+
+def test_eliminatorias_de_a_un_partido_y_con_un_dia_libre_entre_rondas(fx):
+    eliminatorias = [p for p in fx.partidos if p["fase"] != "Fase de grupos"]
+    assert len({p["fecha_hora"] for p in eliminatorias}) == len(eliminatorias)
+    ultimo_de = {}
+    primero_de = {}
+    for p in eliminatorias:
+        primero_de.setdefault(p["fase"], p["fecha_hora"])
+        ultimo_de[p["fase"]] = p["fecha_hora"]
+    fases = list(primero_de)
+    for anterior, siguiente in zip(fases, fases[1:]):
+        assert primero_de[siguiente] - ultimo_de[anterior] > timedelta(days=1)

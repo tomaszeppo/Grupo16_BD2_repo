@@ -42,7 +42,7 @@ def _lectura(rng: random.Random) -> dict:
     if tirada < 0.25:
         return {"ruta": "GET /partidos", "metodo": "GET", "url": "/partidos?fase=Fase%20de%20grupos"}
     if tirada < 0.70:
-        return {"ruta": "GET /partidos/{id}", "metodo": "GET", "url": f"/partidos/P-{rng.randint(1, 104):02d}"}
+        return {"ruta": "GET /partidos/{id}", "metodo": "GET", "url": f"/partidos/P-{rng.randint(1, 128):02d}"}
     if tirada < 0.90:
         return {"ruta": "GET /partidos/{id}/eventos", "metodo": "GET", "url": f"/partidos/P-0{rng.randint(1, 2)}/eventos"}
     evento = rng.choice(EVENTOS_DE_MUESTRA)

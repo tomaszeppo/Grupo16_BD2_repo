@@ -8,7 +8,7 @@ REINTENTO_SEGUNDOS = 5  # con Neo4j caído se reintenta cada tanto, no en cada p
 
 
 class Calendario:
-    """Copia en memoria del calendario (104 partidos), una por proceso de la API.
+    """Copia en memoria del calendario (128 partidos), una por proceso de la API.
 
     Neo4j gobierna el calendario, pero validar un pronóstico solo necesita horario, estado y equipos del
     partido. Con esta copia Neo4j queda fuera del camino del pico de pronósticos, y si se cae se sigue

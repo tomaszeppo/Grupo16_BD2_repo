@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     redis_lote: int = 500
     redis_persistencia_demora_segundos: int = 15
     puntuacion_toma_vencida_segundos: float = 120.0
+    ranking_copia_segundos: float = 2.0  # cuánto guarda cada proceso los primeros puestos; 0 = sin copia
     puntuacion_reintento_segundos: float = 30.0  # cada cuánto se buscan puntuaciones a medias; 0 = no se buscan
 
 

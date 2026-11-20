@@ -75,7 +75,7 @@ def pronosticos_de_usuario(usuario_id: UsuarioId, limit: Limite = 100, offset: D
     return {"fuente": FUENTE, "total": total, "pronosticos": pronosticos}
 
 
-@equipos_router.get("/equipos", summary="Los 48 equipos con su grupo")
+@equipos_router.get("/equipos", summary="Los 64 equipos con su grupo")
 def listar_equipos(svc: EquiposService = Depends(get_equipos_service)) -> dict:
     return {"fuente": FUENTE, "equipos": svc.listar()}
 

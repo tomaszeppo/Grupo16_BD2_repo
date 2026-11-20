@@ -3,8 +3,8 @@ el datacenter de Cassandra de esa región (ver docs/arquitectura_regiones.md).
 
 Simplificación de laboratorio: hay dos regiones. Los países de África, Asia y Oceanía quedan en Europa.
 """
-AMERICA = frozenset({"ARG", "BRA", "URU", "COL", "ECU", "PAR", "CHI", "PER",
-                     "MEX", "USA", "CAN", "CRC", "PAN", "JAM"})
+AMERICA = frozenset({"ARG", "BRA", "URU", "COL", "ECU", "PAR", "CHI", "PER", "BOL", "VEN",
+                     "MEX", "USA", "CAN", "CRC", "PAN", "JAM", "HON"})
 REGIONES = ("america", "europa")
 
 

@@ -37,7 +37,7 @@ El catálogo duplicado es la única copia de datos entre las dos bases. La acept
 - *El pronóstico tiene como clave el usuario y el partido* (`U0000001:P-07`). Así no puede haber dos pronósticos del mismo usuario para el mismo partido, y cargar o corregir es una sola escritura. Lo probamos con 20 pedidos simultáneos del mismo usuario: queda un documento ([prueba](../tests/integration/test_prode_real.py)).
 - *El prode general no guarda integrantes.* Son todos los usuarios; una lista de millones de identificadores no entra en un documento (el tope es 16 MB) y nadie la pediría entera.
 - *Los prodes privados sí llevan a sus integrantes adentro*, porque están acotados a 100 y siempre se leen juntos. El tope se controla en la misma operación que agrega al integrante: con 99 adentro y 10 uniéndose a la vez, entra uno solo ([prueba](../tests/integration/test_prode_real.py)).
-- *No hay un ranking guardado por prode privado.* Su tabla se arma al pedirla con los puntajes de sus integrantes. Así cerrar un partido cuesta una escritura por usuario, no una por cada prode de cada usuario.
+- *No hay un ranking guardado por prode privado.* Su tabla se arma al pedirla con los puntajes de sus integrantes. Así cerrar un partido cuesta una escritura por usuario, no una por cada prode de cada usuario, y la cantidad de prodes no cambia en nada el costo del cierre ni el del ranking público. Por lo mismo, una tabla privada está al día en el mismo instante que el ranking general: sale de los mismos puntajes.
 - *Validación de esquema* en usuarios, prodes y pronósticos: la base rechaza, por ejemplo, un pronóstico con goles negativos aunque llegue por fuera de la API.
 
 **5. Cómo se carga y se lee.** La carga del catálogo usa `upsert`: repetirla deja los mismos totales (`python -m seed.run --verificar` lo comprueba y falla si cambian). Es la corrección del Hito 4. Las lecturas van por índice: `pronosticos` por usuario y por partido; `puntajes` por el mismo orden del ranking, así los primeros puestos salen de recorrer el índice sin ordenar nada.
@@ -72,7 +72,7 @@ Los goles en contra no se modelan: un gol cuenta para el equipo del jugador que 
 
 ## Neo4j
 
-**1. Qué guarda.** Equipos, jugadores, estadios, los 104 partidos con su estado y las jugadas de cada partido, con quién las protagonizó y cuál llevó a cuál. También el cuadro de eliminatorias: qué partido alimenta a cuál.
+**1. Qué guarda.** Equipos, jugadores, estadios, los 128 partidos con su estado y las jugadas de cada partido, con quién las protagonizó y cuál llevó a cuál. También el cuadro de eliminatorias: qué partido alimenta a cuál.
 
 **2. Qué accesos motivaron elegirlo.** Preguntas que son recorridos: qué jugadas llevaron a este gol, qué jugadores participaron en más goles (contando a los que dieron el pase), qué le queda a un equipo hasta la final. En las tres hay que seguir relaciones un número de pasos que no se conoce de antemano.
 
@@ -112,11 +112,12 @@ Se podría: cada partido con su lista de jugadas adentro. Leer el partido entero
 - *Un espectador es una sesión*: varias pestañas con la misma sesión cuentan una vez. Los únicos se cuentan por usuario con un HyperLogLog, que ocupa lo mismo con cien o con un millón de usuarios.
 - *Una sola suscripción por proceso*, compartida por todas sus conexiones: un proceso con mil espectadores no abre mil suscripciones.
 - *No se guarda el token en la presencia*, sino un resumen de él.
+- *El ranking público va primero.* Es la vista que más se pide. Cada proceso de la API guarda los primeros puestos 2 segundos: miles de hinchas mirando la tabla cuestan una consulta a Redis por proceso cada 2 segundos (medido: 40 pedidos, 4 consultas). Las lecturas personales, que son muchas y distintas, van a la réplica.
 - *El ranking es un conjunto ordenado* cuyo puntaje junta en un solo número los puntos, los exactos y el tiempo acumulado, en ese orden de importancia. El puesto de un usuario es una sola consulta (`ZREVRANK`), sin contar a nadie: medido con 100.000 usuarios, 16 ms de mediana contra 291 ms en MongoDB ([rendimiento.md](rendimiento.md#26-saber-el-puesto-de-un-usuario-en-el-ranking)). El miembro es el número de usuario invertido, para que a igualdad total quede primero el identificador más bajo, igual que en MongoDB.
 
 **5. Cómo se carga y se lee.** Lo escribe la API al vuelo. Las sesiones para las pruebas de carga se crean por lotes ([`carga/sesiones.py`](../carga/sesiones.py)).
 
-**6. Distribución.** Un primario y una réplica de solo lectura, que representa "la otra región". En el laboratorio la API lee y escribe todo en el primario: la réplica está para medir cuánto tarda en llegarle un cambio, no la consulta ningún pedido. En producción, un Redis por región para sesiones, presencia y chat, y réplicas del primario central para leer el ranking ([arquitectura por regiones](arquitectura_regiones.md)).
+**6. Distribución.** Un primario y una réplica de solo lectura, que representa "la otra región". Todo se escribe en el primario. Las lecturas de un solo hincha (su puesto y las tablas de sus prodes privados) van a la réplica, y si no responde, al primario: así no compiten con el ranking público ni con la puntuación. En producción, un Redis por región para sesiones, presencia y chat, y réplicas del primario central para leer el ranking ([arquitectura por regiones](arquitectura_regiones.md)).
 
 **7. Consistencia.** La réplica copia sin que el primario la espere: lo que se lee ahí puede llegar con atraso; medido en [rendimiento.md](rendimiento.md#29-partido-en-vivo). La presencia tolera unos segundos de error a propósito: es un conteo para el análisis, no un dato que se cobre.
 

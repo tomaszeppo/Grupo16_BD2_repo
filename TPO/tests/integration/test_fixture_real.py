@@ -1,6 +1,6 @@
-def test_fase_de_grupos_tiene_72_partidos(cliente):
+def test_fase_de_grupos_tiene_96_partidos(cliente):
     cuerpo = cliente.get("/partidos", params={"fase": "Fase de grupos"}).json()
-    assert cuerpo["total"] == 72
+    assert cuerpo["total"] == 96
     primero = cuerpo["partidos"][0]
     assert primero["id"] == "P-01"
     assert primero["estado"] == "Finalizado" and primero["goles_local"] is not None
@@ -8,9 +8,9 @@ def test_fase_de_grupos_tiene_72_partidos(cliente):
 
 
 def test_filtro_por_fecha_y_estado(cliente):
-    assert cliente.get("/partidos", params={"fecha": "2030-06-13"}).json()["total"] == 3
+    assert cliente.get("/partidos", params={"fecha": "2030-06-13"}).json()["total"] == 6
     assert cliente.get("/partidos", params={"estado": "Finalizado"}).json()["total"] == 2
-    assert cliente.get("/partidos").json()["total"] == 104
+    assert cliente.get("/partidos").json()["total"] == 128
 
 
 def test_detalle_coincide_con_los_datos_cargados(cliente, cargado):
@@ -19,7 +19,7 @@ def test_detalle_coincide_con_los_datos_cargados(cliente, cargado):
     assert partido["local"]["codigo"] == esperado["local"]
     assert partido["visitante"]["codigo"] == esperado["visitante"]
     assert partido["fecha_hora"].startswith("2030-06-13T15:00:00")
-    final = cliente.get("/partidos/P-104").json()["partido"]
+    final = cliente.get("/partidos/P-128").json()["partido"]
     assert final["local"] is None and final["visitante"] is None
 
 
@@ -61,7 +61,7 @@ def test_camino_de_un_equipo_en_grupos(cliente):
 
 
 def test_camino_por_el_cuadro_cuando_el_equipo_esta_en_eliminatorias(cliente, neo4j):
-    neo4j._escribir("""MATCH (e:Equipo {codigo: 'ARG'}), (p:Partido {id: 'P-73'})
+    neo4j._escribir("""MATCH (e:Equipo {codigo: 'ARG'}), (p:Partido {id: 'P-97'})
                        MERGE (e)-[:PARTICIPA_EN {condicion: 'local'}]->(p)""")
     cuerpo = cliente.get("/equipos/ARG/camino").json()
     assert len(cuerpo["partidos"]) == 4

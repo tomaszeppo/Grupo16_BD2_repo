@@ -42,7 +42,7 @@ Los tramos son de 0 a 90, con `desde_minuto` menor o igual a `hasta_minuto`; si 
 | `GET /ranking?limit=` | Primeros puestos del prode general | Cualquiera |
 | `GET /ranking/usuarios/{id}` | Puesto de un usuario | Cualquiera |
 | `GET /ranking/historico/{partido_id}` | El ranking como quedó al cerrar ese partido | Cualquiera |
-| `GET /equipos` | Los 48 equipos | Cualquiera |
+| `GET /equipos` | Los 64 equipos, con su grupo (A a P) | Cualquiera |
 | `GET /equipos/{codigo}/jugadores?posicion=` | Plantel de un equipo | Cualquiera |
 
 ## Fixture y partidos (Neo4j)

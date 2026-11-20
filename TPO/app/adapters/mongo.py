@@ -250,7 +250,7 @@ class MongoAdapter:
     def puntuaciones_por_retomar(self, ahora, vencimiento_seg: float, max_intentos: int) -> list[str]:
         """Partidos cerrados cuya puntuación no terminó: pendiente, fallida o tomada por un proceso que ya no
         da señales. Deja afuera las que ya se intentaron `max_intentos` veces. `resultados` tiene a lo sumo
-        104 documentos: no hace falta un índice."""
+        128 documentos: no hace falta un índice."""
         from datetime import timedelta
 
         limite = ahora - timedelta(seconds=vencimiento_seg)
