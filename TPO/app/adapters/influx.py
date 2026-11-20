@@ -9,6 +9,7 @@ FUENTE = "influxdb"
 _RE_PARTIDO = re.compile(r"^P-\d{2,3}$")
 _RE_EQUIPO = re.compile(r"^[A-Z]{3}$")
 _INTERVALOS = {"1m": "1 minute", "5m": "5 minutes"}
+TIPOS_DE_CORRIDA = ("demo", "carga")  # demostración o prueba de carga: se separan en el análisis
 
 
 def _iso(dt: datetime) -> str:
@@ -126,6 +127,44 @@ class InfluxAdapter:
             if respuesta.status_code not in (200, 204):
                 raise DependenciaNoDisponible(FUENTE)
 
+
+    def _escribir(self, nombre: str, lineas: list[str]) -> None:
+        with operacion(FUENTE, nombre, _traducir):
+            respuesta = self._cli().post("/api/v3/write_lp", params={"db": self._s.influx_db, "precision": "nanosecond"},
+                                         content="\n".join(lineas) + "\n")
+            if respuesta.status_code not in (200, 204):
+                raise DependenciaNoDisponible(FUENTE)
+
+    @staticmethod
+    def _validar_audiencia(partido_id, corrida_id, tipo, paises) -> None:
+        if not _RE_PARTIDO.fullmatch(partido_id) or not re.fullmatch(r"[0-9a-f]{32}", corrida_id or ""):
+            raise ValidacionError("Partido o corrida inválidos.")
+        if tipo not in TIPOS_DE_CORRIDA or any(not _RE_EQUIPO.fullmatch(p) for p in paises):
+            raise ValidacionError("Tipo de corrida o país inválido.")
+
+    def guardar_audiencia(self, partido_id: str, minuto: int, corrida_id: str, tipo: str,
+                          espectadores: dict[str, int], comentarios: dict[tuple[str, str], int], instante) -> None:
+        """Espectadores y comentarios de un minuto, por país. Mismo instante que las estadísticas del minuto."""
+        self._validar_audiencia(partido_id, corrida_id, tipo, list(espectadores) + [p for p, _ in comentarios])
+        if any(origen not in ("usuario", "simulacion") for _, origen in comentarios):
+            raise ValidacionError("Origen de comentario inválido.")
+        ts = int(instante.timestamp() * 1_000_000_000)
+        etiquetas = f"corrida_id={corrida_id},tipo={tipo}"
+        lineas = [f"audiencia_partido,partido_id={partido_id},pais={pais},{etiquetas} "
+                  f"espectadores={int(n)}i,minuto={int(minuto)}i {ts}" for pais, n in espectadores.items()]
+        lineas += [f"comentarios_partido,partido_id={partido_id},pais={pais},origen={origen},{etiquetas} "
+                   f"comentarios={int(n)}i,minuto={int(minuto)}i {ts}" for (pais, origen), n in comentarios.items()]
+        if lineas:
+            self._escribir("guardar_audiencia", lineas)
+
+    def guardar_resumen_audiencia(self, partido_id: str, corrida_id: str, tipo: str, unicos: dict[str, int],
+                                  instante) -> None:
+        self._validar_audiencia(partido_id, corrida_id, tipo, list(unicos))
+        ts = int(instante.timestamp() * 1_000_000_000)
+        lineas = [f"audiencia_resumen,partido_id={partido_id},pais={pais},corrida_id={corrida_id},tipo={tipo} "
+                  f"unicos={int(n)}i {ts}" for pais, n in unicos.items()]
+        if lineas:
+            self._escribir("guardar_resumen_audiencia", lineas)
 
     def guardar_jugadores(self, partido_id, minuto, plantel, jugadas, instante, corrida_id=None):
         """Una muestra por jugador/minuto; un único lote por minuto."""

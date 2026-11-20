@@ -5,7 +5,9 @@ import time
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends
+from typing import Literal
+
+from fastapi import APIRouter, Depends, Query
 from app.deps import _influx, get_influx, get_mongo, get_neo4j, get_partidos_admin_service, get_puntuacion_service, requiere_admin
 from app.errors import Conflicto, DependenciaNoDisponible, NoEncontrado
 from app.schemas.comunes import PartidoId
@@ -41,6 +43,21 @@ def escribir(partido, pais, minuto, es_gol=None):
     _comentarios().publicar_automatico(partido, pais, random.choice(NOMBRES), random.choice(textos))
 
 
+def _audiencia():
+    from app.deps import _redis, _settings
+    from app.services.audiencia import Audiencia
+
+    return Audiencia(_redis(), _influx(), _settings())
+
+
+def _paises(audiencia, partido_id):
+    """Países que comenta el simulador: los cuatro fijos y los de quienes estén mirando."""
+    try:
+        return sorted(audiencia.paises_de(partido_id))
+    except Exception:
+        return ["ARG", "BRA", "ESP", "URU"]
+
+
 def _verificar_cassandra():
     """Antes de arrancar: alguna de las dos regiones tiene que responder, o los comentarios no tienen dónde ir."""
     from app.deps import _cassandra
@@ -55,8 +72,9 @@ def _verificar_cassandra():
     raise DependenciaNoDisponible("cassandra")
 
 
-def _ejecutar(partido_id, mongo, admin, puntuacion, neo=None):
+def _ejecutar(partido_id, mongo, admin, puntuacion, neo=None, tipo="demo"):
     col = mongo.db.simulaciones
+    audiencia = _audiencia()
     try:
         partido = admin._partido(partido_id)
         guion = obtener_o_crear(partido, mongo.db)
@@ -74,7 +92,7 @@ def _ejecutar(partido_id, mongo, admin, puntuacion, neo=None):
         corrida_id = uuid.uuid4().hex
         col.update_one({"_id":partido_id}, {"$set":{"jugadas":jugadas, "plantel_estadisticas":plantel,
                        "estadisticas_version":3, "corrida_id":corrida_id}})
-        for pais in ("ARG", "BRA", "ESP", "URU"): escribir(partido_id, pais, 0)
+        for pais in _paises(audiencia, partido_id): escribir(partido_id, pais, 0)
         partido = admin.poner_en_juego(partido_id)
         col.update_one({"_id":partido_id}, {"$set":{"estado":"En juego", "estado_simulacion":"en_curso", "partido":partido, "minuto":0, "marcador":{"local":0,"visitante":0}}})
         inicio_datos = datetime.now(timezone.utc).replace(microsecond=0)
@@ -89,18 +107,29 @@ def _ejecutar(partido_id, mongo, admin, puntuacion, neo=None):
                 col.update_one({"_id":partido_id}, {"$set":{"estadisticas_estado":"fallida", "estadisticas_incompletas":True}})
             else:
                 col.update_one({"_id":partido_id}, {"$set":{"estadisticas_estado":"actualizada"}})
+
+        def cerrar_minuto(minuto, marcador):
+            """Audiencia y comentarios del minuto a InfluxDB, y aviso del estado a quienes miran."""
+            cierre = audiencia.cerrar_minuto(partido_id, minuto, corrida_id, tipo,
+                                             inicio_datos + timedelta(seconds=minuto), marcador, "En juego")
+            if cierre.get("incompleto"):
+                col.update_one({"_id": partido_id}, {"$set": {"audiencia_incompleta": True}})
         guardar_estadisticas(0)
+        cerrar_minuto(0, {"local": 0, "visitante": 0})
         for minuto in range(1,91):
             time.sleep(max(0, inicio + minuto - time.monotonic()))
             local, visitante = (sum(1 for j in jugadas if j["tipo"] == "Gol" and j["minuto"] <= minuto and j["equipo_id"] == partido[lado]["codigo"]) for lado in ("local", "visitante"))
             col.update_one({"_id":partido_id}, {"$set":{"minuto":minuto, "marcador":{"local":local,"visitante":visitante}}})
             guardar_estadisticas(minuto)
             if minuto < 90:
-                for pais in ("ARG", "BRA", "ESP", "URU"): escribir(partido_id, pais, minuto, any(j["tipo"] == "Gol" and j["minuto"] == minuto for j in jugadas))
+                for pais in _paises(audiencia, partido_id): escribir(partido_id, pais, minuto, any(j["tipo"] == "Gol" and j["minuto"] == minuto for j in jugadas))
+            cerrar_minuto(minuto, {"local": local, "visitante": visitante})
         clasificado = partido["local"]["codigo"] if partido["fase"] != "Fase de grupos" and local == visitante else None
         puntuacion.cerrar(partido_id, local, visitante, clasificado)
         puntuacion.ejecutar(partido_id)
         col.update_one({"_id":partido_id}, {"$set":{"estado":"Finalizado", "archivo_estado":"pendiente"}})
+        audiencia.cerrar_partido(partido_id, corrida_id, tipo, inicio_datos + timedelta(seconds=90),
+                                 {"local": local, "visitante": visitante})
         try:
             archivar_estadisticas(partido_id, mongo, neo, _influx())
         except Exception:
@@ -351,25 +380,26 @@ def partido_en_vivo(partido_id: PartidoId, mongo=Depends(get_mongo)):
     return {"fuente": "mongodb", **doc}
 
 @router.post("/administracion/simulaciones/{partido_id}", status_code=202, dependencies=[Depends(requiere_admin)])
-def iniciar(partido_id: PartidoId, mongo=Depends(get_mongo), admin=Depends(get_partidos_admin_service), puntuacion=Depends(get_puntuacion_service), neo=Depends(get_neo4j)):
+def iniciar(partido_id: PartidoId, tipo: Literal["demo", "carga"] = Query("demo", description="demo o carga: se separan en el análisis de audiencia"),
+            mongo=Depends(get_mongo), admin=Depends(get_partidos_admin_service), puntuacion=Depends(get_puntuacion_service), neo=Depends(get_neo4j)):
     partido = admin._partido(partido_id)
     if partido["estado"] != "Programado" or not partido["local"] or not partido["visitante"]:
         raise Conflicto("Elegí un partido programado con equipos definidos.")
     _verificar_cassandra()
     try:
-        mongo.db.simulaciones.insert_one({"_id":partido_id, "estado_simulacion":"iniciando"})
+        mongo.db.simulaciones.insert_one({"_id":partido_id, "estado_simulacion":"iniciando", "tipo": tipo})
     except Exception as exc:
         from pymongo.errors import DuplicateKeyError
         if not isinstance(exc, DuplicateKeyError):
             raise
         reinicio = mongo.db.simulaciones.replace_one(
             {"_id": partido_id, "estado_simulacion": "fallida"},
-            {"_id": partido_id, "estado_simulacion": "iniciando"},
+            {"_id": partido_id, "estado_simulacion": "iniciando", "tipo": tipo},
         )
         if reinicio.modified_count != 1:
             raise Conflicto("Ya existe una simulación activa o finalizada para este partido.") from exc
-    threading.Thread(target=_ejecutar, args=(partido_id,mongo,admin,puntuacion,neo), daemon=True).start()
-    return {"partido_id":partido_id,"estado":"iniciando"}
+    threading.Thread(target=_ejecutar, args=(partido_id,mongo,admin,puntuacion,neo,tipo), daemon=True).start()
+    return {"partido_id":partido_id,"estado":"iniciando","tipo":tipo}
 
 @router.get("/administracion/simulaciones/{partido_id}", dependencies=[Depends(requiere_admin)])
 def estado(partido_id: PartidoId, mongo=Depends(get_mongo)):

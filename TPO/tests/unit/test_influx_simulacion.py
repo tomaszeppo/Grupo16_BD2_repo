@@ -81,3 +81,26 @@ def test_contadores_incluyen_jugadas_y_goles_del_guion():
     adaptador.guardar_minuto("P-13", 24, "ARG", "BRA", datetime(2026, 1, 1, tzinfo=timezone.utc), (1, 0), ({"Tiro":1,"Pase":9}, {}))
     linea = pedidos[-1].content.decode().splitlines()[0]
     assert "goles=1i" in linea and "tiros=2i" in linea and "pases_completados=9i" in linea
+
+
+def test_linea_de_audiencia_y_comentarios():
+    pedidos = []
+    adaptador = InfluxAdapter(Settings(_env_file=None))
+    adaptador._http = httpx.Client(base_url="http://influx", transport=httpx.MockTransport(
+        lambda req: pedidos.append(req) or httpx.Response(204)))
+    instante = datetime(2030, 6, 13, 15, 0, tzinfo=timezone.utc)
+    adaptador.guardar_audiencia("P-03", 23, "a" * 32, "demo", {"ARG": 2}, {("ARG", "usuario"): 3}, instante)
+    ts = int(instante.timestamp() * 1_000_000_000)
+    assert pedidos[0].content.decode().splitlines() == [
+        f"audiencia_partido,partido_id=P-03,pais=ARG,corrida_id={'a' * 32},tipo=demo espectadores=2i,minuto=23i {ts}",
+        f"comentarios_partido,partido_id=P-03,pais=ARG,origen=usuario,corrida_id={'a' * 32},tipo=demo comentarios=3i,minuto=23i {ts}",
+    ]
+
+
+def test_audiencia_rechaza_valores_que_romperian_la_linea():
+    adaptador = InfluxAdapter(Settings(_env_file=None))
+    instante = datetime(2030, 6, 13, 15, 0, tzinfo=timezone.utc)
+    with pytest.raises(ValidacionError):
+        adaptador.guardar_audiencia("P-03", 1, "a" * 32, "demo", {"AR G": 1}, {}, instante)
+    with pytest.raises(ValidacionError):
+        adaptador.guardar_audiencia("P-03", 1, "a" * 32, "otro", {"ARG": 1}, {}, instante)

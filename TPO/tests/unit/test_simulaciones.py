@@ -1,7 +1,31 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import pytest
+
 from app.routes import simulaciones
+
+
+class AudienciaQueAnota:
+    def __init__(self, paises=("ARG", "BRA", "ESP", "URU")):
+        self.paises, self.minutos, self.finales = set(paises), [], []
+
+    def paises_de(self, partido_id):
+        return set(self.paises)
+
+    def cerrar_minuto(self, partido_id, minuto, corrida_id, tipo, instante, marcador, estado):
+        self.minutos.append((minuto, tipo, marcador))
+        return {}
+
+    def cerrar_partido(self, partido_id, corrida_id, tipo, instante, marcador=None):
+        self.finales.append((tipo, marcador))
+
+
+@pytest.fixture(autouse=True)
+def sin_redis(monkeypatch):
+    audiencia = AudienciaQueAnota()
+    monkeypatch.setattr(simulaciones, "_audiencia", lambda: audiencia)
+    return audiencia
 
 
 class PlantelFalso:
@@ -133,3 +157,38 @@ def test_simulacion_respeta_gol_definido_en_guion(monkeypatch):
     puntuacion.cerrar.assert_called_once_with("P-03", 1, 0, None)
     muestra_42 = influx.guardar_jugadores.call_args_list[42].args
     assert muestra_42[1] == 42 and muestra_42[3][0]["jugador"] == "J-ARG-09"
+
+
+def test_simulacion_comenta_en_los_paises_que_miran_y_cierra_cada_minuto(monkeypatch, sin_redis):
+    sin_redis.paises.add("JPN")
+    acciones = []
+    col = Mock()
+    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=PlantelFalso()))
+    partido = {"id": "P-03", "fase": "Fase de grupos", "local": {"codigo": "ARG"}, "visitante": {"codigo": "BRA"}}
+    admin = SimpleNamespace(_partido=lambda _: partido, poner_en_juego=lambda _: partido)
+    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas": []})
+    monkeypatch.setattr(simulaciones, "escribir", lambda id, pais, minuto, *args: acciones.append((pais, minuto)))
+    monkeypatch.setattr(simulaciones, "_influx", lambda: SimpleNamespace(guardar_jugadores=lambda *args: None))
+    monkeypatch.setattr(simulaciones, "archivar_estadisticas", lambda *args: None)
+    monkeypatch.setattr(simulaciones.time, "sleep", lambda _: None)
+    simulaciones._ejecutar("P-03", mongo, admin, SimpleNamespace(cerrar=Mock(), ejecutar=Mock()), tipo="carga")
+    assert ("JPN", 0) in acciones and ("JPN", 45) in acciones
+    assert [m for m, _, _ in sin_redis.minutos] == list(range(91))
+    assert {t for _, t, _ in sin_redis.minutos} == {"carga"}
+    assert sin_redis.finales == [("carga", {"local": 0, "visitante": 0})]
+
+
+def test_audiencia_incompleta_queda_marcada(monkeypatch, sin_redis):
+    sin_redis.cerrar_minuto = lambda *args: {"incompleto": True}
+    col = Mock()
+    mongo = SimpleNamespace(db=SimpleNamespace(simulaciones=col, jugadores=PlantelFalso()))
+    partido = {"id": "P-03", "fase": "Fase de grupos", "local": {"codigo": "ARG"}, "visitante": {"codigo": "BRA"}}
+    admin = SimpleNamespace(_partido=lambda _: partido, poner_en_juego=lambda _: partido)
+    monkeypatch.setattr(simulaciones, "obtener_o_crear", lambda *args: {"jugadas": []})
+    monkeypatch.setattr(simulaciones, "escribir", lambda *args: None)
+    monkeypatch.setattr(simulaciones, "_influx", lambda: SimpleNamespace(guardar_jugadores=lambda *args: None))
+    monkeypatch.setattr(simulaciones, "archivar_estadisticas", lambda *args: None)
+    monkeypatch.setattr(simulaciones.time, "sleep", lambda _: None)
+    simulaciones._ejecutar("P-03", mongo, admin, SimpleNamespace(cerrar=Mock(), ejecutar=Mock()))
+    marcas = [c.args[1]["$set"] for c in col.update_one.call_args_list if "audiencia_incompleta" in c.args[1].get("$set", {})]
+    assert marcas and col.update_one.call_args_list[-1].args[1]["$set"]["estado_simulacion"] == "completa"

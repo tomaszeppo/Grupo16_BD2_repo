@@ -187,7 +187,10 @@ services:
           influxdb3 show databases --host http://influxdb:8181 --format csv > /tmp/bases 2>/dev/null && break;
           sleep 2;
         done;
-        grep -qx fixture2030_metrics /tmp/bases || influxdb3 create database fixture2030_metrics --retention-period 1h --host http://influxdb:8181
+        grep -qx fixture2030_metrics /tmp/bases || influxdb3 create database fixture2030_metrics --host http://influxdb:8181;
+        influxdb3 update database --database fixture2030_metrics --retention-period none --host http://influxdb:8181
+    # Sin vencimiento: la audiencia y las estadísticas se guardan para el análisis posterior. La segunda línea
+    # corrige una base creada por una versión anterior, que vencía los datos a la hora.
     networks: [tpo]
 
   api:
