@@ -1,24 +1,7 @@
-from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import Mock
 
 from app.routes import simulaciones
-from tests.apoyo import entrar
-
-
-def test_recientes_consulta_ventanas_y_limita_por_region(monkeypatch):
-    llamadas = []
-    fila = SimpleNamespace(comentario_id="abc", usuario_nombre="Ana", contenido="gol", creado_en=datetime.now(timezone.utc))
-    class Session:
-        def execute(self, query, params):
-            llamadas.append(params)
-            return [fila] if len(llamadas) == 1 else []
-    monkeypatch.setattr(simulaciones, "cassandra", lambda: Session())
-    resultado = simulaciones.recientes("P-03", "ARG")
-    assert resultado["items"][0]["contenido"] == "gol"
-    assert all(p[:2] == ("P-03", "ARG") for p in llamadas)
-    assert len(llamadas) == 2
-    assert (llamadas[0][2] - llamadas[1][2]).total_seconds() == 1800
 
 
 class PlantelFalso:
@@ -60,44 +43,13 @@ def test_falla_de_comentarios_marca_error_sin_iniciar(monkeypatch):
     assert col.update_one.call_args.args[1]["$set"]["estado_simulacion"] == "fallida"
 
 
-def test_endpoint_fastapi_filtra_pais(cliente, monkeypatch):
-    llamadas = []
-    class Session:
-        def execute(self, query, params):
-            llamadas.append(params)
-            return []
-    monkeypatch.setattr(simulaciones, "cassandra", lambda: Session())
-    respuesta = cliente.get("/partidos/P-03/comentarios/recientes?pais=ARG")
-    assert respuesta.status_code == 200
-    assert respuesta.json()["pais"] == "ARG"
-    assert respuesta.json()["items"] == []
-    assert all(p[:2] == ("P-03", "ARG") for p in llamadas)
-    assert cliente.get("/partidos/P-03/comentarios/recientes?pais=arg").status_code == 422
-
-
-def test_comentar_usa_usuario_y_region_de_sesion(cliente, monkeypatch):
-    guardados = []
-    def guardar(partido, pais, nombre, contenido):
-        guardados.append((partido, pais, nombre, contenido))
-        return {"comentario_id":"c1", "usuario_nombre":nombre, "contenido":contenido, "creado_en":"2026-01-01T00:00:00Z"}
-    monkeypatch.setattr(simulaciones, "guardar_comentario", guardar)
-    usuario = cliente.post("/usuarios", json={"nombre":"Ana", "pais":"ARG"}).json()["usuario"]
-    headers = entrar(cliente, usuario["id"])
-    assert cliente.post("/partidos/P-03/comentarios", headers=headers, json={"contenido":"hola"}).status_code == 409
-    assert cliente.post("/partidos/P-03/estado", headers={"X-Admin-Clave":"clave-de-prueba"}, json={"estado":"En juego"}).status_code == 200
-    respuesta = cliente.post("/partidos/P-03/comentarios", headers=headers, json={"contenido":"  Vamos!  "})
-    assert respuesta.status_code == 201
-    assert guardados == [("P-03", "ARG", "Ana", "Vamos!")]
-    assert cliente.post("/partidos/P-03/comentarios", headers=headers, json={"contenido":"   "}).status_code == 422
-    assert cliente.post("/partidos/P-03/comentarios", json={"contenido":"hola"}).status_code == 401
-    assert cliente.post("/partidos/P-03/comentarios", headers=headers, json={"contenido":"hola", "pais":"BRA"}).status_code == 422
-
-
 def test_comentarios_de_gol_usan_textos_de_gol(monkeypatch):
     guardados = []
-    monkeypatch.setattr(simulaciones, "guardar_comentario", lambda *args: guardados.append(args))
+    servicio = SimpleNamespace(publicar_automatico=lambda *args: guardados.append(args))
+    monkeypatch.setattr(simulaciones, "_comentarios", lambda: servicio)
     monkeypatch.setattr(simulaciones.random, "choice", lambda opciones: opciones[0])
     simulaciones.escribir("P-03", "ARG", 23)
+    assert guardados[0][:2] == ("P-03", "ARG")
     assert guardados[0][3] in simulaciones.GOLES
     assert len(simulaciones.COMENTARIOS) >= 10
 

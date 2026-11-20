@@ -1,14 +1,12 @@
-"""Simulación de laboratorio y lectura de comentarios por región."""
+"""Simulación de laboratorio: el partido en 90 segundos, sus estadísticas en InfluxDB y su archivo en Neo4j."""
 import random
 import threading
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
-from functools import lru_cache
 
-from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-from app.deps import _influx, get_influx, get_mongo, get_neo4j, get_partidos_admin_service, get_puntuacion_service, requiere_admin, usuario_actual
+from fastapi import APIRouter, Depends
+from app.deps import _influx, get_influx, get_mongo, get_neo4j, get_partidos_admin_service, get_puntuacion_service, requiere_admin
 from app.errors import Conflicto, DependenciaNoDisponible, NoEncontrado
 from app.schemas.comunes import PartidoId
 from app.observability import logger
@@ -16,19 +14,11 @@ from seed.cargar_guion_simulacion import obtener_o_crear
 
 router = APIRouter(tags=["Simulaciones"])
 
-@lru_cache
-def cassandra():
-    try:
-        from cassandra.cluster import Cluster
-        cluster = Cluster(["cassandra"], connect_timeout=5, protocol_version=4)
-        session = cluster.connect("fixture2030")
-        session.default_timeout = 5
-        return session
-    except Exception as exc:
-        raise DependenciaNoDisponible("cassandra") from exc
+def _comentarios():
+    from app.deps import comentarios_del_simulador
 
-def ventana(fecha):
-    return fecha.replace(minute=fecha.minute // 30 * 30, second=0, microsecond=0)
+    return comentarios_del_simulador()
+
 
 COMENTARIOS = (
     "Qué lindo partido se está armando.", "¡Vamos, que todavía hay tiempo!",
@@ -45,66 +35,25 @@ NOMBRES = ("Luli", "Nico", "Mica", "Santi", "Fede", "Sofi", "Juli", "Tomi", "Val
 GOLES = ("¡Gooooool! ¡Qué locura!", "¡Gol! Se gritó con todo.", "¡Adentro! Cambia el partido.", "¡Qué momento para meterla!")
 
 
-def guardar_comentario(partido, pais, nombre, contenido):
-    ahora = datetime.now(timezone.utc)
-    comentario_id = uuid.uuid4()
-    try:
-        cassandra().execute("INSERT INTO comentarios_por_partido_pais (partido_id,pais,ventana,creado_en,comentario_id,usuario_nombre,contenido) VALUES (%s,%s,%s,%s,%s,%s,%s)",
-            (partido, pais, ventana(ahora), ahora, comentario_id, nombre, contenido))
-    except Exception as exc:
-        raise DependenciaNoDisponible("cassandra") from exc
-    return {"comentario_id": str(comentario_id), "usuario_nombre": nombre,
-            "contenido": contenido, "creado_en": ahora.isoformat()}
-
-
 def escribir(partido, pais, minuto, es_gol=None):
+    """Comentario automático de un hincha simulado: pasa por el mismo camino que los reales (Cassandra y vivo)."""
     textos = GOLES if (minuto in (23, 75) if es_gol is None else es_gol) else COMENTARIOS
-    guardar_comentario(partido, pais, random.choice(NOMBRES), random.choice(textos))
+    _comentarios().publicar_automatico(partido, pais, random.choice(NOMBRES), random.choice(textos))
 
 
-class NuevoComentario(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    contenido: str = Field(min_length=1, max_length=280)
+def _verificar_cassandra():
+    """Antes de arrancar: alguna de las dos regiones tiene que responder, o los comentarios no tienen dónde ir."""
+    from app.deps import _cassandra
+    from app.dominio.regiones import REGIONES
 
-    @field_validator("contenido")
-    @classmethod
-    def validar_contenido(cls, texto):
-        texto = texto.strip()
-        if not texto:
-            raise ValueError("El comentario no puede estar vacío.")
-        return texto
+    for region in REGIONES:
+        try:
+            _cassandra().ping_region(region)
+            return
+        except DependenciaNoDisponible:
+            continue
+    raise DependenciaNoDisponible("cassandra")
 
-
-@router.post("/partidos/{partido_id}/comentarios", status_code=201)
-def publicar_comentario(partido_id: PartidoId, cuerpo: NuevoComentario,
-                        usuario_id: str = Depends(usuario_actual),
-                        mongo=Depends(get_mongo), neo4j=Depends(get_neo4j)):
-    partido = neo4j.obtener_partido(partido_id)
-    if partido is None:
-        raise NoEncontrado("No existe el partido.")
-    if partido["estado"] != "En juego":
-        raise Conflicto("Solo se puede comentar mientras el partido está en juego.")
-    usuario = mongo.obtener_usuario(usuario_id)
-    if usuario is None:
-        raise NoEncontrado("No existe el usuario.")
-    comentario = guardar_comentario(partido_id, usuario["pais"], usuario["nombre"], cuerpo.contenido)
-    return {"fuente": "cassandra", "partido_id": partido_id, "pais": usuario["pais"], **comentario}
-
-
-@router.get("/partidos/{partido_id}/comentarios/recientes")
-def recientes(partido_id: PartidoId, pais: str = Query(pattern="^[A-Z]{3}$")):
-    ahora = datetime.now(timezone.utc)
-    actual = ventana(ahora)
-    items = []
-    try:
-        for v in (actual, actual - timedelta(minutes=30)):
-            filas = cassandra().execute("SELECT comentario_id,usuario_nombre,contenido,creado_en FROM comentarios_por_partido_pais WHERE partido_id=%s AND pais=%s AND ventana=%s LIMIT 20", (partido_id, pais, v))
-            items.extend({"comentario_id": str(f.comentario_id), "usuario_nombre": f.usuario_nombre,
-                          "contenido": f.contenido, "creado_en": f.creado_en.isoformat()} for f in filas)
-            if len(items) >= 20: break
-    except Exception as exc:
-        raise DependenciaNoDisponible("cassandra") from exc
-    return {"fuente":"cassandra", "partido_id":partido_id, "pais":pais, "items":items[:20]}
 
 def _ejecutar(partido_id, mongo, admin, puntuacion, neo=None):
     col = mongo.db.simulaciones
@@ -406,7 +355,7 @@ def iniciar(partido_id: PartidoId, mongo=Depends(get_mongo), admin=Depends(get_p
     partido = admin._partido(partido_id)
     if partido["estado"] != "Programado" or not partido["local"] or not partido["visitante"]:
         raise Conflicto("Elegí un partido programado con equipos definidos.")
-    cassandra()
+    _verificar_cassandra()
     try:
         mongo.db.simulaciones.insert_one({"_id":partido_id, "estado_simulacion":"iniciando"})
     except Exception as exc:

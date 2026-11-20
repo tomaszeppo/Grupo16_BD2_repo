@@ -39,6 +39,9 @@ CASSANDRA_CAMBIO_REGION = Counter("prode_cassandra_cambio_region_total",
                                   "Operaciones de Cassandra atendidas por la otra región porque la propia no respondió",
                                   ["desde", "hacia"])
 
+VIVO_COMENTARIOS = Counter("prode_vivo_comentarios_total", "Comentarios por origen y resultado",
+                           ["origen", "resultado"])
+
 SIN_RUTA = "(sin ruta)"  # pedidos a direcciones que no existen: una sola etiqueta, no una por dirección
 
 

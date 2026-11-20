@@ -146,9 +146,6 @@ services:
       CASSANDRA_DC: america
     ports: ["127.0.0.1:${CASSANDRA_AMERICA_PUERTO:-9043}:9042"]
     volumes: ["cassandra_america_datos:/var/lib/cassandra"]
-    networks:
-      tpo:
-        aliases: [cassandra]  # nombre anterior, para lo que todavía se conecta a "cassandra"
 
   cassandra_europa:
     <<: *cassandra

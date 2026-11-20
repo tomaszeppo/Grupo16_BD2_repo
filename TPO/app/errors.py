@@ -34,6 +34,11 @@ class Conflicto(ApiError):
     codigo = "CONFLICTO"
 
 
+class DemasiadosPedidos(ApiError):
+    status_code = 429
+    codigo = "DEMASIADOS_PEDIDOS"
+
+
 class DependenciaNoDisponible(ApiError):
     status_code = 503
     codigo = "DEPENDENCIA_NO_DISPONIBLE"

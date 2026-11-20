@@ -21,6 +21,7 @@ TAGS = [
     {"name": "Redis · Sesiones", "description": "Entrar y salir. Las demás rutas piden X-Sesion o la cookie de sesión."},
     {"name": "MongoDB · Prode", "description": "Usuarios, prodes, pronósticos y ranking."},
     {"name": "MongoDB · Equipos", "description": "Catálogo de equipos y planteles."},
+    {"name": "Cassandra · Comentarios", "description": "Tribuna de cada país durante el partido. Se guarda en la región del país."},
     {"name": "Administración", "description": "Operación del partido para la demostración. Requiere X-Admin-Clave."},
     {"name": "Sistema", "description": "Salud y métricas."},
 ]
@@ -43,13 +44,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     registrar_manejadores(app)
     instrumentar(app)
 
-    from app.routes import admin, fixture, health, prode, ranking, sesiones, simulaciones
+    from app.routes import admin, comentarios, fixture, health, prode, ranking, sesiones, simulaciones
 
     app.include_router(sesiones.router)
     app.include_router(fixture.router)
     app.include_router(prode.router)
     app.include_router(ranking.router)
     app.include_router(admin.router)
+    app.include_router(comentarios.router)
     app.include_router(simulaciones.router)
     app.include_router(prode.equipos_router)
     app.include_router(health.router)

@@ -21,6 +21,7 @@ from app.puertos.ranking import RankingMongo, RankingPort
 from app.puertos.sesiones import SesionesPort, SesionesRedis
 from app.reloj import Reloj, ahora
 from app.services.calendario import Calendario
+from app.services.comentarios import ComentariosService
 from app.services.fixture import FixtureService
 from app.services.health import HealthService
 from app.services.partidos_admin import PartidosAdminService
@@ -186,6 +187,18 @@ async def get_puntuacion_service(mongo=Depends(get_mongo), neo4j=Depends(get_neo
 
 async def get_ranking_service(ranking=Depends(get_ranking), mongo=Depends(get_mongo)) -> RankingService:
     return RankingService(ranking, mongo)
+
+
+async def get_comentarios_service(cassandra=Depends(get_cassandra), redis=Depends(get_redis), neo4j=Depends(get_neo4j),
+                                  mongo=Depends(get_mongo), reloj=Depends(get_reloj),
+                                  settings: Settings = Depends(get_settings)) -> ComentariosService:
+    return ComentariosService(cassandra, redis, neo4j, mongo, reloj, settings.chat_segundos_entre_comentarios)
+
+
+def comentarios_del_simulador() -> ComentariosService:
+    """El simulador corre en un hilo fuera de un pedido: arma el servicio con las piezas del proceso."""
+    return ComentariosService(_cassandra(), _redis(), _neo4j(), _mongo(), ahora,
+                              _settings().chat_segundos_entre_comentarios)
 
 
 def precalentar() -> None:

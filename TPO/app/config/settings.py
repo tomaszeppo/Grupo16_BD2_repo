@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     redis_password: str = ""
     redis_replica_url: str = "redis://localhost:6381/0"
     sesion_ttl_segundos: int = 86400  # se renueva con cada uso
+    chat_segundos_entre_comentarios: float = 5.0  # modo lento, por usuario
 
     cassandra_america: str = "cassandra_america"  # nodo de contacto de cada datacenter
     cassandra_europa: str = "cassandra_europa"

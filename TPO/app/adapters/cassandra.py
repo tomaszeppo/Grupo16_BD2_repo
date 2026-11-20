@@ -16,9 +16,9 @@ _SIN_REGION = {"NoHostAvailable", "Unavailable", "ConnectionException", "Connect
 _DEMORA = {"OperationTimedOut", "ReadTimeout", "WriteTimeout"}
 
 _CONSULTAS = {
-    "insertar": "INSERT INTO comentarios_por_partido_pais (partido_id, pais, ventana, creado_en, comentario_id, "
+    "insertar": "INSERT INTO fixture2030.comentarios_por_partido_pais (partido_id, pais, ventana, creado_en, comentario_id, "
                 "usuario_nombre, contenido, origen) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    "listar": "SELECT comentario_id, usuario_nombre, contenido, creado_en, origen FROM comentarios_por_partido_pais "
+    "listar": "SELECT comentario_id, usuario_nombre, contenido, creado_en, origen FROM fixture2030.comentarios_por_partido_pais "
               "WHERE partido_id = ? AND pais = ? AND ventana = ? AND creado_en < ? LIMIT ?",
     "ping": "SELECT now() FROM system.local",
 }
@@ -58,7 +58,7 @@ class CassandraAdapter:
             cluster = Cluster([contacto], port=self._s.cassandra_puerto, protocol_version=4,
                               connect_timeout=self._s.timeout_segundos,
                               execution_profiles={EXEC_PROFILE_DEFAULT: perfil})
-            self._sesiones[region] = cluster.connect("fixture2030")
+            self._sesiones[region] = cluster.connect()
         return self._sesiones[region]
 
     def _preparada(self, sesion, nombre: str):
