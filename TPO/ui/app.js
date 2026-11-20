@@ -2,6 +2,9 @@
    Todo texto que viene de la API se inserta con esc() para que un nombre de usuario no pueda meter HTML. */
 "use strict";
 
+// Fondo de la portada: una de las cinco fotos del Bernabéu, al azar en cada carga (créditos en img/CREDITOS.md).
+document.documentElement.style.setProperty("--foto-estadio", `url("/demo/img/estadio-${1 + Math.floor(Math.random() * 5)}.jpg")`);
+
 const contenido = document.getElementById("contenido");
 const sesion = {
   get usuario() {
@@ -72,7 +75,15 @@ const grupoDe = (partido, equipos) => partido.fase === "Fase de grupos" ? equipo
 
 const ANFITRIONES = [["ARG", "Argentina"], ["PAR", "Paraguay"], ["URU", "Uruguay"], ["ESP", "España"], ["POR", "Portugal"], ["MAR", "Marruecos"]];
 const marcador = (p) => p.goles_local == null ? "–" : `${p.goles_local} - ${p.goles_visitante}`;
-const duracion = (seg) => seg >= 86400 ? `${(seg / 86400).toFixed(1)} d` : seg >= 3600 ? `${(seg / 3600).toFixed(1)} h` : `${Math.round(seg / 60)} min`;
+// Anticipación acumulada (tercer criterio del ranking), en unidades enteras: "2 d 19 h 12 min", "4 h 5 min", "12 min 30 s".
+const duracion = (segundos) => {
+  const seg = Math.max(0, Math.round(segundos || 0));
+  const d = Math.floor(seg / 86400), h = Math.floor(seg % 86400 / 3600), m = Math.floor(seg % 3600 / 60), s = seg % 60;
+  if (d) return `${d} d ${h} h ${m} min`;
+  if (h) return `${h} h ${m} min`;
+  if (m) return `${m} min ${s} s`;
+  return `${s} s`;
+};
 
 class ErrorDeApi extends Error {
   constructor(estado, codigo, mensaje) { super(mensaje); this.estado = estado; this.codigo = codigo; }
@@ -883,12 +894,14 @@ async function vistaPartido(id) {
     </section>
     <dialog id="ranking-modal" class="ranking-modal rounded-3" aria-labelledby="ranking-modal-titulo"><div class="ranking-modal-cabecera"><div><h2 id="ranking-modal-titulo">Rankings</h2><p>Elegí un grupo para comparar los pronósticos y los puntos de este partido. El puesto se ordena por el puntaje acumulado.</p></div><button class="btn btn-outline-primary btn-sm" id="cerrar-ranking" aria-label="Cerrar rankings">Cerrar</button></div><label class="form-label" for="ranking-selector">Elegí un ranking</label><select class="form-select" id="ranking-selector"><option value="general">General</option></select><div id="ranking-aviso-grupos" class="nota mb-2" aria-live="polite"></div><div id="ranking-contenido" role="status"><p>Consultando ranking…</p></div></dialog>
     <div class="vstack gap-3 partido-en-vivo">
-      <div id="estadisticas"></div>
-      <div id="pronostico"></div>
-      <section class="card bloque relato" aria-labelledby="relato-titulo"><header><div><h2 id="relato-titulo">Minuto a minuto</h2><p class="relato-subtitulo">Las últimas acciones del partido</p></div><span id="relato-estado" class="relato-estado" role="status">Conectando…</span></header><div id="relato-lista" class="relato-lista" tabindex="0" aria-label="Historial de jugadas" aria-live="polite"><p class="vacio">Esperando la primera jugada.</p></div></section>
-      <div id="comentarios"></div>
-      <div id="audiencia"></div>
-      <details class="partido-detalles"><summary>Recorrido de jugadas</summary><div id="jugadas"></div></details>
+      <div class="partido-principal">
+        <div id="estadisticas"></div>
+        <div id="pronostico"></div>
+        <section class="card bloque relato" aria-labelledby="relato-titulo"><header><div><h2 id="relato-titulo">Minuto a minuto</h2><p class="relato-subtitulo">Las últimas acciones del partido</p></div><span id="relato-estado" class="relato-estado" role="status">Conectando…</span></header><div id="relato-lista" class="relato-lista" tabindex="0" aria-label="Historial de jugadas" aria-live="polite"><p class="vacio">Esperando la primera jugada.</p></div></section>
+        <div id="audiencia"></div>
+        <details class="partido-detalles"><summary>Recorrido de jugadas</summary><div id="jugadas"></div></details>
+      </div>
+      <div class="partido-lateral"><div id="comentarios"></div></div>
     </div>`;
 
   const modal = document.getElementById("ranking-modal");
@@ -1191,9 +1204,9 @@ function celdaPuntosPartido(pronostico) {
 }
 
 const filaRanking = (f, yo, verPronosticos) => `<tr class="${f.usuario_id === yo ? "yo" : ""}"><td class="puesto">${f.puesto}</td><td>${esc(f.nombre || f.usuario_id)}</td>
-  ${verPronosticos ? celdaPronostico(f.pronostico) + celdaPuntosPartido(f.pronostico) : ""}<td class="n">${f.puntos}</td><td class="n">${f.exactos}</td><td class="n">${esc(duracion(f.tiempo_seg))}</td></tr>`;
+  ${verPronosticos ? celdaPronostico(f.pronostico) + celdaPuntosPartido(f.pronostico) : ""}<td class="n">${f.puntos}</td><td class="n">${f.exactos}</td><td class="n" title="${esc(f.tiempo_seg)} segundos">${esc(duracion(f.tiempo_seg))}</td></tr>`;
 const tablaRanking = (filas, yo, verPronosticos = false) => filas.length
-  ? `<div class="table-responsive ranking-tabla" tabindex="0" role="region" aria-label="Tabla de posiciones"><table class="table table-hover align-middle mb-0"><thead><tr><th scope="col">Puesto</th><th scope="col">Usuario</th>${verPronosticos ? '<th scope="col">Pronóstico</th><th scope="col" class="n">Puntos del partido</th>' : ""}<th scope="col" class="n">${verPronosticos ? "Puntos acumulados" : "Puntos"}</th><th scope="col" class="n">Exactos</th><th scope="col" class="n">Anticipación</th></tr></thead><tbody>${filas.map(f => filaRanking(f, yo, verPronosticos)).join("")}</tbody></table></div>`
+  ? `<div class="table-responsive ranking-tabla" tabindex="0" role="region" aria-label="Tabla de posiciones"><table class="table table-hover align-middle mb-0"><thead><tr><th scope="col">Puesto</th><th scope="col">Usuario</th>${verPronosticos ? '<th scope="col">Pronóstico</th><th scope="col" class="n">Puntos del partido</th>' : ""}<th scope="col" class="n">${verPronosticos ? "Puntos acumulados" : "Puntos"}</th><th scope="col" class="n">Exactos</th><th scope="col" class="n" title="Tercer criterio: cuánto antes del partido cargaste cada pronóstico acertado, sumado">Anticipación <span class="desempate">(desempate)</span></th></tr></thead><tbody>${filas.map(f => filaRanking(f, yo, verPronosticos)).join("")}</tbody></table></div>`
   : `<p class="vacio">Todavía no se cerró ningún partido con pronósticos: el ranking está vacío.</p>`;
 
 

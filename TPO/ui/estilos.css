@@ -156,12 +156,13 @@ summary { min-height: 44px; }
   margin-bottom: 1.25rem; padding: clamp(1.25rem, 5vw, 2.5rem);
   border-radius: 1rem; color: #fff; background: var(--noche);
 }
-/* Foto: Estadio Más Monumental, Buenos Aires (Dibumartinez23, CC0, Wikimedia Commons). Ver img/CREDITOS.md. */
+/* Foto de fondo: una de cinco del estadio Santiago Bernabéu, Madrid, elegida al azar en cada carga (app.js).
+   Autores y licencias en img/CREDITOS.md. */
 .portada-cancha {
   position: absolute; inset: 0; z-index: -1;
   background:
     linear-gradient(100deg, #0b1d33f0 0%, #0b1d33d9 45%, #0b1d3399 100%),
-    url("img/estadio.jpg") center 62% / cover no-repeat;
+    var(--foto-estadio, url("img/estadio-1.jpg")) center 62% / cover no-repeat;
 }
 .portada-cuerpo { position: relative; display: grid; gap: .65rem; }
 .portada-volanta { font-size: .78rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; color: var(--oro); }
@@ -177,7 +178,7 @@ summary { min-height: 44px; }
   border-radius: 1rem; padding: clamp(1rem, 4vw, 2rem); margin-bottom: 1.5rem; color: #fff;
   background:
     linear-gradient(160deg, #0b1d33f2 0%, #0b1d33e0 55%, #0b1d33c7 100%),
-    url("img/estadio.jpg") center 62% / cover no-repeat,
+    var(--foto-estadio, url("img/estadio-1.jpg")) center 62% / cover no-repeat,
     var(--noche);
   box-shadow: 0 14px 40px #0b1d3333;
 }
@@ -390,7 +391,19 @@ tr.yo td { --bs-table-bg: var(--oro-claro); background: var(--oro-claro); font-w
 .comentario-tu { font-size: .75rem; font-weight: 700; color: var(--mongo); }
 .partido-detalles > summary { display: flex; align-items: center; padding: .75rem 1rem; border: 1px solid var(--linea); border-radius: .875rem; background: var(--papel); font-weight: 700; cursor: pointer; }
 .partido-detalles[open] > summary { margin-bottom: .75rem; }
-.partido-en-vivo > :empty { display: none; }
+.partido-principal > :empty, .partido-lateral > :empty { display: none; }
+/* En el teléfono las dos columnas se deshacen y los comentarios vuelven a quedar después del minuto a minuto. */
+.partido-principal, .partido-lateral { display: contents; }
+#estadisticas { order: 1; } #pronostico { order: 2; } .partido-en-vivo .relato { order: 3; }
+#comentarios { order: 4; } #audiencia { order: 5; } .partido-detalles { order: 6; }
+@media (min-width: 992px) {
+  /* Escritorio: a la izquierda el partido (estadísticas, jugadas, audiencia); a la derecha solo la tribuna, fija y alta. */
+  .partido-en-vivo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 38%); gap: 1.5rem; align-items: start; }
+  .partido-principal { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+  .partido-lateral { display: block; position: sticky; top: 82px; min-width: 0; }
+  .partido-lateral .tribuna { display: flex; flex-direction: column; height: calc(100vh - 82px - 1.5rem); min-height: 28rem; margin: 0; }
+  .partido-lateral .comentarios-lista { flex: 1 1 auto; max-height: none; min-height: 0; }
+}
 
 /* Audiencia */
 .audiencia-ahora, .audiencia-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .6rem; margin-bottom: .9rem; }
@@ -547,3 +560,4 @@ tr.yo td { --bs-table-bg: var(--oro-claro); background: var(--oro-claro); font-w
   .marca-pelota { width: 26px; height: 26px; }
   .menu a { font-size: .64rem; }
 }
+.ranking-tabla th .desempate { display: block; font-weight: 400; font-size: .72rem; color: var(--apagado); text-transform: none; letter-spacing: 0; }
