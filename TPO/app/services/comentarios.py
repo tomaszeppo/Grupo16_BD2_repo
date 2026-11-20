@@ -103,6 +103,8 @@ class ComentariosService:
         fila = {"partido_id": partido_id, "pais": pais, "ventana": ventana(ahora), "creado_en": ahora,
                 "comentario_id": comentario_id, "usuario_nombre": nombre, "contenido": contenido, "origen": origen}
         try:
+            # Primero el país: si el comentario se guardara y el país no, "todos los países" no lo encontraría.
+            self._cassandra.registrar_pais(region_de(pais), partido_id, pais)
             region = self._cassandra.guardar_comentario(region_de(pais), fila)
         except Exception:
             metricas.VIVO_COMENTARIOS.labels(origen, "rechazado").inc()
@@ -123,7 +125,7 @@ class ComentariosService:
     def historial(self, partido_id: str, pais: str | None, antes_de: datetime | None, limite: int) -> dict:
         """Hacia atrás, ventana por ventana. `pais=None` mezcla todos los países que tuvieron actividad."""
         tope = antes_de or self._tope_inicial(partido_id)
-        paises = [pais] if pais else sorted(self._redis.miembros(f"paises:{partido_id}") or PAISES_SIMULADOR)
+        paises = [pais] if pais else self._paises_con_comentarios(partido_id)
         items, regiones = [], set()
         cortadas = []  # (país, ventana) que devolvieron el máximo pedido: pueden tener más filas
         actual = ventana(tope)
@@ -159,6 +161,18 @@ class ComentariosService:
         for c in items:
             c["creado_en"] = _iso(c["creado_en"])
         return {"items": items, "siguiente": siguiente, "regiones_atendidas": sorted(regiones)}
+
+    def _paises_con_comentarios(self, partido_id: str) -> list[str]:
+        """Las tribunas que hay que leer para "todos los países". Salen de Cassandra, que es donde están los
+        comentarios: no dependen de que Redis conserve nada. Los partidos comentados antes de que existiera esa
+        tabla no figuran en ella; para esos se usa lo que haya en Redis o los países del simulador."""
+        paises = self._cassandra.paises_con_comentarios(partido_id)
+        if not paises:
+            try:
+                paises = self._redis.miembros(f"paises:{partido_id}")
+            except Exception:
+                paises = set()
+        return sorted(paises or PAISES_SIMULADOR)
 
     def _tope_inicial(self, partido_id: str) -> datetime:
         """Desde dónde se empieza a leer hacia atrás cuando el cliente no lo indica.

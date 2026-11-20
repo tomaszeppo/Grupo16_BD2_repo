@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from app.adapters.base import operacion
 from app.config.settings import Settings
@@ -41,24 +41,43 @@ def construir_sql(
     )
 
 
-def _filtro_audiencia(partido_id: str, corrida_id: str, desde: int, hasta: int, pais: str | None) -> str:
+# Un partido simulado dura 90 segundos y sus filas llevan la hora real en que se escribieron. Con margen.
+DURACION_DE_UN_PARTIDO = timedelta(minutes=5)
+
+
+def _rango_del_partido(inicio: datetime | None) -> str:
+    """Condición de tiempo de un partido. InfluxDB 3 Core guarda un archivo por cada tramo de 10 minutos con
+    datos y no deja que una consulta lea más de 432: sin esta condición, la consulta de un partido abriría los
+    archivos de todos. `inicio=None` (simulaciones viejas, sin la hora guardada) no acota."""
+    if inicio is None:
+        return ""
+    if inicio.tzinfo is not None:
+        inicio = inicio.astimezone(timezone.utc)
+    return f" AND time >= '{_iso(inicio)}' AND time < '{_iso(inicio + DURACION_DE_UN_PARTIDO)}'"
+
+
+def _filtro_audiencia(partido_id: str, corrida_id: str, desde: int, hasta: int, pais: str | None,
+                      inicio: datetime | None = None) -> str:
     if not _RE_PARTIDO.fullmatch(partido_id) or not re.fullmatch(r"[0-9a-f]{32}", corrida_id or ""):
         raise ValidacionError("Partido o corrida inválidos.")
     if pais is not None and not _RE_EQUIPO.fullmatch(pais):
         raise ValidacionError("País inválido.")
     filtro = (f"partido_id = '{partido_id}' AND corrida_id = '{corrida_id}' "
               f"AND minuto >= {int(desde)} AND minuto <= {int(hasta)}")
-    return filtro + (f" AND pais = '{pais}'" if pais else "")
+    return filtro + (f" AND pais = '{pais}'" if pais else "") + _rango_del_partido(inicio)
 
 
-def sql_audiencia(partido_id: str, corrida_id: str, desde: int, hasta: int, pais: str | None) -> str:
+def sql_audiencia(partido_id: str, corrida_id: str, desde: int, hasta: int, pais: str | None,
+                  inicio: datetime | None = None) -> str:
     return ("SELECT minuto, pais, espectadores FROM audiencia_partido WHERE "
-            f"{_filtro_audiencia(partido_id, corrida_id, desde, hasta, pais)} ORDER BY minuto, pais LIMIT 20000")
+            f"{_filtro_audiencia(partido_id, corrida_id, desde, hasta, pais, inicio)} ORDER BY minuto, pais LIMIT 20000")
 
 
-def sql_comentarios(partido_id: str, corrida_id: str, desde: int, hasta: int, pais: str | None) -> str:
+def sql_comentarios(partido_id: str, corrida_id: str, desde: int, hasta: int, pais: str | None,
+                    inicio: datetime | None = None) -> str:
     return ("SELECT minuto, pais, origen, comentarios FROM comentarios_partido WHERE "
-            f"{_filtro_audiencia(partido_id, corrida_id, desde, hasta, pais)} ORDER BY minuto, pais, origen LIMIT 40000")
+            f"{_filtro_audiencia(partido_id, corrida_id, desde, hasta, pais, inicio)} "
+            "ORDER BY minuto, pais, origen LIMIT 40000")
 
 
 def sql_audiencia_promedio(pais: str | None, tipo: str | None) -> str:
@@ -217,19 +236,19 @@ class InfluxAdapter:
         if lineas:
             self._escribir("guardar_resumen_audiencia", lineas)
 
-    def audiencia_por_minuto(self, partido_id, corrida_id, desde, hasta, pais=None) -> list[dict]:
-        sql = sql_audiencia(partido_id, corrida_id, desde, hasta, pais)
+    def audiencia_por_minuto(self, partido_id, corrida_id, desde, hasta, pais=None, inicio=None) -> list[dict]:
+        sql = sql_audiencia(partido_id, corrida_id, desde, hasta, pais, inicio)
         with operacion(FUENTE, "audiencia_por_minuto", _traducir):
             return self._consultar_tolerante(sql)
 
-    def comentarios_por_minuto(self, partido_id, corrida_id, desde, hasta, pais=None) -> list[dict]:
-        sql = sql_comentarios(partido_id, corrida_id, desde, hasta, pais)
+    def comentarios_por_minuto(self, partido_id, corrida_id, desde, hasta, pais=None, inicio=None) -> list[dict]:
+        sql = sql_comentarios(partido_id, corrida_id, desde, hasta, pais, inicio)
         with operacion(FUENTE, "comentarios_por_minuto", _traducir):
             return self._consultar_tolerante(sql)
 
-    def resumen_audiencia(self, partido_id, corrida_id) -> dict[str, int]:
+    def resumen_audiencia(self, partido_id, corrida_id, inicio=None) -> dict[str, int]:
         filtro = _filtro_audiencia(partido_id, corrida_id, 0, 0, None).split(" AND minuto")[0]
-        sql = f"SELECT pais, unicos FROM audiencia_resumen WHERE {filtro} ORDER BY pais"
+        sql = f"SELECT pais, unicos FROM audiencia_resumen WHERE {filtro}{_rango_del_partido(inicio)} ORDER BY pais"
         with operacion(FUENTE, "resumen_audiencia", _traducir):
             return {f["pais"]: int(f["unicos"]) for f in self._consultar_tolerante(sql)}
 

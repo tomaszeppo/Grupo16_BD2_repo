@@ -34,3 +34,11 @@ def test_dependencias_informa_cada_region_de_cassandra(cliente, cassandra):
     cuerpo = cliente.get("/health/dependencias").json()
     assert cuerpo["cassandra_america"]["estado"] == "ok"
     assert cuerpo["cassandra_europa"]["estado"] == "caida"
+
+
+def test_dependencias_informa_influxdb(cliente, influx):
+    assert cliente.get("/health/dependencias").json()["influxdb"]["estado"] == "ok"
+    influx.caida = True
+    cuerpo = cliente.get("/health/dependencias").json()
+    assert cuerpo["influxdb"]["estado"] == "caida"
+    assert cuerpo["mongodb"]["estado"] == "ok"

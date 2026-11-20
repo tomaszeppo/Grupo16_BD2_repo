@@ -117,3 +117,14 @@ def test_tramo_archivado_calcula_la_posesion_desde_el_porcentaje_por_minuto():
     neo = SimpleNamespace(leer_estadisticas_archivadas=lambda _: {"equipos": [], "muestras": muestras})
     r = simulaciones.estadisticas_partido("P-03", 0, 9, mongo=mongo, influx=None, neo=neo)
     assert {e["equipo_id"]: round(e["posesion_pct"]) for e in r["equipos"]} == {"ARG": 75, "BRA": 25}
+
+
+def test_las_consultas_de_un_partido_se_acotan_a_su_horario():
+    """InfluxDB 3 Core limita cuántos archivos lee una consulta: con el rango de tiempo solo abre los del partido."""
+    from datetime import datetime, timezone
+
+    inicio = datetime(2030, 6, 13, 15, 0, 7, tzinfo=timezone.utc)
+    for sql in (influx.sql_audiencia("P-03", "a" * 32, 0, 90, None, inicio),
+                influx.sql_comentarios("P-03", "a" * 32, 0, 90, "ARG", inicio)):
+        assert "time >= '2030-06-13T15:00:07Z' AND time < '2030-06-13T15:05:07Z'" in sql
+    assert "time >=" not in influx.sql_audiencia("P-03", "a" * 32, 0, 90, None)  # simulaciones sin hora guardada

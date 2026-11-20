@@ -308,3 +308,37 @@ def test_no_se_reintenta_sin_fin_una_puntuacion_que_siempre_falla(cliente, mongo
     intentos = sum(len(servicio.retomar_pendientes()) for _ in range(10))
     assert intentos == 5
     assert mongo.resultados["P-03"]["puntuacion"]["estado"] == "fallida"
+
+
+def test_la_puntuacion_larga_avisa_que_sigue_viva(mongo, neo4j, reloj, monkeypatch):
+    """Con el ranking en Redis, cada lote renueva la toma: un paso largo no se da por abandonado."""
+    from app.services import puntuacion as modulo
+    from app.services.calendario import Calendario
+
+    monkeypatch.setattr(modulo, "SEGUNDOS_ENTRE_LATIDOS", 0)
+
+    class RankingPorLotes:
+        demora = 0
+
+        def puntuar_en_redis(self, partido_id, resultado, al_avanzar=None):
+            for _ in range(3):
+                reloj.instante += timedelta(seconds=100)  # cada lote tarda 100 s: el paso entero pasa los 120
+                al_avanzar()
+            return 0
+
+        def persistir_partido(self, partido_id, al_avanzar=None):
+            reloj.instante += timedelta(seconds=100)
+            al_avanzar()
+
+        def limpiar_partido(self, partido_id):
+            pass
+
+    mongo.registrar_resultado("P-03", 2, 1, None, reloj(), reloj(), reloj())
+    observado = []
+    original = mongo.renovar_toma
+    mongo.renovar_toma = lambda partido_id, ahora: (observado.append(
+        mongo.puntuaciones_por_retomar(ahora, 120, 5)), original(partido_id, ahora))
+    servicio = modulo.PuntuacionService(mongo, neo4j, Calendario(neo4j, 30, reloj), reloj, RankingPorLotes(), 120)
+    servicio.ejecutar("P-03")
+    assert mongo.resultados["P-03"]["puntuacion"]["estado"] == "completa"
+    assert len(observado) >= 4 and all(pendientes == [] for pendientes in observado)

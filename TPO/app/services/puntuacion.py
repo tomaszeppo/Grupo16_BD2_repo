@@ -7,6 +7,7 @@ from app.reloj import Reloj
 
 PASOS = ("puntuar", "sumar", "foto")
 MAX_INTENTOS = 5  # tope de reintentos automáticos; repetir el cierre a mano sigue siendo posible
+SEGUNDOS_ENTRE_LATIDOS = 10
 
 
 class PuntuacionService:
@@ -112,16 +113,31 @@ class PuntuacionService:
         # la puntuación entera, que con muchos pronósticos puede durar más que ese plazo.
         self._mongo.marcar_paso(partido_id, paso, duracion_ms, {**extra, "tomada_en": self._reloj()})
 
+    def _latido(self, partido_id: str):
+        """Devuelve la función que avisa que la puntuación sigue viva. Con muchos pronósticos un solo paso
+        puede durar más que el plazo para darla por abandonada; llamada después de cada lote, renueva la toma
+        (como mucho una vez cada 10 segundos, para no sumar una escritura por lote)."""
+        ultimo = [time.monotonic()]
+
+        def avisar() -> None:
+            if time.monotonic() - ultimo[0] >= SEGUNDOS_ENTRE_LATIDOS:
+                ultimo[0] = time.monotonic()
+                self._mongo.renovar_toma(partido_id, self._reloj())
+
+        return avisar
+
     def _ejecutar_redis(self, partido_id, resultado, hechos):
+        latido = self._latido(partido_id)
         inicio = time.perf_counter()
-        cantidad = self._ranking.puntuar_en_redis(partido_id, resultado)
+        cantidad = self._ranking.puntuar_en_redis(partido_id, resultado, latido)
         self._marcar(partido_id, "puntuar", round((time.perf_counter() - inicio) * 1000, 1),
                                 {"pronosticos": cantidad})
         # El ranking queda disponible en Redis antes de hacer el volcado durable.
         if "sumar" not in hechos:
             time.sleep(self._ranking.demora)
+            self._mongo.renovar_toma(partido_id, self._reloj())
             inicio = time.perf_counter()
-            self._ranking.persistir_partido(partido_id)
+            self._ranking.persistir_partido(partido_id, latido)
             self._marcar(partido_id, "sumar", round((time.perf_counter() - inicio) * 1000, 1), {})
         if "foto" not in hechos:
             inicio = time.perf_counter()

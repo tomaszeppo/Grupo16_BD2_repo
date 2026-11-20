@@ -28,6 +28,8 @@ _CONSULTAS = {
     "listar_instante": "SELECT comentario_id, usuario_nombre, contenido, creado_en, origen "
                        "FROM fixture2030.comentarios_por_partido_pais "
                        "WHERE partido_id = ? AND pais = ? AND ventana = ? AND creado_en = ?",
+    "registrar_pais": "INSERT INTO fixture2030.paises_por_partido (partido_id, pais) VALUES (?, ?)",
+    "listar_paises": "SELECT pais FROM fixture2030.paises_por_partido WHERE partido_id = ?",
     "ping": "SELECT now() FROM system.local",
 }
 
@@ -52,6 +54,7 @@ class CassandraAdapter:
         self._s = settings
         self._sesiones: dict = {}
         self._preparadas: dict = {}
+        self._paises_anotados: set[tuple[str, str]] = set()  # (partido, país) que este proceso ya escribió
 
     def _sesion(self, region: str):
         if region not in self._sesiones:
@@ -120,6 +123,18 @@ class CassandraAdapter:
     def _comentarios(filas, pais: str) -> list[dict]:
         return [{"comentario_id": str(f.comentario_id), "usuario_nombre": f.usuario_nombre, "contenido": f.contenido,
                  "creado_en": f.creado_en, "origen": f.origen or "usuario", "pais": pais} for f in filas]
+
+    def registrar_pais(self, region: str, partido_id: str, pais: str) -> None:
+        """Anota que ese país comentó el partido. Cada proceso lo escribe una sola vez por país y partido;
+        repetirlo desde otro proceso pisa la misma fila."""
+        if (partido_id, pais) in self._paises_anotados:
+            return
+        self._ejecutar(region, "registrar_pais", (partido_id, pais))
+        self._paises_anotados.add((partido_id, pais))
+
+    def paises_con_comentarios(self, partido_id: str) -> set[str]:
+        filas, _ = self._ejecutar("america", "listar_paises", (partido_id,))
+        return {f.pais for f in filas}
 
     def ping_region(self, region: str) -> None:
         """Sin cambio de región: el estado de salud tiene que decir si ESTA región responde."""

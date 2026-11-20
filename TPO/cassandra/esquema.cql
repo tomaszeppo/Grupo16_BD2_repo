@@ -10,3 +10,10 @@ CREATE TABLE IF NOT EXISTS fixture2030.comentarios_por_partido_pais (
   usuario_nombre text, contenido text, origen text,
   PRIMARY KEY ((partido_id, pais, ventana), creado_en, comentario_id)
 ) WITH CLUSTERING ORDER BY (creado_en DESC, comentario_id ASC);
+
+-- Qué países comentaron cada partido: la lista de particiones que hay que leer para "todos los países".
+-- Una fila por país y partido, escrita la primera vez que ese país comenta (no una por comentario).
+CREATE TABLE IF NOT EXISTS fixture2030.paises_por_partido (
+  partido_id text, pais text,
+  PRIMARY KEY (partido_id, pais)
+);

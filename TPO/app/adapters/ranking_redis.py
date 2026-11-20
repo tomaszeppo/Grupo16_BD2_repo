@@ -88,12 +88,14 @@ class RankingRedis:
         except redis.RedisError as exc:
             raise DependenciaNoDisponible("redis") from exc
 
-    def preparar_partido(self, partido_id):
-        """Reserva un snapshot por partido, recorriendo Mongo sin cargarlo entero en memoria."""
-        with self.r.lock(f"prode:partido:{partido_id}:preparacion", timeout=3600, blocking_timeout=3600):
-            return self._preparar_partido(partido_id)
+    def preparar_partido(self, partido_id, al_avanzar=None):
+        """Reserva un snapshot por partido, recorriendo Mongo sin cargarlo entero en memoria.
 
-    def _preparar_partido(self, partido_id):
+        `al_avanzar` se llama después de cada lote: quien puntúa lo usa para avisar que sigue trabajando."""
+        with self.r.lock(f"prode:partido:{partido_id}:preparacion", timeout=3600, blocking_timeout=3600):
+            return self._preparar_partido(partido_id, al_avanzar)
+
+    def _preparar_partido(self, partido_id, al_avanzar=None):
         self._asegurar_ranking()
         clave = f"prode:partido:{partido_id}:pronosticos"
         cursor = self.mongo.db.pronosticos.find({"partido_id": partido_id},
@@ -110,14 +112,16 @@ class RankingRedis:
                 if nombres:
                     self.r.hset(NOMBRES, mapping=nombres)
                 cantidad += len(mapping)
+            if al_avanzar:
+                al_avanzar()
         self.r.set(f"prode:partido:{partido_id}:preparado", "1")
         return cantidad
 
-    def puntuar_en_redis(self, partido_id, resultado):
+    def puntuar_en_redis(self, partido_id, resultado, al_avanzar=None):
         self._asegurar_ranking()
         # Se vuelve a leer al cerrar: una API con calendario en caché podría haber
         # aceptado una edición después del inicio; calcular() la marca anulada.
-        self.preparar_partido(partido_id)
+        self.preparar_partido(partido_id, al_avanzar)
         clave = f"prode:partido:{partido_id}:pronosticos"
         aplicados = f"prode:partido:{partido_id}:aplicados"
         cursor = self.r.hscan_iter(clave, count=self.lote)
@@ -138,17 +142,22 @@ class RankingRedis:
                     pipe.eval(LUA_APLICAR, 3, ZSET, DATOS, aplicados, usuario, miembro_redis(usuario), payload)
             pipe.execute()
             cantidad += len(bloque)
+            if al_avanzar:
+                al_avanzar()
         return cantidad
 
-    def persistir_partido(self, partido_id):
+    def persistir_partido(self, partido_id, al_avanzar=None):
         """Escritura idempotente en Mongo de los resultados ya calculados en Redis."""
         from pymongo import UpdateOne
+
+        from app.dominio.ids import id_pronostico
         aplicados = f"prode:partido:{partido_id}:aplicados"
         for bloque in _lotes(self.r.hscan_iter(aplicados, count=self.lote), self.lote):
             pronosticos, puntajes = [], []
             for usuario, texto in bloque:
                 p = json.loads(texto)
-                pronosticos.append(UpdateOne({"partido_id": partido_id, "usuario_id": usuario}, {"$set": p}))
+                # Por su clave: MongoDB va directo al documento, sin pasar por un índice secundario.
+                pronosticos.append(UpdateOne({"_id": id_pronostico(usuario, partido_id)}, {"$set": p}))
                 previo = {"$in": [{"$literal": partido_id}, {"$ifNull": ["$aplicados", []]}]}
                 campos = {}
                 for nombre, valor in (("puntos", p["puntos"]), ("exactos", int(p["exacto"])), ("tiempo_seg", p["tiempo_seg"])):
@@ -159,6 +168,8 @@ class RankingRedis:
             if pronosticos:
                 self.mongo.db.pronosticos.bulk_write(pronosticos, ordered=False)
                 self.mongo.db.puntajes.bulk_write(puntajes, ordered=False)
+            if al_avanzar:
+                al_avanzar()
 
     def partido_puntuado(self, partido_id):
         pass

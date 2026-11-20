@@ -309,6 +309,12 @@ class MongoAdapter:
                  "primeros": self._top(self.db_trabajo, 100)},
                 upsert=True)
 
+    def renovar_toma(self, partido_id: str, ahora) -> None:
+        """Señal de vida del proceso que está puntuando: mientras llegue, nadie más retoma la puntuación."""
+        with operacion(FUENTE, "renovar_toma", _traducir):
+            self.db.resultados.update_one({"_id": partido_id, "puntuacion.estado": "en_curso"},
+                                          {"$set": {"puntuacion.tomada_en": ahora}})
+
     def marcar_paso(self, partido_id: str, paso: str, duracion_ms: float, extra: dict) -> None:
         cambios = {f"puntuacion.pasos.{paso}": duracion_ms, **{f"puntuacion.{k}": v for k, v in extra.items()}}
         with operacion(FUENTE, "marcar_paso", _traducir):

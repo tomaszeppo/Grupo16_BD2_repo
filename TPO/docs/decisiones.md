@@ -88,7 +88,7 @@ Los goles en contra no se modelan: un gol cuenta para el equipo del jugador que 
 
 **8. Qué pasa si falla.** No se puede ver el detalle de un partido, sus jugadas ni operar partidos: la API devuelve 503. **Se puede seguir pronosticando y viendo el fixture**, con la copia del calendario. Medido: 19.499 pronósticos sin un error en una corrida en la que Neo4j estuvo caído 30 segundos.
 
-**9. Costo.** Un producto más para operar, con un único punto de falla en esta edición. La primera vez que ve una consulta tarda en armar el plan, y en el laboratorio eso superaba el tiempo de espera de un pedido: por eso la API hace que Neo4j planifique todas sus consultas al arrancar.
+**9. Costo.** Un producto más para operar, con un único punto de falla en esta edición. La primera vez que ve una consulta tarda en armar el plan, y en el laboratorio eso superaba el tiempo de espera de un pedido: por eso la API hace que Neo4j planifique todas sus consultas al arrancar. Y el archivo de cada partido guarda en el grafo datos que no se recorren: una relación por equipo y minuto con los totales (182 por partido) y un resumen por jugador. Son una copia de lo que midió InfluxDB, escrita una sola vez al archivar. La aceptamos para que el histórico de un partido (jugadas y números) salga de una sola base cuando los datos crudos de InfluxDB ya vencieron; si hubiera que elegir de nuevo, esos totales podrían quedar solo en los resúmenes de InfluxDB, que tampoco vencen.
 
 **10. Evidencia.** Carga repetida y unicidad: [test_carga.py](../tests/integration/test_carga.py). Recorridos (cadena de un gol, participación en goles, camino por el cuadro): [test_fixture_real.py](../tests/integration/test_fixture_real.py). Lecturas bajo carga y caída: [rendimiento.md](rendimiento.md).
 
@@ -136,13 +136,13 @@ Se podría: cada partido con su lista de jugadas adentro. Leer el partido entero
 
 **3. Modelo.** Columnas anchas, con la tabla pensada para la consulta.
 
-**4. Estructura concreta.** En [modelo_de_datos.md](modelo_de_datos.md#cassandra--keyspace-fixture2030). La partición es partido, país y media hora: es exactamente lo que lee una tribuna, y acota el tamaño de cada partición en un partido largo. Dentro de la partición, del más nuevo al más viejo.
+**4. Estructura concreta.** En [modelo_de_datos.md](modelo_de_datos.md#cassandra--keyspace-fixture2030). La partición es partido, país y media hora: es exactamente lo que lee una tribuna, y acota el tamaño de cada partición en un partido largo. Dentro de la partición, del más nuevo al más viejo. Una segunda tabla, `paises_por_partido`, guarda qué países comentaron cada partido: es la lista de tribunas que hay que leer para mostrar "todos los países", y está en Cassandra para que el historial no dependa de otra base. A la escala del enunciado, la tribuna de un país grande puede juntar en media hora más filas de las que conviene en una partición; ahí habría que sumar a la clave un número de reparto y leer todas las partes. No lo construimos ni lo medimos.
 
 **5. Cómo se carga y se lee.** Escribe la API, en la región del país del usuario. Un reintento del mismo comentario no se duplica: la clave lleva la hora del servidor, así que la tabla sola no lo evitaría; lo frena una marca en Redis (`visto:`) de 10 minutos. Reintentar después de 10 minutos sí duplicaría; lo aceptamos.
 
 **6. Distribución.** Un datacenter por región (`america` y `europa`), cada uno con una copia completa. En el laboratorio, un nodo por región; en producción, tres por región con replicación 3.
 
-**7. Consistencia.** `LOCAL_ONE`: cada escritura confirma en su región sin esperar a la otra, que recibe la copia por detrás. Un hincha de Europa puede ver un comentario de América con un instante de atraso; nunca se pierde.
+**7. Consistencia.** `LOCAL_ONE`: cada escritura confirma en su región sin esperar a la otra, que recibe la copia por detrás. Un hincha de Europa puede ver un comentario de América con un instante de atraso. Lo que una región no recibió mientras estaba caída le llega al volver, porque la otra le guarda los pendientes hasta 3 horas (el valor por defecto de Cassandra). Una caída más larga exige correr una reparación (`nodetool repair`) para igualar las copias; en el laboratorio no está automatizada.
 
 **8. Qué pasa si falla.** Si se cae la región de un usuario, la API escribe y lee en la otra, lo informa (`region_atendida`) y lo cuenta en una métrica. Al volver, la región caída recibe lo que se escribió en el corte. Medido en [rendimiento.md](rendimiento.md#29-partido-en-vivo). Si se caen las dos, comentar responde 503 y el partido sigue.
 
@@ -160,7 +160,7 @@ Se podría: cada partido con su lista de jugadas adentro. Leer el partido entero
 
 **3. Modelo.** Series de tiempo, con consultas en SQL.
 
-**4. Estructura concreta.** En [modelo_de_datos.md](modelo_de_datos.md#influxdb--tres-bases). Solo son etiquetas las dimensiones por las que se filtra o agrupa (partido, país, origen, corrida, tipo); el minuto y los valores son campos. Es la corrección del Hito 8 sobre la cardinalidad.
+**4. Estructura concreta.** En [modelo_de_datos.md](modelo_de_datos.md#influxdb--tres-bases). Solo son etiquetas las dimensiones por las que se filtra o agrupa (partido, país, origen, corrida, tipo); el minuto y los valores son campos. Es la corrección del Hito 8 sobre la cardinalidad. La corrida es una etiqueta aunque tenga un valor nuevo por simulación, porque toda consulta de un partido filtra por ella; en InfluxDB 3 las etiquetas son columnas del archivo y no un índice de series aparte, y en el torneo son a lo sumo 104 valores.
 
 **5. Cómo se carga y se lee.** Escribe el simulador una vez por minuto simulado. Las escrituras no esperan el volcado a disco de InfluxDB: esperándolo, cada una tardaba cerca de un segundo y el partido, que simula un minuto por segundo, se atrasaba al doble. A cambio, una caída de InfluxDB puede perder el último segundo de muestras, que el archivo del partido detecta como faltantes.
 
@@ -170,7 +170,7 @@ Se podría: cada partido con su lista de jugadas adentro. Leer el partido entero
 
 **8. Qué pasa si falla.** La simulación sigue; los minutos sin escribir se marcan como incompletos y el archivo del partido queda pendiente hasta reintentarlo. El análisis de audiencia no responde (503) mientras no vuelva.
 
-**9. Costo.** Los datos crudos de cada simulación vencen a los 7 días (antes se archivan en Neo4j); los resúmenes, la audiencia y los comentarios por minuto no vencen y crecen con cada partido: 91 filas de audiencia y 182 de comentarios por país y partido. Para un torneo de 104 partidos es poco; en producción, con muchos países, convendría resumir los partidos terminados.
+**9. Costo.** Los datos crudos de cada simulación vencen a los 7 días (antes se archivan en Neo4j); los resúmenes, la audiencia y los comentarios por minuto no vencen y crecen con cada partido: 91 filas de audiencia y 182 de comentarios por país y partido. Para un torneo de 104 partidos es poco; en producción, con muchos países, convendría resumir los partidos terminados. Además, esta edición de InfluxDB no deja que una consulta lea más de 432 archivos, y guarda uno por tabla y por cada tramo de 10 minutos con datos. Por eso las consultas de un partido llevan el rango de tiempo de ese partido y abren solo sus archivos. La única que recorre todo es el promedio de audiencia entre partidos: con uno o dos archivos por partido entra para los 104 del torneo, pero no crece mucho más; pasado ese punto hay que guardar el promedio ya calculado o subir el límite, que cuesta memoria.
 
 **10. Evidencia.** Formato de las filas y escrituras sin espera: [test_influx_simulacion.py](../tests/unit/test_influx_simulacion.py). Cierre de cada minuto: [test_audiencia.py](../tests/unit/test_audiencia.py). Análisis de audiencia y tramos: [test_analisis_audiencia.py](../tests/unit/test_analisis_audiencia.py).
 

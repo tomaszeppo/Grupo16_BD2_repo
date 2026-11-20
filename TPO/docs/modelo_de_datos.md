@@ -132,7 +132,7 @@ Claves que usa la API. Todas viven en el primario; la réplica (`redis_replica`)
 | `sesion:{token}` | texto | Id del usuario de esa sesión | 24 h desde el último uso |
 | `audiencia:{partido}:{pais}` | conjunto ordenado | Quién está mirando: un resumen del token de cada conexión abierta, con la hora de su última señal como puntaje | Cada miembro deja de contar si no da señal en 15 s; sale al cerrar la conexión |
 | `unicos:{partido}:{pais}` | HyperLogLog | Usuarios distintos que miraron el partido desde ese país | No |
-| `paises:{partido}` | conjunto | Países con espectadores o comentarios en el partido | No |
+| `paises:{partido}` | conjunto | Países con espectadores o comentarios en el partido; lo usa el conteo de audiencia de cada minuto | No |
 | `cuenta:{partido}:{pais}:{origen}` | contador | Comentarios del minuto en curso; el simulador lo toma y lo borra al cerrar cada minuto | Al leerse |
 | `visto:{comentario_id}` | texto | El comentario ya guardado, para responder igual a un reintento | 10 min |
 | `lento:{usuario}` | texto | Marca del modo lento | 5 s |
@@ -160,6 +160,15 @@ CREATE TABLE fixture2030.comentarios_por_partido_pais (
 - La partición es partido, país y ventana de media hora: la tribuna de un país en un tramo del partido. Acota el tamaño de cada partición y reparte la escritura de un partido con mucha gente.
 - `origen` separa los comentarios de usuarios de los automáticos del simulador.
 - Sin vencimiento: se guardan para el análisis posterior.
+
+```sql
+CREATE TABLE fixture2030.paises_por_partido (
+  partido_id text, pais text,
+  PRIMARY KEY (partido_id, pais)
+);
+```
+
+- Qué países comentaron cada partido: una fila por país, escrita la primera vez que ese país comenta. Es lo que lee el historial de "todos los países" para saber qué particiones abrir.
 - El historial recorre ventanas hacia atrás; "todos los países" lee la partición de cada país con actividad y las mezcla por fecha. Si el partido ya se cerró, empieza a leer desde su cierre y no desde la hora actual.
 - La hora se guarda al milisegundo, así que dos comentarios pueden tener la misma. Para que ninguno se pierda entre dos páginas, cada página termina siempre en un cambio de hora: puede traer algunos comentarios más que los pedidos.
 
@@ -179,4 +188,4 @@ La audiencia, en `fixture2030_resumenes`:
 | `comentarios_partido` | `partido_id`, `pais`, `origen`, `corrida_id`, `tipo` | `comentarios`, `minuto` | Una fila por país y origen en cada minuto simulado |
 | `audiencia_resumen` | `partido_id`, `pais`, `corrida_id`, `tipo` | `unicos` | Una fila por país al terminar el partido |
 
-`tipo` es `demo` o `carga`. `corrida_id` identifica cada simulación: las consultas de un partido usan la última. Las etiquetas son las que se usan para filtrar o agrupar; el minuto es un campo, como en las demás medidas de la simulación. Cada partido escribe, por país, 91 filas de audiencia y 182 de comentarios.
+`tipo` es `demo` o `carga`. `corrida_id` identifica cada simulación: las consultas de un partido usan la última y llevan además el rango de tiempo de ese partido (su hora de inicio está en la ficha de la simulación, en MongoDB). Las etiquetas son las que se usan para filtrar o agrupar; el minuto es un campo, como en las demás medidas de la simulación. Cada partido escribe, por país, 91 filas de audiencia y 182 de comentarios.

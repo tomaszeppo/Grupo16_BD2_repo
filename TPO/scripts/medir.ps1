@@ -33,6 +33,9 @@ Herramienta python -m carga.poblar --usuarios $UsuariosChico --partidos P-06
 Herramienta python -m carga.poblar --usuarios $Usuarios --partidos P-05
 Herramienta python -m carga.poblar --usuarios $UsuariosChico --partidos P-12
 Herramienta python -m carga.poblar --usuarios $Usuarios --partidos P-11
+# La API conserva hasta 30 s su copia del calendario anterior al borrado: se la reinicia para que mida sobre el nuevo.
+docker compose restart api | Out-Null
+Esperar-Api
 
 Write-Host "== 1. Pico de pronósticos (tres niveles de concurrencia) =="
 foreach ($c in 10, 50, 200) {

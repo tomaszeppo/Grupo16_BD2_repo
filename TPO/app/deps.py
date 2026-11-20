@@ -182,10 +182,11 @@ def espectador(partido_id: str, sesion: tuple[str, str] = Depends(sesion_actual)
 
 # --- servicios ---
 async def get_health_service(mongo=Depends(get_mongo), neo4j=Depends(get_neo4j), redis=Depends(get_redis),
-                             cassandra=Depends(get_cassandra), calendario=Depends(get_calendario)) -> HealthService:
+                             cassandra=Depends(get_cassandra), influx=Depends(get_influx),
+                             calendario=Depends(get_calendario)) -> HealthService:
     # Un solo "redis": sesiones, vivo y ranking usan el mismo servidor.
-    return HealthService({"mongodb": mongo, "neo4j": neo4j, "redis": redis, **salud_por_region(cassandra)},
-                         calendario)
+    return HealthService({"mongodb": mongo, "neo4j": neo4j, "redis": redis, **salud_por_region(cassandra),
+                          "influxdb": influx}, calendario)
 
 
 async def get_fixture_service(neo4j=Depends(get_neo4j), calendario=Depends(get_calendario)) -> FixtureService:

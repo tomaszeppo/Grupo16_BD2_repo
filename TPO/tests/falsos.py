@@ -211,6 +211,11 @@ class MongoFalso(_Base):
         self._verificar()
         return _pub(copy.deepcopy(self.fotos.get(partido_id)))
 
+    def renovar_toma(self, partido_id, ahora) -> None:
+        self._verificar()
+        if self.resultados[partido_id]["puntuacion"]["estado"] == "en_curso":
+            self.resultados[partido_id]["puntuacion"]["tomada_en"] = ahora
+
     def marcar_paso(self, partido_id, paso, duracion_ms, extra) -> None:
         self._verificar()
         self.resultados[partido_id]["puntuacion"]["pasos"][paso] = duracion_ms
@@ -473,6 +478,8 @@ class CassandraFalso(_Base):
         super().__init__()
         self.caidas: set[str] = set()
         self.filas: dict = {}  # misma clave primaria = misma fila, como en Cassandra
+        self.paises: dict[str, set[str]] = {}  # tabla paises_por_partido
+        self.altas_de_pais = 0  # escrituras en esa tabla (una por país y partido, no una por comentario)
 
     def _region(self, region):
         from app.dominio.regiones import otra
@@ -501,10 +508,26 @@ class CassandraFalso(_Base):
         return [dict(f, comentario_id=str(f["comentario_id"])) for (p, pa, v, _, _), f in self.filas.items()
                 if (p, pa, v) == (partido_id, pais, ventana) and f["creado_en"] == instante], atendio
 
+    def registrar_pais(self, region, partido_id, pais) -> None:
+        self._region(region)
+        if pais not in self.paises.get(partido_id, set()):
+            self.paises.setdefault(partido_id, set()).add(pais)
+            self.altas_de_pais += 1
+
+    def paises_con_comentarios(self, partido_id) -> set[str]:
+        self._region("america")
+        return set(self.paises.get(partido_id, set()))
+
     def ping_region(self, region):
         self._verificar()
         if region in self.caidas:
             raise DependenciaNoDisponible(self.fuente)
+
+
+class InfluxFalso(_Base):
+    """Solo lo que usa el chequeo de salud; las pruebas de series arman su propio doble."""
+
+    fuente = "influxdb"
 
 
 class _PubSubFalso:

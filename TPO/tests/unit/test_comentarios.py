@@ -167,3 +167,23 @@ def test_historial_sigue_respondiendo_si_no_se_puede_consultar_el_cierre(cliente
     mongo.caida = True
     resp = cliente.get("/partidos/P-03/comentarios?pais=ARG")
     assert resp.status_code == 200 and resp.json()["items"][0]["contenido"] == "hola"
+
+
+def test_cada_pais_que_comenta_queda_anotado_en_cassandra_una_vez(cliente, cassandra):
+    como = _preparar(cliente, "MEX", "Memo")
+    _comentar(cliente, como, "uno")
+    _comentar(cliente, _preparar(cliente, "MEX", "Lupe", en_juego=False), "dos")
+    assert cassandra.paises == {"P-03": {"MEX"}}
+    assert cassandra.altas_de_pais == 1
+
+
+def test_historial_de_todos_no_depende_de_redis(cliente, redis):
+    """Qué países comentaron un partido se lee de Cassandra: perder Redis no deja el historial incompleto."""
+    _comentar(cliente, _preparar(cliente, "MEX", "Memo"), "de México")
+    _comentar(cliente, _preparar(cliente, "FRA", "Léa", en_juego=False), "de Francia")
+    redis.borrar("paises:P-03")
+    items = cliente.get("/partidos/P-03/comentarios?alcance=todos").json()["items"]
+    assert sorted(c["pais"] for c in items) == ["FRA", "MEX"]
+    redis.caida = True
+    resp = cliente.get("/partidos/P-03/comentarios?alcance=todos")
+    assert resp.status_code == 200 and len(resp.json()["items"]) == 2

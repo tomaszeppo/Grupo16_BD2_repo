@@ -74,7 +74,7 @@ Para operar partidos en la demostración. Piden el encabezado `X-Admin-Clave`.
 | Ruta | Qué devuelve |
 |---|---|
 | `GET /health` | Que la API está viva |
-| `GET /health/dependencias` | Estado de MongoDB, Neo4j, Redis, cada región de Cassandra y la copia del calendario. Responde 200 aunque una base esté caída: el cuerpo dice cuál |
+| `GET /health/dependencias` | Estado de MongoDB, Neo4j, Redis, cada región de Cassandra, InfluxDB y la copia del calendario. Responde 200 aunque una base esté caída: el cuerpo dice cuál |
 | `GET /metrics` | Métricas para Prometheus |
 | `GET /demo/` | La interfaz de demostración |
 
